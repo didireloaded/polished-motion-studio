@@ -1,7 +1,6 @@
 "use client";
-import { useState, useEffect, useRef, type FormEvent } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
-  Mic,
   Compass,
   Heart,
   MessageCircle,
@@ -20,27 +19,21 @@ import {
   Send,
   Search,
   MoreHorizontal,
-  Bookmark,
-  Volume2,
   Mountain,
   Sun,
   Music,
   Camera,
   Utensils,
   Coffee,
-  Link as LinkIcon,
   LogOut,
   LoaderCircle,
   Flag,
   EyeOff,
-  CheckCheck,
   Navigation,
-  Menu,
 } from "lucide-react";
 import {
   people,
   towns,
-  interests,
   initialState,
   sampleMatches,
   type Person,
@@ -54,17 +47,15 @@ import {
   ProfileSetup,
   ThisOrThat,
   Welcome,
-  VerificationInfo,
-  VoicePreview,
   portrait,
 } from "./redesign";
 type Tab = "discover" | "nearby" | "connections" | "chat" | "profile";
 const nav = [
   { id: "discover", label: "Discover", icon: Compass },
-  { id: "nearby", label: "Around you", icon: MapPin },
+  { id: "nearby", label: "Nearby", icon: MapPin },
   { id: "connections", label: "Connections", icon: Heart },
-  { id: "chat", label: "Conversations", icon: MessageCircle },
-  { id: "profile", label: "My profile", icon: UserRound },
+  { id: "chat", label: "Chats", icon: MessageCircle },
+  { id: "profile", label: "Profile", icon: UserRound },
 ] as const;
 const tagIcons: Record<string, typeof Coffee> = {
   Coffee: Coffee,
@@ -163,8 +154,6 @@ export default function NamLink() {
       | "about"
       | "report"
       | "welcome"
-      | "verification"
-      | "voice"
     >(null),
     [reportPerson, setReportPerson] = useState<Person | null>(null),
     [activeChat, setActiveChat] = useState<string | null>(null),
@@ -173,7 +162,6 @@ export default function NamLink() {
     [ageMax, setAgeMax] = useState(40),
     [ageMin, setAgeMin] = useState(18),
     [intent, setIntent] = useState("Any intention"),
-    [category, setCategory] = useState("For you"),
     [query, setQuery] = useState(""),
     [message, setMessage] = useState("");
   const queue = useRef(Promise.resolve());
@@ -260,7 +248,6 @@ export default function NamLink() {
       p.age <= ageMax &&
       (town === "All Namibia" || p.town === town) &&
       (intent === "Any intention" || p.intent === intent) &&
-      (category === "For you" || p.tags.includes(category)) &&
       (!query ||
         (p.name + " " + p.tags.join(" ") + " " + p.town)
           .toLowerCase()
@@ -272,7 +259,6 @@ export default function NamLink() {
   const active = people.find((p) => p.id === activeChat);
   function changeTab(id: Tab) {
     setTab(id);
-    if (id !== "discover") setCategory("For you");
     setActiveChat(null);
     setQuery("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -287,12 +273,13 @@ export default function NamLink() {
           </span>
           namlink<span className="brand-dot">.</span>
         </a>
-        <div className="sidebar-caption">A LITTLE CLOSER.</div>
+
         <nav>
           {nav.map((n) => (
             <button
               key={n.id}
               className={tab === n.id ? "nav-item active" : "nav-item"}
+              aria-current={tab === n.id ? "page" : undefined}
               onClick={() => changeTab(n.id)}
             >
               <n.icon size={21} strokeWidth={1.7} />
@@ -305,16 +292,8 @@ export default function NamLink() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="namibia-mark">
-            <Mountain size={30} strokeWidth={1} />
-            <span>
-              Made for the place
-              <br />
-              we call home.
-            </span>
-          </div>
           <button className="safety-link" onClick={() => setModal("safety")}>
-            <ShieldCheck size={17} /> Your space. Your pace.
+            <ShieldCheck size={17} /> Dating safety
             <ArrowUpRight size={15} />
           </button>
           <div className="sidebar-user">
@@ -332,10 +311,7 @@ export default function NamLink() {
               <b>{profileName}</b>
               <small>{state.profile.town}, NA</small>
             </div>
-            <IconButton
-              label="About this preview"
-              onClick={() => setModal("about")}
-            >
+            <IconButton label="About NamLink" onClick={() => setModal("about")}>
               <MoreHorizontal size={20} />
             </IconButton>
           </div>
@@ -343,64 +319,21 @@ export default function NamLink() {
       </aside>
       <div className="main-wrap">
         <header className="topbar">
-          <div className="mobile-brand brand">
-            namlink<span className="brand-dot">.</span>
-          </div>
-          <div className="top-location">
-            <MapPin size={16} />
-            <button onClick={() => setModal("filters")}>
-              {town === "All Namibia" ? "Namibia" : town}
-              <ChevronDown size={13} />
-            </button>
-            <span className="country-dot" />
-          </div>
-          <div className="top-actions">
-            <button
-              className={"data-button " + (state.lowData ? "enabled" : "")}
-              disabled={busy}
-              onClick={() =>
-                act(
-                  { type: "lowData", value: !state.lowData },
-                  !state.lowData
-                    ? "Data saver is on. Smaller photos, less data."
-                    : "Full quality photos enabled.",
-                )
-              }
-            >
-              <Leaf size={15} />
-              <span>Data saver</span>
-              <span className="mini-switch">
-                <i />
-              </span>
-            </button>
-            <button className="preview-tag" onClick={() => setModal("about")}>
-              PREVIEW
-            </button>
-            <button
-              className="user-avatar small"
-              aria-label="My profile"
-              onClick={() => changeTab("profile")}
-            >
-              {state.profile.name ? (
-                state.profile.name[0].toUpperCase()
-              ) : (
-                <UserRound size={17} />
-              )}
-            </button>
-          </div>
+          <a className="brand" href="/">
+            NamLink
+          </a>
+          <button
+            className="location-button"
+            onClick={() => setModal("filters")}
+          >
+            {town === "All Namibia" ? "Namibia" : town}
+            <ChevronDown size={15} />
+          </button>
         </header>
         {error && (
           <div className="error-banner" role="alert">
             {error}
             <button onClick={load}>Retry</button>
-          </div>
-        )}
-        {!signedIn && loaded && (
-          <div className="error-banner">
-            Sign in to save your likes, profile, and messages.
-            <a href="/signin-with-chatgpt?return_to=/" target="_top">
-              Sign in
-            </a>
           </div>
         )}
         <div className={"page-layout " + (tab === "chat" ? "chat-layout" : "")}>
@@ -409,11 +342,8 @@ export default function NamLink() {
               <>
                 <div className="page-heading">
                   <div>
-                    <span className="eyebrow">GOOD CONNECTIONS START HERE</span>
-                    <h1>A little closer.</h1>
-                    <p>
-                      Different stories. Shared ground. Your kind of people.
-                    </p>
+                    <h1>Discover</h1>
+                    <p>Sample profiles in Namibia.</p>
                   </div>
                   <button
                     className="filter-button"
@@ -429,11 +359,6 @@ export default function NamLink() {
                   visible={visible}
                   open={setSelected}
                   like={like}
-                  act={act}
-                  category={category}
-                  setCategory={setCategory}
-                  town={town}
-                  setTown={setTown}
                 />
               </>
             )}
@@ -441,11 +366,8 @@ export default function NamLink() {
               <>
                 <div className="page-heading">
                   <div>
-                    <span className="eyebrow">
-                      SAME PLACE. NEW POSSIBILITIES.
-                    </span>
-                    <h1>Around you.</h1>
-                    <p>Start a little closer to home.</p>
+                    <h1>Nearby</h1>
+                    <p>Browse people by town.</p>
                   </div>
                   <button
                     className="filter-button"
@@ -468,9 +390,7 @@ export default function NamLink() {
               <>
                 <div className="page-heading">
                   <div>
-                    <span className="eyebrow">THAT LITTLE SOMETHING</span>
-                    <h1>Connections.</h1>
-                    <p>A shared story is a good place to begin.</p>
+                    <h1>Connections</h1>
                   </div>
                 </div>
                 <Connections
@@ -489,9 +409,7 @@ export default function NamLink() {
               <>
                 <div className="page-heading">
                   <div>
-                    <span className="eyebrow">MORE THAN A HELLO</span>
-                    <h1>Conversations.</h1>
-                    <p>A good story starts with a little curiosity.</p>
+                    <h1>Chats</h1>
                   </div>
                 </div>
                 <div
@@ -560,28 +478,10 @@ export default function NamLink() {
                           </IconButton>
                         </div>
                         <div className="message-area">
-                          <div className="chat-common-ground">
-                            <Mountain size={18} />
-                            <div>
-                              <span className="eyebrow">
-                                A LITTLE COMMON GROUND
-                              </span>
-                              <p>Start with a story, not just a hello.</p>
-                            </div>
-                          </div>
-                          <div className="thread-intro">
-                            <Avatar p={active} size={68} />
-                            <h2>A little common ground.</h2>
-                            <p>{active.tags.join(" · ")}</p>
-                            <span className="sample-label">
-                              SAMPLE CONVERSATION
-                            </span>
-                            <p className="sample-explanation">
-                              Try sending a message. It is saved privately to
-                              your account; this sample person won’t receive it
-                              or reply.
-                            </p>
-                          </div>
+                          <p className="chat-preview-note">
+                            Sample chat. Messages are saved privately and aren’t
+                            delivered to anyone.
+                          </p>
                           {(state.messages[active.id] ?? []).map((m) => (
                             <div
                               className={
@@ -603,7 +503,6 @@ export default function NamLink() {
                           <div ref={bottom} />
                         </div>
                         <div className="icebreakers">
-                          <span>START SOMEWHERE</span>
                           <button
                             onClick={() =>
                               setMessage(
@@ -664,9 +563,7 @@ export default function NamLink() {
               <>
                 <div className="page-heading">
                   <div>
-                    <span className="eyebrow">BE YOUR KIND OF PERSON</span>
-                    <h1>Your story.</h1>
-                    <p>The details that make you, you.</p>
+                    <h1>Profile</h1>
                   </div>
                 </div>
                 <section className="my-profile">
@@ -678,7 +575,7 @@ export default function NamLink() {
                     )}
                   </div>
                   <h2>
-                    {state.profile.name || "Make yourself at home"}
+                    {state.profile.name || "Create profile"}
                     {state.onboarded && `, ${state.profile.age}`}
                   </h2>
                   <p>
@@ -691,9 +588,7 @@ export default function NamLink() {
                       setModal(state.onboarded ? "onboard" : "welcome")
                     }
                   >
-                    {state.onboarded
-                      ? "Edit your profile"
-                      : "Create your profile"}
+                    {state.onboarded ? "Edit profile" : "Create profile"}
                     <ArrowUpRight size={17} />
                   </button>
                   <div className="profile-summary">
@@ -703,7 +598,7 @@ export default function NamLink() {
                     </div>
                     <p>
                       {state.profile.bio ||
-                        "Your story belongs here. Add the little things a photo can’t say."}
+                        "Add a bio when you create your profile."}
                     </p>
                     <div className="interest-tags">
                       {state.profile.tags.map((t) => (
@@ -716,34 +611,11 @@ export default function NamLink() {
                   </div>
                 </section>
                 <div className="settings-panel">
-                  <button onClick={() => setModal("voice")}>
-                    <span>
-                      <Mic size={20} />
-                      <div>
-                        <b>Your voice story</b>
-                        <small>
-                          Try a local recording. Nothing is uploaded.
-                        </small>
-                      </div>
-                    </span>
-                    <ArrowUpRight size={19} />
-                  </button>
-                  <button onClick={() => setModal("verification")}>
-                    <span>
-                      <ShieldCheck size={20} />
-                      <div>
-                        <b>Profile verification</b>
-                        <small>Planned · Not yet available.</small>
-                      </div>
-                    </span>
-                    <ArrowUpRight size={19} />
-                  </button>
                   <button onClick={() => setModal("quiz")}>
                     <span>
                       <Heart size={20} />
                       <div>
-                        <b>This or that</b>
-                        <small>A few choices that say a lot.</small>
+                        <b>Prompts</b>
                       </div>
                     </span>
                     <ArrowUpRight size={19} />
@@ -758,9 +630,6 @@ export default function NamLink() {
                       <Leaf size={20} />
                       <div>
                         <b>Data saver</b>
-                        <small>
-                          Smaller images. A little lighter on your data.
-                        </small>
                       </div>
                     </span>
                     <span
@@ -776,10 +645,7 @@ export default function NamLink() {
                     <span>
                       <ShieldCheck size={20} />
                       <div>
-                        <b>Dating on your terms</b>
-                        <small>
-                          Safety, boundaries, and meeting in person.
-                        </small>
+                        <b>Dating safety</b>
                       </div>
                     </span>
                     <ArrowUpRight size={19} />
@@ -788,88 +654,32 @@ export default function NamLink() {
                     <span>
                       <EyeOff size={20} />
                       <div>
-                        <b>About this preview</b>
-                        <small>Your data, and what’s available now.</small>
+                        <b>About NamLink</b>
                       </div>
                     </span>
                     <ArrowUpRight size={19} />
                   </button>
                 </div>
-                <a
-                  className="signout"
-                  href="/signout-with-chatgpt?return_to=/"
-                  target="_top"
-                >
-                  <LogOut size={15} />
-                  Sign out
-                </a>
+                {signedIn && (
+                  <a
+                    className="signout"
+                    href="/signout-with-chatgpt?return_to=/"
+                    target="_top"
+                  >
+                    <LogOut size={15} />
+                    Sign out
+                  </a>
+                )}
               </>
             )}
           </main>
-          {tab !== "chat" && (
-            <aside className="right-rail">
-              <section className="rail-intro">
-                <span className="eyebrow">ROOTED RIGHT HERE</span>
-                <h2>
-                  Made for the place
-                  <br />
-                  we call home.
-                </h2>
-                <img
-                  src="/editorial/dunes.jpg"
-                  alt="Illustrative Namibian dunes"
-                />
-                <p>A big country can still feel a little closer.</p>
-              </section>
-              <section className="rail-profile">
-                <span className="eyebrow">A LITTLE MORE YOU</span>
-                <h3>
-                  {state.onboarded
-                    ? "Keep telling your story."
-                    : "Let them meet the real you."}
-                </h3>
-                <p>A thoughtful answer often says more than another photo.</p>
-                <button
-                  className="primary full"
-                  onClick={() =>
-                    setModal(state.onboarded ? "onboard" : "welcome")
-                  }
-                >
-                  {state.onboarded ? "Edit your story" : "Start your story"}
-                  <ArrowUpRight size={16} />
-                </button>
-                <button className="rail-text" onClick={() => setModal("quiz")}>
-                  This or that
-                  <ArrowRight size={15} />
-                </button>
-              </section>
-              <button
-                className="rail-safety"
-                onClick={() => setModal("safety")}
-              >
-                <ShieldCheck size={21} />
-                <span>
-                  Your space.
-                  <br />
-                  <b>Your pace.</b>
-                </span>
-                <ArrowUpRight size={16} />
-              </button>
-              <div className="rail-footer">
-                <button onClick={() => setModal("about")}>
-                  About & privacy
-                </button>
-                <span>Development preview · 18+</span>
-                <span>© {new Date().getFullYear()} NamLink</span>
-              </div>
-            </aside>
-          )}
         </div>
       </div>
       <nav className="mobile-nav">
         {nav.map((n) => (
           <button
             className={tab === n.id ? "active" : ""}
+            aria-current={tab === n.id ? "page" : undefined}
             key={n.id}
             onClick={() => changeTab(n.id)}
           >
@@ -880,23 +690,12 @@ export default function NamLink() {
               }
               strokeWidth={1.7}
             />
-            <span>
-              {n.id === "chat"
-                ? "Chat"
-                : n.id === "nearby"
-                  ? "Nearby"
-                  : n.id === "profile"
-                    ? "You"
-                    : n.label}
-            </span>
+            <span>{n.label}</span>
           </button>
         ))}
       </nav>
       {selected && (
-        <Modal
-          title="A little more to the story"
-          close={() => setSelected(null)}
-        >
+        <Modal title="Profile" close={() => setSelected(null)}>
           <div className="detail-photo">
             <img
               src={img(selected, state.lowData)}
@@ -942,21 +741,6 @@ export default function NamLink() {
               <span>{selected.prompt}</span>
               <h3>{selected.answer}</h3>
             </div>
-            <div className="detail-voice">
-              <Mic size={19} />
-              <div>
-                <b>Voice intro</b>
-                <span>No voice recording on this sample profile.</span>
-              </div>
-            </div>
-            <div className="detail-roots">
-              <MapPin size={20} />
-              <div>
-                <span className="eyebrow">ROOTS & CONNECTIONS</span>
-                <h3>{selected.town}, Namibia</h3>
-                <p>Town-level discovery. No precise location shared.</p>
-              </div>
-            </div>
             <div className="detail-actions">
               <button
                 className={
@@ -974,7 +758,7 @@ export default function NamLink() {
                 />
                 {state.likes.includes(selected.id)
                   ? "Liked"
-                  : "Connect with " + selected.name}
+                  : "Like " + selected.name}
               </button>
               {sampleMatches.includes(selected.id) && (
                 <button className="secondary" onClick={() => goChat(selected)}>
@@ -1012,13 +796,10 @@ export default function NamLink() {
         </Modal>
       )}
       {modal === "filters" && (
-        <Modal title="Your kind of connection" close={() => setModal(null)}>
+        <Modal title="Filters" close={() => setModal(null)}>
           <div className="form-body">
-            <p className="muted">
-              A little direction. A little room for possibility.
-            </p>
             <label>
-              Where would you like to look?
+              Town
               <select value={town} onChange={(e) => setTown(e.target.value)}>
                 {["All Namibia", ...towns].map((t) => (
                   <option key={t}>{t}</option>
@@ -1096,7 +877,7 @@ export default function NamLink() {
       )}
       {modal === "onboard" && (
         <Modal
-          title={state.onboarded ? "Your story" : "Make yourself at home"}
+          title={state.onboarded ? "Edit profile" : "Create profile"}
           close={() => setModal(null)}
         >
           <ProfileSetup
@@ -1108,28 +889,14 @@ export default function NamLink() {
         </Modal>
       )}
       {modal === "quiz" && (
-        <Modal title="This or that?" close={() => setModal(null)}>
+        <Modal title="Prompts?" close={() => setModal(null)}>
           <div className="form-body">
             <ThisOrThat state={state} busy={busy} act={act} />
           </div>
         </Modal>
       )}
-      {modal === "verification" && (
-        <Modal title="Profile verification" close={() => setModal(null)}>
-          <div className="form-body">
-            <VerificationInfo />
-          </div>
-        </Modal>
-      )}
-      {modal === "voice" && (
-        <Modal title="Your voice story" close={() => setModal(null)}>
-          <div className="form-body">
-            <VoicePreview />
-          </div>
-        </Modal>
-      )}
       {modal === "safety" && (
-        <Modal title="Your space. Your pace." close={() => setModal(null)}>
+        <Modal title="Dating safety" close={() => setModal(null)}>
           <Safety />
         </Modal>
       )}

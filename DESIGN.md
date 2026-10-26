@@ -18,3 +18,9 @@ Reject: gradient text/buttons, ambient glows, repeated sparkle badges, arbitrary
 Assets: locally served imagery extracted from the user's HTML; illustrative, potentially generated, not verified real people. Only image legibility overlays use gradients.
 
 Invariants: preserve account-scoped server data, auth boundaries, adult validation, connection requirement for messages, blocking semantics and low-data mode. Preserve existing site's current audience (public at time of redesign); account details remain authenticated and private. No new biometric collection or GPS access. Voice recorder is optional, local session playback only. Verification is explicitly unavailable.
+
+## iOS refinement — latest user direction
+
+The selected Stitch content and imagery remain the basis. The user rejected the density of the initial implementation. The active layout therefore uses native system typography, semantic dark iOS surfaces, one coral accent, a full-width native-style tab bar and bottom sheets. Discover has one primary profile and a grouped list of other people. Location and intent live in a filter sheet. Prompts are in profile editing, not discovery. Nearby is a town list; the illustrative radar was removed. Connections is a single segmented control and grouped list. Chat has no introductory promotional cards. Desktop keeps only navigation and the main content column. No slogan banners, category carousels, glows, oversized match scores, decorative badges or empty planned-feature rows.
+
+Onboarding was reduced to three steps: about you, preferences, and profile. A planned verification screen is not an onboarding task. Voice recording is optional and collapsed behind an explicit action.
