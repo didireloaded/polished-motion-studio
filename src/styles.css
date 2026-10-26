@@ -115,3 +115,4 @@
 @keyframes radar { from { transform: scale(0.2); opacity: 0.8; } to { transform: scale(1); opacity: 0; } }
 @utility animate-radar { animation: radar 3.2s cubic-bezier(.2,.6,.3,1) infinite; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
+@utility input { width: 100%; border-radius: 0.875rem; background: var(--secondary); padding: 0.7rem 0.9rem; font-size: 15px; outline: none; border: 1px solid transparent; transition: border-color .2s; &:focus { border-color: var(--ring); } }
