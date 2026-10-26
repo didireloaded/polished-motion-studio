@@ -193,7 +193,7 @@ export function Discover({
                 {
                   value: "Sunset by the sea",
                   image: "coast",
-                  label: "Swakopmund jetty",
+                  label: "Coastal sunset",
                   sub: "A little salt in the air",
                 },
               ].map((c) => (
