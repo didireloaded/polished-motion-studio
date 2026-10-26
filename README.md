@@ -11,7 +11,7 @@ Database migrations are in `drizzle/`. Local preview requires the migration to b
 
 ## Implemented
 
-Home now presents one photo-led profile at a time with private save, pass/undo, like, filters, and an expandable details panel. The five-screen target and location/posting rules are in `SCREEN-PLAN.md`. The existing tabs remain available during the screen-by-screen build.
+The five tabs are Home, Radar, Posts, Chats, and You. Home presents one photo-led sample profile at a time with private save, pass/undo, like, filters, and expandable details.
 
 
 - Responsive editorial profile grid, accessible native dialogs and reduced-motion support.
@@ -21,12 +21,14 @@ Home now presents one photo-led profile at a time with private save, pass/undo, 
 - Native share / clipboard date plan and a local safety checklist. No automated messages or live location tracking.
 - ChatGPT account identity, authenticated account-scoped D1 persistence, no-store responses, same-origin write protection, bounded input, atomic version checks against concurrent writes, idempotent message IDs.
 - Account data reset with confirmation.
+- Radar offers town browsing, an illustrative view or list of sample profiles, and real member-created event invitations. It does not use GPS.
+- Posts let signed-in adult members publish anonymously, receive private replies, and accept a reply to create a connection. Accepted connections can exchange persistent messages in Chats. Member blocking and reporting are available.
 
 ## Preview boundaries
 
-All eight profiles are fictional; active profile imagery is illustrative artwork from the user-selected Stitch designs. Two fixed sample connections demonstrate chat. Messages are private test records, not delivered to another member; no artificial replies are generated. Reports are stored privately and block the sample profile; there is no active moderation team.
+All eight Home/Radar profiles are fictional; their imagery is illustrative artwork from the selected Stitch designs. The sample chats are private test records, not delivered to another member. Real member chat is confined to accepted post replies. No artificial replies are generated. Reports are stored, but there is no active moderation team. The profile reset clears profile and sample data; community posts and real conversations remain.
 
-The site currently allows public preview browsing; authenticated account data is isolated by user. Do not treat it as a live dating service before implementing real member profiles, mutual matching, message delivery and notification policies, media upload/processing, robust age/region assurance, moderation/admin operations, abuse limits, retention/export/deletion policy, and operational monitoring. Adult/region declarations do not prove age or residence.
+The site allows public preview browsing; authenticated account data is isolated by user. Community posting and messaging work, but this is still a development preview. Launch needs real member profiles in discovery, mutual profile matching, notifications, media upload/processing, robust age/region assurance, moderation/admin operations, stronger concurrency-safe abuse controls, full account export/deletion, and operational monitoring. Adult/region declarations do not prove age or residence.
 
 An optional browser voice recorder supports local, session-only playback; it does not upload or save audio.
 
@@ -49,7 +51,7 @@ Not implemented: phone OTP, native apps, selfie verification, stories, voice/vid
 
 `npx tsc --noEmit`
 
-`node --experimental-strip-types --test tests/model.test.mjs`
+`node --experimental-strip-types --test tests/*.test.mjs`
 
 Build via the Sites `build-site.mjs` helper. The deployment source and generated artifact must match the same pushed commit.
 

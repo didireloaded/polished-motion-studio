@@ -5,14 +5,14 @@ The new portrait reference is the visual authority for Home. Keep one person in 
 ## Five destinations
 
 1. **Home:** one profile, next/previous people, private save, like, pass with undo, filters, shared interests and expandable details. Existing account likes and blocks continue to apply. A profile can show a voice intro only when an actual recording is stored. Never show a fabricated compatibility percentage, distance, verification check, or online status.
-2. **Radar:** privacy preserving map or town view, opt-in nearby discovery, crossed-path history, and a compact list of local events. An event detail should answer what, when, where, and who is interested. An invitation such as “Want to go together?” belongs with the event and still needs the other person to accept. The present Nearby tab is town browsing; it does not request GPS.
-3. **Posts:** logged-in members can write a short post that appears without their public profile. A reply is private to its author and the poster; it is never a public comment. The poster can accept a reply, and that acceptance creates a connection and unlocks a private chat. The author’s identity must not be returned by public post APIs. Posting, replying, acceptance, and moderation need server-side ownership checks and abuse limits. Event invitations may be linked to an event but retain the same private-reply rule.
-4. **Chats:** connection inbox, likes/matches, and messages. A mutual profile like or accepted post reply creates a connection. Only connected members can exchange messages. The present Chats and Connections tabs are sample flows; real delivery will require member identities, message persistence, and notification policy.
-5. **You:** profile, photos, interests, prompts, voice intro, town and intention, privacy and data saver, verification status once an actual service exists, blocking/report history, and account controls.
+2. **Radar:** implemented as illustrative town browsing, list view, and member-created event invitations. It does not request GPS. Crossed-path history remains a native-app concept requiring explicit location permission.
+3. **Posts:** implemented anonymous member posts and event invitations, private replies, acceptance, reporting, and basic server-side abuse limits. The public API does not return a poster account ID.
+4. **Chats:** implemented persistent messages between members connected through an accepted post reply. Saved profiles and sample chats are separate preview areas. Mutual profile likes and push notifications remain future work.
+5. **You:** implemented profile editing, town and intention, interests, prompts, data saver, and blocked-member management. Voice recording plays locally for the session only; photo uploads and verification remain future work.
 
 ## Build order
 
-Home first, then Posts and its connection rule, Chats with real accepted connections, Radar and Events, then the full You/profile setup. Integrate each screen with the account data and test its primary path before moving to the next.
+The five-tab development preview is implemented. Next work should focus on real member discovery, native location and media capabilities, notifications, moderation operations, and launch readiness.
 
 ## Location rules
 

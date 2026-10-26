@@ -8,6 +8,13 @@
       "when": 1793007790439,
       "tag": "0000_wandering_scarecrow",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1793051641997,
+      "tag": "0001_third_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

@@ -41,7 +41,6 @@ import {
   type Action,
 } from "../lib/model";
 import {
-  Nearby,
   Connections,
   ProfileSetup,
   ThisOrThat,
@@ -49,13 +48,15 @@ import {
   portrait,
 } from "./redesign";
 import { Home } from "./home";
-type Tab = "discover" | "nearby" | "connections" | "chat" | "profile";
+import { Radar, Posts, MemberInbox, emptyCommunity, type CommunityData, type ThreadDetail } from "./community-ui";
+import { type CommunityAction } from "../lib/community";
+type Tab = "discover" | "nearby" | "posts" | "chat" | "profile";
 const nav = [
   { id: "discover", label: "Home", icon: Compass },
-  { id: "nearby", label: "Nearby", icon: MapPin },
-  { id: "connections", label: "Connections", icon: Heart },
+  { id: "nearby", label: "Radar", icon: MapPin },
+  { id: "posts", label: "Posts", icon: Heart },
   { id: "chat", label: "Chats", icon: MessageCircle },
-  { id: "profile", label: "Profile", icon: UserRound },
+  { id: "profile", label: "You", icon: UserRound },
 ] as const;
 const tagIcons: Record<string, typeof Coffee> = {
   Coffee: Coffee,
@@ -164,6 +165,13 @@ export default function NamLink() {
     [intent, setIntent] = useState("Any intention"),
     [query, setQuery] = useState(""),
     [message, setMessage] = useState("");
+  const [community, setCommunity] = useState<CommunityData>(emptyCommunity);
+  const [communityError, setCommunityError] = useState("");
+  const [communityBusy, setCommunityBusy] = useState(false);
+  const [focusPostId, setFocusPostId] = useState<string | null>(null);
+  const [chatView, setChatView] = useState<"members" | "saved" | "sample">("members");
+  const [memberThreadId, setMemberThreadId] = useState<string | null>(null);
+  const [memberThread, setMemberThread] = useState<ThreadDetail | null>(null);
   const queue = useRef(Promise.resolve());
   const bottom = useRef<HTMLDivElement>(null);
   async function load() {
@@ -228,6 +236,61 @@ export default function NamLink() {
     queue.current = job.then(() => {});
     return job;
   }
+  async function loadCommunity() {
+    try {
+      const res = await fetch("/api/community", { cache: "no-store" });
+      if (!res.ok) throw new Error("Couldn’t load posts and conversations.");
+      setCommunity((await res.json()) as CommunityData);
+      setCommunityError("");
+    } catch (e) {
+      setCommunityError(e instanceof Error ? e.message : "Couldn’t load the community.");
+    }
+  }
+  useEffect(() => {
+    if (!["nearby", "posts", "chat"].includes(tab)) return;
+    void loadCommunity();
+    const refresh = window.setInterval(() => void loadCommunity(), 30000);
+    return () => window.clearInterval(refresh);
+  }, [tab, signedIn]);
+  async function communityAct(action: CommunityAction, success?: string): Promise<boolean> {
+    if (!signedIn) {
+      location.href = "/signin-with-chatgpt?return_to=/";
+      return false;
+    }
+    setCommunityBusy(true);
+    try {
+      const res = await fetch("/api/community", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(action),
+      });
+      const data = await res.json() as { error?: string };
+      if (!res.ok) throw new Error(data.error || "Couldn’t save that.");
+      await loadCommunity();
+      if (success) setToast(success);
+      return true;
+    } catch (e) {
+      setToast(e instanceof Error ? e.message : "Couldn’t save that.");
+      return false;
+    } finally { setCommunityBusy(false); }
+  }
+  async function refreshMemberThread(id: string) {
+    const res = await fetch(`/api/community?thread=${encodeURIComponent(id)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("This conversation isn’t available.");
+    const data = await res.json() as { thread: ThreadDetail };
+    setMemberThread(data.thread);
+  }
+  async function openMemberThread(id: string) {
+    setMemberThreadId(id);
+    setMemberThread(null);
+    setChatView("members");
+    setTab("chat");
+    try { await refreshMemberThread(id); }
+    catch (e) { setToast(e instanceof Error ? e.message : "Couldn’t load the conversation."); setMemberThreadId(null); }
+  }
+  useEffect(() => {
+    if (tab !== "chat" || chatView !== "members" || !memberThreadId) return;
+    const refresh = window.setInterval(() => void refreshMemberThread(memberThreadId).catch(() => { setMemberThreadId(null); setMemberThread(null); }), 12000);
+    return () => window.clearInterval(refresh);
+  }, [tab, chatView, memberThreadId]);
   function like(p: Person) {
     act(
       { type: "like", person: p.id, value: !state.likes.includes(p.id) },
@@ -239,6 +302,7 @@ export default function NamLink() {
   function goChat(p: Person) {
     setSelected(null);
     setActiveChat(p.id);
+    setChatView("sample");
     setTab("chat");
   }
   const visible = people.filter(
@@ -265,7 +329,7 @@ export default function NamLink() {
   }
   const profileName = state.profile.name || "Your profile";
   return (
-    <div className={"app-shell " + (tab === "discover" ? "home-shell" : "")}>
+    <div className={"app-shell " + (tab === "discover" ? "home-shell" : "rest-shell")}>
       <aside className="sidebar">
         <a href="/" className="brand" aria-label="NamLink home">
           <span className="brand-symbol">
@@ -284,8 +348,8 @@ export default function NamLink() {
             >
               <n.icon size={21} strokeWidth={1.7} />
               <span>{n.label}</span>
-              {n.id === "chat" && (
-                <span className="nav-count">{matches.length}</span>
+              {n.id === "chat" && community.threads.length > 0 && (
+                <span className="nav-count">{community.threads.length}</span>
               )}
               {tab === n.id && <span className="nav-dot" />}
             </button>
@@ -354,61 +418,50 @@ export default function NamLink() {
                 chats={() => changeTab("chat")}
                 report={(p) => { setReportPerson(p); setModal("report"); }}
                 block={(p) => act({ type: "block", person: p.id }, "Profile blocked and removed from your connections.")}
-                openSaved={() => { setConnectionView("Saved"); changeTab("connections"); }}
+                openSaved={() => { setConnectionView("Saved"); setChatView("saved"); changeTab("chat"); }}
               />
             )}
-            {tab === "nearby" && (
-              <>
-                <div className="page-heading">
-                  <div>
-                    <h1>Nearby</h1>
-                    <p>Browse people by town.</p>
-                  </div>
-                  <button
-                    className="filter-button"
-                    aria-label="Filters"
-                    onClick={() => setModal("filters")}
-                  >
-                    <SlidersHorizontal size={18} />
-                  </button>
-                </div>
-                <Nearby
-                  state={state}
-                  visible={visible}
-                  open={setSelected}
-                  town={town}
-                  setTown={setTown}
-                />
-              </>
+            {communityError && ["nearby", "posts", "chat"].includes(tab) && (
+              <div className="error-banner" role="alert">{communityError}<button onClick={loadCommunity}>Retry</button></div>
             )}
-            {tab === "connections" && (
-              <>
-                <div className="page-heading">
-                  <div>
-                    <h1>Connections</h1>
-                  </div>
-                </div>
-                <Connections
-                  state={state}
-                  busy={busy}
-                  open={setSelected}
-                  like={like}
-                  save={(p) => act({ type: "save", person: p.id, value: false }, "Removed from saved profiles.")}
-                  matches={matches}
-                  chat={goChat}
-                  view={connectionView}
-                  setView={setConnectionView}
-                />
-              </>
+            {tab === "nearby" && (
+              <Radar
+                town={town}
+                setTown={setTown}
+                visible={visible}
+                open={setSelected}
+                events={community.posts.filter((p) => p.kind === "event" && p.eventAt !== null && p.eventAt > Date.now() && (town === "All Namibia" || p.town === town))}
+                openEvent={(id) => { setFocusPostId(id); changeTab("posts"); }}
+                filters={() => setModal("filters")}
+              />
+            )}
+            {tab === "posts" && (
+              <Posts
+                data={community}
+                town={town}
+                signedIn={signedIn}
+                onboarded={state.onboarded}
+                ownTown={state.profile.town}
+                busy={communityBusy}
+                submit={communityAct}
+                requireProfile={() => { changeTab("profile"); setModal("onboard"); }}
+                openThread={openMemberThread}
+                focusPostId={focusPostId}
+                clearFocus={() => setFocusPostId(null)}
+                onPublished={() => setTown(state.profile.town)}
+              />
             )}
             {tab === "chat" && (
               <>
-                <div className="page-heading">
-                  <div>
-                    <h1>Chats</h1>
-                  </div>
+                <div className="rest-heading"><div><span className="rest-overline">A PLACE TO TALK</span><h1>Chats.</h1><p>Keep the conversations that matter close.</p></div></div>
+                <div className="rest-segment chat-switch">
+                  <button className={chatView === "members" ? "selected" : ""} onClick={() => setChatView("members")}>Connections{community.threads.length ? ` (${community.threads.length})` : ""}</button>
+                  <button className={chatView === "saved" ? "selected" : ""} onClick={() => { setChatView("saved"); setConnectionView("Saved"); }}>Saved & likes</button>
+                  <button className={chatView === "sample" ? "selected" : ""} onClick={() => setChatView("sample")}>Sample chats</button>
                 </div>
-                <div
+                {chatView === "members" && <MemberInbox data={community} thread={memberThread} selectedThreadId={memberThreadId} openThread={openMemberThread} closeThread={() => { setMemberThreadId(null); setMemberThread(null); }} submit={communityAct} busy={communityBusy} safety={() => setModal("safety")} block={async (memberId) => { if (await communityAct({type:"block",memberId},"Member blocked.")) { setMemberThreadId(null); setMemberThread(null); } }} />}
+                {chatView === "saved" && <Connections state={state} busy={busy} open={setSelected} like={like} save={(p) => { void act({ type: "save", person: p.id, value: false }, "Removed from saved profiles."); }} matches={matches} chat={goChat} view={connectionView} setView={setConnectionView} />}
+                {chatView === "sample" && <div
                   className={"chat-container " + (active ? "thread-open" : "")}
                 >
                   <section className="conversation-list">
@@ -552,14 +605,14 @@ export default function NamLink() {
                       </div>
                     )}
                   </section>
-                </div>
+                </div>}
               </>
             )}
             {tab === "profile" && (
               <>
                 <div className="page-heading">
                   <div>
-                    <h1>Profile</h1>
+                    <h1>You</h1>
                   </div>
                 </div>
                 <section className="my-profile">
@@ -656,6 +709,7 @@ export default function NamLink() {
                     <ArrowUpRight size={19} />
                   </button>
                 </div>
+                {community.blockedMembers.length > 0 && <section className="blocked-list"><h2>Blocked members</h2>{community.blockedMembers.map((b) => <div key={b.memberId}><span>{b.person.name}</span><button disabled={communityBusy} onClick={() => communityAct({ type: "unblock", memberId: b.memberId }, "Member unblocked.")}>Unblock</button></div>)}</section>}
                 {signedIn && (
                   <a
                     className="signout"
@@ -682,7 +736,7 @@ export default function NamLink() {
             <n.icon
               size={22}
               fill={
-                tab === n.id && n.id === "connections" ? "currentColor" : "none"
+                tab === n.id && n.id === "posts" ? "currentColor" : "none"
               }
               strokeWidth={1.7}
             />
@@ -974,20 +1028,20 @@ export default function NamLink() {
               onClick={async () => {
                 if (
                   window.confirm(
-                    "Delete all saved preview data, including your profile, likes, quiz answers, and messages?",
+                    "Reset your profile, likes, quiz answers, and sample chats? Your posts and real conversations will remain.",
                   )
                 ) {
                   if (
                     await act(
                       { type: "reset" },
-                      "Your saved preview data has been reset.",
+                      "Your profile and sample data have been reset. Posts and real conversations remain.",
                     )
                   )
                     setModal(null);
                 }
               }}
             >
-              Delete my saved preview data
+              Reset profile and sample data
             </button>
           </div>
         </Modal>
