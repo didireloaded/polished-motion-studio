@@ -41,7 +41,6 @@ import {
   type Action,
 } from "../lib/model";
 import {
-  Discover,
   Nearby,
   Connections,
   ProfileSetup,
@@ -49,9 +48,10 @@ import {
   Welcome,
   portrait,
 } from "./redesign";
+import { Home } from "./home";
 type Tab = "discover" | "nearby" | "connections" | "chat" | "profile";
 const nav = [
-  { id: "discover", label: "Discover", icon: Compass },
+  { id: "discover", label: "Home", icon: Compass },
   { id: "nearby", label: "Nearby", icon: MapPin },
   { id: "connections", label: "Connections", icon: Heart },
   { id: "chat", label: "Chats", icon: MessageCircle },
@@ -265,7 +265,7 @@ export default function NamLink() {
   }
   const profileName = state.profile.name || "Your profile";
   return (
-    <div className="app-shell">
+    <div className={"app-shell " + (tab === "discover" ? "home-shell" : "")}>
       <aside className="sidebar">
         <a href="/" className="brand" aria-label="NamLink home">
           <span className="brand-symbol">
@@ -339,28 +339,23 @@ export default function NamLink() {
         <div className={"page-layout " + (tab === "chat" ? "chat-layout" : "")}>
           <main>
             {tab === "discover" && (
-              <>
-                <div className="page-heading">
-                  <div>
-                    <h1>Discover</h1>
-                    <p>Sample profiles in Namibia.</p>
-                  </div>
-                  <button
-                    className="filter-button"
-                    aria-label="Filters"
-                    onClick={() => setModal("filters")}
-                  >
-                    <SlidersHorizontal size={18} />
-                  </button>
-                </div>
-                <Discover
-                  state={state}
-                  busy={busy}
-                  visible={visible}
-                  open={setSelected}
-                  like={like}
-                />
-              </>
+              <Home
+                key={`${town}|${ageMin}|${ageMax}|${intent}|${query}`}
+                state={state}
+                busy={busy || !loaded}
+                visible={visible}
+                like={like}
+                save={(p) => act(
+                  { type: "save", person: p.id, value: !(state.saved ?? []).includes(p.id) },
+                  (state.saved ?? []).includes(p.id) ? "Removed from saved profiles." : `${p.name} saved for later.`,
+                )}
+                filters={() => setModal("filters")}
+                account={() => changeTab("profile")}
+                chats={() => changeTab("chat")}
+                report={(p) => { setReportPerson(p); setModal("report"); }}
+                block={(p) => act({ type: "block", person: p.id }, "Profile blocked and removed from your connections.")}
+                openSaved={() => { setConnectionView("Saved"); changeTab("connections"); }}
+              />
             )}
             {tab === "nearby" && (
               <>
@@ -398,6 +393,7 @@ export default function NamLink() {
                   busy={busy}
                   open={setSelected}
                   like={like}
+                  save={(p) => act({ type: "save", person: p.id, value: false }, "Removed from saved profiles.")}
                   matches={matches}
                   chat={goChat}
                   view={connectionView}

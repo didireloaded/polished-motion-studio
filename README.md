@@ -11,6 +11,9 @@ Database migrations are in `drizzle/`. Local preview requires the migration to b
 
 ## Implemented
 
+Home now presents one photo-led profile at a time with private save, pass/undo, like, filters, and an expandable details panel. The five-screen target and location/posting rules are in `SCREEN-PLAN.md`. The existing tabs remain available during the screen-by-screen build.
+
+
 - Responsive editorial profile grid, accessible native dialogs and reduced-motion support.
 - Town, age, intent, and interest filters; no swipe interface.
 - Private profile editing with server-validated adult declaration and a Namibian town allowlist.

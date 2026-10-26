@@ -15,3 +15,22 @@ test('profile intent is validated and old profiles remain compatible',()=>{
  assert.equal(applyAction(initialState(),current).profile.intent,'Coffee & conversations');
  assert.equal(actionSchema.safeParse({type:'profile',profile:{...profile,intent:'Unsupported'}}).success,false);
 });
+
+test('saved profiles are private bookmarks, compatible with existing accounts',()=>{
+ const legacy=initialState(); delete legacy.saved;
+ const s=applyAction(legacy,actionSchema.parse({type:'save',person:'p1',value:true}));
+ assert.deepEqual(s.saved,['p1']); assert.deepEqual(s.likes,[]);
+ assert.deepEqual(applyAction(s,{type:'save',person:'p1',value:true}).saved,['p1']);
+ assert.deepEqual(applyAction(s,{type:'save',person:'p1',value:false}).saved,[]);
+ assert.equal(legacy.saved,undefined);
+ assert.throws(()=>applyAction(s,{type:'save',person:'unknown',value:true}));
+});
+test('blocking or reporting removes bookmarks and prevents saving again',()=>{
+ const s=applyAction(initialState(),{type:'save',person:'p2',value:true});
+ for(const action of [{type:'block',person:'p2'},{type:'report',person:'p2',reason:'Other'}]) {
+  const blocked=applyAction(s,action);
+  assert.deepEqual(blocked.saved,[]);
+  assert.throws(()=>applyAction(blocked,{type:'save',person:'p2',value:true}));
+ }
+ assert.deepEqual(applyAction(s,{type:'reset'}).saved,[]);
+});

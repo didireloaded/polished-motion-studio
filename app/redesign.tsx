@@ -28,126 +28,6 @@ export const portrait = (person: Person, lowData = false) =>
   `/editorial/${person.photo}${lowData ? "-small" : ""}.jpg`;
 type Act = (action: Action, success?: string) => Promise<boolean>;
 
-export function Discover({
-  state,
-  busy,
-  visible,
-  open,
-  like,
-}: {
-  state: State;
-  busy: boolean;
-  visible: Person[];
-  open: (p: Person) => void;
-  like: (p: Person) => void;
-}) {
-  const featured = visible[0];
-  const rest = visible.slice(1);
-  return (
-    <>
-      {featured ? (
-        <>
-          <article className="featured-person">
-            <button
-              className="featured-photo"
-              onClick={() => open(featured)}
-              aria-label={`View ${featured.name}’s profile`}
-            >
-              <img
-                src={portrait(featured, state.lowData)}
-                alt={`${featured.name}, illustrative profile`}
-                style={{ objectPosition: featured.position }}
-              />
-            </button>
-            <div className="featured-info">
-              <button className="person-heading" onClick={() => open(featured)}>
-                <h2>
-                  {featured.name}, {featured.age}
-                </h2>
-                <p>
-                  {featured.town} · {featured.job}
-                </p>
-              </button>
-              <button
-                className={
-                  "heart-control " +
-                  (state.likes.includes(featured.id) ? "selected" : "")
-                }
-                disabled={busy}
-                aria-label={`${state.likes.includes(featured.id) ? "Unlike" : "Like"} ${featured.name}`}
-                aria-pressed={state.likes.includes(featured.id)}
-                onClick={() => like(featured)}
-              >
-                <Heart
-                  size={24}
-                  strokeWidth={1.5}
-                  fill={
-                    state.likes.includes(featured.id) ? "currentColor" : "none"
-                  }
-                />
-              </button>
-            </div>
-            <button className="profile-preview" onClick={() => open(featured)}>
-              <p>{featured.answer}</p>
-              <span>
-                View profile
-                <ArrowRight size={15} />
-              </span>
-            </button>
-          </article>
-          {rest.length > 0 && (
-            <section className="people-section">
-              <h2>More people</h2>
-              <div className="people-list">
-                {rest.map((p) => (
-                  <div className="person-row" key={p.id}>
-                    <button className="person-row-open" onClick={() => open(p)}>
-                      <img src={portrait(p, true)} alt={p.name} />
-                      <div>
-                        <h3>
-                          {p.name}, {p.age}
-                        </h3>
-                        <p>{p.town}</p>
-                      </div>
-                      <ArrowRight size={16} />
-                    </button>
-                    <button
-                      className={
-                        "heart-control " +
-                        (state.likes.includes(p.id) ? "selected" : "")
-                      }
-                      disabled={busy}
-                      aria-label={`${state.likes.includes(p.id) ? "Unlike" : "Like"} ${p.name}`}
-                      aria-pressed={state.likes.includes(p.id)}
-                      onClick={() => like(p)}
-                    >
-                      <Heart
-                        size={20}
-                        strokeWidth={1.5}
-                        fill={
-                          state.likes.includes(p.id) ? "currentColor" : "none"
-                        }
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      ) : (
-        <div className="empty-state">
-          <h2>No profiles found</h2>
-          <p>Try another town or adjust your filters.</p>
-        </div>
-      )}
-      <p className="screen-footnote">
-        Preview profiles are fictional. Likes don’t contact real people.
-      </p>
-    </>
-  );
-}
-
 export function Nearby({
   state,
   visible,
@@ -203,6 +83,7 @@ export function Connections({
   busy,
   open,
   like,
+  save,
   matches,
   chat,
   view,
@@ -212,6 +93,7 @@ export function Connections({
   busy: boolean;
   open: (p: Person) => void;
   like: (p: Person) => void;
+  save: (p: Person) => void;
   matches: Person[];
   chat: (p: Person) => void;
   view: string;
@@ -220,10 +102,12 @@ export function Connections({
   const liked = people.filter(
     (p) => state.likes.includes(p.id) && !state.blocked.includes(p.id),
   );
-  const shown = view === "Liked" ? liked : matches;
+  const saved = people.filter((p) => (state.saved ?? []).includes(p.id) && !state.blocked.includes(p.id));
+  const shown = view === "Liked" ? liked : view === "Saved" ? saved : matches;
   return (
     <>
       <div className="segmented">
+        <button className={view === "Saved" ? "selected" : ""} aria-pressed={view === "Saved"} onClick={() => setView("Saved")}>Saved{saved.length > 0 ? ` (${saved.length})` : ""}</button>
         <button
           className={view === "Liked" ? "selected" : ""}
           aria-pressed={view === "Liked"}
@@ -251,7 +135,9 @@ export function Connections({
                 <p>{p.town}</p>
               </div>
             </button>
-            {view === "Liked" ? (
+            {view === "Saved" ? (
+              <button className="plain-action" onClick={() => save(p)}>Remove</button>
+            ) : view === "Liked" ? (
               <button
                 className="heart-control selected"
                 aria-label={`Unlike ${p.name}`}
@@ -270,8 +156,8 @@ export function Connections({
       </div>
       {!shown.length && (
         <div className="empty-state">
-          <h2>No likes yet</h2>
-          <p>People you like will appear here.</p>
+          <h2>{view === "Saved" ? "No saved profiles" : "No likes yet"}</h2>
+          <p>{view === "Saved" ? "Use the star on Home to save someone for later." : "People you like will appear here."}</p>
         </div>
       )}
       <p className="screen-footnote">

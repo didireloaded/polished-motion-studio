@@ -161,6 +161,7 @@ export type State = {
     intent?: "A relationship" | "Open to exploring" | "Coffee & conversations";
   };
   likes: string[];
+  saved?: string[];
   blocked: string[];
   messages: Record<string, Message[]>;
   reports: { person: string; reason: string; at: number }[];
@@ -180,6 +181,7 @@ export function initialState(): State {
       adult: false,
     },
     likes: [],
+    saved: [],
     blocked: [],
     messages: {
       p2: [
@@ -208,6 +210,7 @@ export function initialState(): State {
 export const sampleMatches = ["p2", "p4"];
 export const actionSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("like"), person: z.string(), value: z.boolean() }),
+  z.object({ type: z.literal("save"), person: z.string(), value: z.boolean() }),
   z.object({ type: z.literal("block"), person: z.string() }),
   z.object({
     type: z.literal("report"),
@@ -267,9 +270,17 @@ export function applyAction(state: State, action: Action): State {
       ? [...new Set([...s.likes, action.person])]
       : s.likes.filter((id) => id !== action.person);
   }
+  if (action.type === "save") {
+    if (s.blocked.includes(action.person))
+      throw new Error("This profile is blocked.");
+    s.saved = action.value
+      ? [...new Set([...(s.saved ?? []), action.person])]
+      : (s.saved ?? []).filter((id) => id !== action.person);
+  }
   if (action.type === "block" || action.type === "report") {
     if (!s.blocked.includes(action.person)) s.blocked.push(action.person);
     s.likes = s.likes.filter((id) => id !== action.person);
+    s.saved = (s.saved ?? []).filter((id) => id !== action.person);
     delete s.messages[action.person];
     if (action.type === "report")
       s.reports.push({
