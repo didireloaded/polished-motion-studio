@@ -6,3 +6,12 @@ test('block removes likes and conversation, prevents future contact',()=>{let s=
 test('messages require a connection and deduplicate retries',()=>{const action={type:'message',person:'p2',text:'Coffee at the coast?',id:crypto.randomUUID()};let s=applyAction(initialState(),action);s=applyAction(s,action);assert.equal(s.messages.p2.filter(m=>m.id===action.id).length,1);assert.throws(()=>applyAction(s,{...action,person:'p1'}));});
 test('server schema rejects underage, unsupported towns and empty messages',()=>{const p={...initialState().profile,name:'Test',adult:true};assert.equal(actionSchema.safeParse({type:'profile',profile:{...p,age:17}}).success,false);assert.equal(actionSchema.safeParse({type:'profile',profile:{...p,town:'London'}}).success,false);assert.equal(actionSchema.safeParse({type:'profile',profile:{...p,adult:false}}).success,false);assert.equal(actionSchema.safeParse({type:'message',person:'p2',text:' ',id:crypto.randomUUID()}).success,false);});
 test('report records reason and blocks sample; reset returns clean account',()=>{const s=applyAction(initialState(),{type:'report',person:'p1',reason:'Other'});assert.equal(s.reports.length,1);assert.ok(s.blocked.includes('p1'));assert.deepEqual(applyAction(s,{type:'reset'}).reports,[]);});
+
+test('profile intent is validated and old profiles remain compatible',()=>{
+ const profile={...initialState().profile,name:'Preview Tester',adult:true};
+ const legacy=actionSchema.safeParse({type:'profile',profile});
+ assert.equal(legacy.success,true);
+ const current=actionSchema.parse({type:'profile',profile:{...profile,intent:'Coffee & conversations'}});
+ assert.equal(applyAction(initialState(),current).profile.intent,'Coffee & conversations');
+ assert.equal(actionSchema.safeParse({type:'profile',profile:{...profile,intent:'Unsupported'}}).success,false);
+});

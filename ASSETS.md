@@ -1,17 +1,7 @@
-# Stock assets
+# Active design assets
 
-Illustrative photos from Unsplash; none depict verified NamLink members. Names, ages, towns and biographies are fictional. Do not present these people as real local users.
+The active artwork in `public/editorial/` was extracted from the user's selected Stitch HTML export. `ASSETS-REDESIGN.json` preserves each exact source URL. Portraits have 1000px and 280px versions so data saver loads smaller files without changing the person shown.
 
-| File | Unsplash image ID |
-| --- | --- |
-| ndapewa | photo-1531123897727-8f129e1688ce |
-| leah | photo-1524504388940-b1c1722653e1 |
-| amara | photo-1534528741775-53994a69daeb |
-| johannes | photo-1506794778202-cad84cf45f1d |
-| selma | photo-1534751516642-a1af1ef26a56 |
-| daniel | photo-1500648767791-00dcc994a43e |
-| tuli | photo-1524250502761-1ac6f2e30d43 |
-| michael | photo-1519085360753-af0119f7cbe7 |
-| namibia | photo-1547234935-80c7145ec969 |
+These images are illustrative and may be generated. The names, biographies and locations are fictional preview content. They must not be presented as verified Namibian members or evidence of a real member's location. Artwork is served from the app; visiting the app does not request these images from Stitch or Google.
 
-Each portrait is stored at 650px and 240px widths. The dunes photo illustrates the regional editorial panel; it is not a geolocation or live map.
+The earlier stock photos in `public/photos/` are retained for source history but are not used by the redesigned UI.

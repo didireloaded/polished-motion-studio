@@ -1,11 +1,11 @@
 # NamLink — A little closer
 
-A phone-friendly, private, full-stack **development preview** for a Namibia-focused dating product. This is a responsive web app, not a native iOS/Android binary or a launch-ready public dating service.
+A phone-friendly, full-stack **development preview** for a Namibia-focused dating product. This is a responsive web app, not a native iOS/Android binary or a launch-ready public dating service.
 
 ## Run locally
 
 Node >=22.13, then `npm ci` and `npm run dev -- --port 49233`.
-Local authentication: open `/signin-with-chatgpt?return_to=/` on the dev server. Hosted sign-in and owner-only access are provided by Sites. For phone testing use the hosted HTTPS URL; localhost on your phone points to the phone itself.
+Local authentication: open `/signin-with-chatgpt?return_to=/` on the dev server. Hosted sign-in is provided by Sites. Existing public site access is preserved; account data requires authentication. For phone testing use the hosted HTTPS URL; localhost on your phone points to the phone itself.
 
 Database migrations are in `drizzle/`. Local preview requires the migration to be applied using the D1 command in the starter documentation. Hosted publishing applies migrations automatically. `.openai/hosting.json` declares the DB binding.
 
@@ -21,11 +21,13 @@ Database migrations are in `drizzle/`. Local preview requires the migration to b
 
 ## Preview boundaries
 
-All eight profiles are fictional; photos are Unsplash stock. Two fixed sample connections demonstrate chat. Messages are private test records, not delivered to another member; no artificial replies are generated. Reports are stored privately and block the sample profile; there is no active moderation team.
+All eight profiles are fictional; active profile imagery is illustrative artwork from the user-selected Stitch designs. Two fixed sample connections demonstrate chat. Messages are private test records, not delivered to another member; no artificial replies are generated. Reports are stored privately and block the sample profile; there is no active moderation team.
 
-The current private audience is the owner only. Do not open this to real users before implementing real member profiles, mutual matching, message delivery and notification policies, media upload/processing, robust age/region assurance, moderation/admin operations, abuse limits, retention/export/deletion policy, and operational monitoring. Adult/region declarations do not prove age or residence.
+The site currently allows public preview browsing; authenticated account data is isolated by user. Do not treat it as a live dating service before implementing real member profiles, mutual matching, message delivery and notification policies, media upload/processing, robust age/region assurance, moderation/admin operations, abuse limits, retention/export/deletion policy, and operational monitoring. Adult/region declarations do not prove age or residence.
 
-Not implemented: phone OTP, native apps, selfie verification, stories, voice/video, background location, crossed paths, end-to-end encryption, compatibility scoring, trusted-contact alerts. Browser screenshot blocking cannot be guaranteed. No paywalls.
+An optional browser voice recorder supports local, session-only playback; it does not upload or save audio.
+
+Not implemented: phone OTP, native apps, selfie verification, stories, voice/video delivery, background location, crossed paths, end-to-end encryption, compatibility scoring, trusted-contact alerts. Browser screenshot blocking cannot be guaranteed. No paywalls.
 
 ## Structure
 
@@ -35,7 +37,10 @@ Not implemented: phone OTP, native apps, selfie verification, stories, voice/vid
 - `app/api/state/route.ts`: authenticated read/write boundary and concurrency control.
 - `db/schema.ts`, `drizzle/`: account data schema and migration.
 - `tests/model.test.mjs`: behavioral invariants.
-- `public/photos/`: regular and low-data versions of stock photography.
+- `public/editorial/`: locally served images from the selected Stitch design, plus low-data portraits.
+- `app/redesign.tsx`: selected discovery, nearby, connection and onboarding flows.
+- `DESIGN.md`: reference lock and explicit anti-slop decisions.
+- `ASSETS-REDESIGN.json`: source URLs for the supplied design assets.
 
 ## Verification
 
@@ -45,8 +50,12 @@ Not implemented: phone OTP, native apps, selfie verification, stories, voice/vid
 
 Build via the Sites `build-site.mjs` helper. The deployment source and generated artifact must match the same pushed commit.
 
-## Design sources
+## Original design sources
 
 Primary: supplied images 3 and 7, dark editorial photography, strong hierarchy and compact image overlays. Secondary: image 9 for conversation structure and image 1 for profile questions. Navigation borrows frosted separation from image 2 without its blue palette. Black canvas, white text, sunset pink for actions, pale yellow for the single editorial note. No decorative gradient buttons. Gradients are limited to image legibility overlays.
 
-Image source IDs are available in `ASSETS.md`. Fonts: DM Sans and Manrope, served by Google Fonts with system fallbacks. Images are served locally and do not contact Unsplash at runtime.
+Image source IDs are available in `ASSETS.md`. Fonts: DM Sans and Plus Jakarta Sans, served by Google Fonts with system fallbacks. Images are served locally and do not contact Unsplash at runtime.
+
+## Selected Stitch redesign
+
+The October redesign uses the supplied HTML as the visual source of truth. Gradient buttons, fake compatibility percentages, online statuses, precise distances, verification badges and invented activity counts were removed. Featured discovery, town radar (explicitly illustrative), paired photo prompts, connection cards and four-step profile setup retain the selected layouts. Native zoom remains enabled. Verification is a planned-state screen with no biometric collection.
