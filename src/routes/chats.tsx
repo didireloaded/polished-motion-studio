@@ -31,7 +31,7 @@ function Chats() {
             <PageHeader eyebrow="Connections" title="Chats" />
             {list.length === 0 ? (
               <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
-                <motion.div animate={{ rotate: [0, -8, 8, 0] }} transition={{ repeat: Infinity, duration: 2.5 }} className="rounded-full bg-primary/15 p-4 text-primary"><MessagesSquare className="h-7 w-7" /></motion.div>
+                <motion.div initial={{ opacity: 0, scale: 0.82 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 320, damping: 24 }} className="rounded-full bg-primary/15 p-4 text-primary"><MessagesSquare className="h-7 w-7" /></motion.div>
                 <p className="mt-4 font-semibold">No chats yet</p>
                 <p className="mt-1 text-sm text-muted-foreground">Like someone on Home to start a conversation.</p>
                 <Link to="/" className="mt-5 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-glow">Discover people</Link>
@@ -95,7 +95,7 @@ function Thread({ id, onBack }: { id: string; onBack: () => void }) {
       </header>
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
         <div className="mb-4 rounded-2xl bg-card p-4 text-center text-sm text-muted-foreground">
-          {shared.length ? <>You both like <span className="text-accent">{shared.join(", ")}</span></> : <>Ask about: <span className="text-accent">“{p.prompt}…”</span></>}
+          {shared.length ? <>You both like <span className="text-primary">{shared.join(", ")}</span></> : <>Ask about: <span className="text-primary">“{p.prompt}…”</span></>}
         </div>
         <AnimatePresence initial={false}>
           {msgs.map((m) => (

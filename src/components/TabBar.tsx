@@ -1,10 +1,10 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Flame, Radar, MessageSquareText, MessagesSquare, User } from "lucide-react";
+import { Flame, MapPin, MessageSquareText, MessagesSquare, User } from "lucide-react";
 
 const tabs = [
   { to: "/", label: "Home", icon: Flame },
-  { to: "/radar", label: "Radar", icon: Radar },
+  { to: "/radar", label: "Nearby", icon: MapPin },
   { to: "/posts", label: "Posts", icon: MessageSquareText },
   { to: "/chats", label: "Chats", icon: MessagesSquare },
   { to: "/you", label: "You", icon: User },
@@ -40,7 +40,7 @@ export function PageHeader({ eyebrow, title, right }: { eyebrow?: string; title:
   return (
     <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="flex items-end justify-between px-5 pb-4 pt-8">
       <div>
-        {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">{eyebrow}</p>}
+        {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</p>}
         <h1 className="mt-1 text-3xl font-extrabold">{title}</h1>
       </div>
       {right}

@@ -48,13 +48,13 @@ function You() {
 
       {savedPeople.length > 0 && (
         <section className="mt-6 px-5">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-accent">Saved</h2>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">Saved</h2>
           <div className="no-scrollbar flex gap-3 overflow-x-auto">
             {savedPeople.map((p) => (
               <motion.div key={p.id} whileHover={{ y: -4 }} className="relative h-40 w-28 shrink-0 overflow-hidden rounded-2xl">
                 <img src={photo(p, true)} alt="" className="h-full w-full object-cover" />
                 <div className="bg-scrim absolute inset-0" />
-                <p className="absolute bottom-2 left-2 text-sm font-semibold">{p.name}</p>
+                <p className="absolute bottom-2 left-2 text-sm font-semibold text-white">{p.name}</p>
               </motion.div>
             ))}
           </div>

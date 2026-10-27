@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AnimatePresence, motion, useMotionValue, useTransform, animate, type PanInfo } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Heart, X, Bookmark, Undo2, SlidersHorizontal, MapPin, Sparkles, ChevronUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import { people, photo, towns, update, useStore, toggle, type Person } from "@/lib/namlink";
@@ -68,7 +68,7 @@ function Home() {
       <div className="relative mx-4 mt-4 h-[68vh] min-h-[480px]">
         <AnimatePresence>
           {deck.slice(0, 3).reverse().map((p) => (
-            <Card key={p.id} person={p} depth={deck.indexOf(p)} onDecide={decide} open={open && p === current} setOpen={setOpen} />
+            <Card key={p.id} person={p} depth={deck.indexOf(p)} open={open && p === current} setOpen={setOpen} />
           ))}
         </AnimatePresence>
         {!current && <Empty onReset={() => { setTown("All"); update((st) => ({ ...st, passed: [] })); }} />}
@@ -89,7 +89,7 @@ function Home() {
           <motion.div initial={{ opacity: 0, scale: 0.6, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -20 }}
             transition={{ type: "spring", stiffness: 400, damping: 22 }}
             className="glass fixed left-1/2 top-24 z-50 -translate-x-1/2 rounded-full border border-border px-5 py-3 text-sm shadow-float">
-            <Sparkles className="mr-2 inline h-4 w-4 text-accent" />You liked {toast} — say hi in <Link to="/chats" className="font-semibold text-primary">Chats</Link>
+            <Sparkles className="mr-2 inline h-4 w-4 text-primary" />You liked {toast} — say hi in <Link to="/chats" className="font-semibold text-primary">Chats</Link>
           </motion.div>
         )}
       </AnimatePresence>
@@ -97,50 +97,30 @@ function Home() {
   );
 }
 
-function Card({ person: p, depth, onDecide, open, setOpen }: { person: Person; depth: number; onDecide: (p: Person, l: boolean) => void; open: boolean; setOpen: (b: boolean) => void }) {
-  const x = useMotionValue(0);
-  const rotate = useTransform(x, [-250, 250], [-14, 14]);
-  const likeOp = useTransform(x, [30, 140], [0, 1]);
-  const nopeOp = useTransform(x, [-140, -30], [1, 0]);
+function Card({ person: p, depth, open, setOpen }: { person: Person; depth: number; open: boolean; setOpen: (b: boolean) => void }) {
   const top = depth === 0;
-
-  const onEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x > 120 || info.velocity.x > 600) { animate(x, 600, { duration: 0.3 }); onDecide(p, true); }
-    else if (info.offset.x < -120 || info.velocity.x < -600) { animate(x, -600, { duration: 0.3 }); onDecide(p, false); }
-    else animate(x, 0, { type: "spring", stiffness: 400, damping: 30 });
-  };
 
   return (
     <motion.article
-      className="absolute inset-0 overflow-hidden rounded-[2rem] bg-card shadow-float"
-      style={{ x: top ? x : 0, rotate: top ? rotate : 0, zIndex: 10 - depth }}
+      className="absolute inset-0 overflow-hidden rounded-[2rem] bg-card text-white shadow-float"
+      style={{ zIndex: 10 - depth }}
       initial={{ scale: 0.9, y: 30, opacity: 0 }}
       animate={{ scale: 1 - depth * 0.05, y: depth * 16, opacity: depth > 1 ? 0.6 : 1 }}
-      exit={{ x: x.get() >= 0 ? 500 : -500, opacity: 0, rotate: x.get() >= 0 ? 20 : -20, transition: { duration: 0.35 } }}
+      exit={{ y: -38, opacity: 0, scale: 0.94, transition: { duration: 0.28 } }}
       transition={{ type: "spring", stiffness: 260, damping: 26 }}
-      drag={top && !open ? "x" : false}
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.9}
-      onDragEnd={onEnd}
     >
       <div className="absolute inset-0 overflow-hidden">
         <img src={photo(p)} alt={`${p.name}, illustrative profile`} draggable={false} className={`h-full w-full object-cover ${top ? "animate-drift" : ""}`} style={{ objectPosition: "center 30%" }} />
       </div>
       <div className="bg-scrim absolute inset-0" />
-      {top && (
-        <>
-          <motion.div style={{ opacity: likeOp }} className="absolute left-6 top-8 -rotate-12 rounded-xl border-4 border-primary px-3 py-1 font-display text-3xl font-extrabold text-primary">LIKE</motion.div>
-          <motion.div style={{ opacity: nopeOp }} className="absolute right-6 top-8 rotate-12 rounded-xl border-4 border-foreground px-3 py-1 font-display text-3xl font-extrabold text-foreground">PASS</motion.div>
-        </>
-      )}
 
       <motion.div layout className="absolute inset-x-0 bottom-0 p-6" transition={{ type: "spring", stiffness: 300, damping: 32 }}>
         <motion.div layout="position">
-          <h2 className="text-4xl font-extrabold">{p.name} <span className="font-sans text-2xl font-normal text-muted-foreground">{p.age}</span></h2>
-          <p className="mt-1 flex items-center gap-1 text-sm text-muted-foreground"><MapPin className="h-3.5 w-3.5" />{p.town} · {p.job}</p>
+          <h2 className="text-4xl font-extrabold">{p.name} <span className="font-sans text-2xl font-normal text-white/75">{p.age}</span></h2>
+          <p className="mt-1 flex items-center gap-1 text-sm text-white/80"><MapPin className="h-3.5 w-3.5" />{p.town} · {p.job}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {p.tags.map((t, i) => (
-              <motion.span key={t} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.06 }} className="glass rounded-full px-3 py-1 text-xs">{t}</motion.span>
+              <motion.span key={t} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.06 }} className="profile-glass rounded-full px-3 py-1 text-xs">{t}</motion.span>
             ))}
           </div>
         </motion.div>
@@ -152,12 +132,12 @@ function Card({ person: p, depth, onDecide, open, setOpen }: { person: Person; d
                 <p className="text-xs font-semibold uppercase tracking-widest opacity-70">{p.prompt}</p>
                 <p className="mt-1 font-display text-lg font-bold leading-snug">{p.answer}</p>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">Looking for: {p.intent}</p>
+              <p className="mt-3 text-xs text-white/75">Looking for: {p.intent}</p>
             </motion.div>
           )}
         </AnimatePresence>
         {top && (
-          <button onClick={() => setOpen(!open)} className="mt-4 flex w-full items-center justify-center gap-1 text-xs font-medium text-muted-foreground">
+          <button onClick={() => setOpen(!open)} className="mt-4 flex w-full items-center justify-center gap-1 text-xs font-medium text-white/80">
             <motion.span animate={{ rotate: open ? 180 : 0 }}><ChevronUp className="h-4 w-4" /></motion.span>{open ? "Less" : "More about " + p.name}
           </button>
         )}
@@ -184,7 +164,7 @@ function IconBtn({ children, onClick, disabled, label }: { children: React.React
 function RoundBtn({ children, onClick, label, primary, size, active }: { children: React.ReactNode; onClick: () => void; label: string; primary?: boolean; size: "md" | "lg"; active?: boolean }) {
   return (
     <motion.button aria-label={label} onClick={onClick} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.85 }}
-      className={`flex items-center justify-center rounded-full ${size === "lg" ? "h-[4.5rem] w-[4.5rem]" : "h-14 w-14"} ${primary ? "bg-primary text-primary-foreground shadow-glow" : `border border-border bg-card ${active ? "text-accent" : "text-foreground"}`}`}>
+      className={`flex items-center justify-center rounded-full ${size === "lg" ? "h-[4.5rem] w-[4.5rem]" : "h-14 w-14"} ${primary ? "bg-primary text-primary-foreground shadow-glow" : `border border-border bg-card ${active ? "text-primary" : "text-foreground"}`}`}>
       {children}
     </motion.button>
   );
