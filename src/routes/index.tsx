@@ -65,7 +65,7 @@ function Home() {
         )}
       </AnimatePresence>
 
-      <div className="relative mx-4 mt-4 h-[68vh] min-h-[480px]">
+      <div className="relative mx-4 mt-4 h-[calc(100svh-280px)] min-h-[300px] max-h-[580px]">
         <AnimatePresence>
           {deck.slice(0, 3).reverse().map((p) => (
             <Card key={p.id} person={p} depth={deck.indexOf(p)} open={open && p === current} setOpen={setOpen} />
