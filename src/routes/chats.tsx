@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Send, MessagesSquare } from "lucide-react";
+import type { FormEvent } from "react";
+import { ArrowLeft, CalendarDays, Check, MapPin, Send, MessagesSquare } from "lucide-react";
 import { people, photo, update, useStore, timeAgo } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
@@ -137,6 +138,12 @@ function Chats() {
 }
 
 type MatchRow = { id: string; user_a: string; user_b: string; created_at: string };
+
+function toDateTimeLocal(value: string) {
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
 type MessageRow = {
   id: string;
   match_id: string;
@@ -331,6 +338,27 @@ function LiveThread({
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [notice, setNotice] = useState("");
+  const [planFormOpen, setPlanFormOpen] = useState(false);
+  const [planNotice, setPlanNotice] = useState("");
+  const [activity, setActivity] = useState("");
+  const [venueName, setVenueName] = useState("");
+  const [town, setTown] = useState(person.town);
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [planNote, setPlanNote] = useState("");
+  const datePlanQuery = useQuery({
+    queryKey: ["date-plan", match.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("date_plans")
+        .select(
+          "match_id,proposed_by,activity,venue_name,town,scheduled_at,note,confirmed_a,confirmed_b,created_at,updated_at",
+        )
+        .eq("match_id", match.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
   const messageQuery = useQuery({
     queryKey: ["messages", match.id],
     queryFn: async () => {
@@ -357,6 +385,11 @@ function LiveThread({
           void client.invalidateQueries({ queryKey: ["messages", match.id] });
           void client.invalidateQueries({ queryKey: ["matches", userId] });
         },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "date_plans", filter: `match_id=eq.${match.id}` },
+        () => void client.invalidateQueries({ queryKey: ["date-plan", match.id] }),
       )
       .subscribe();
     return () => {
@@ -413,6 +446,56 @@ function LiveThread({
     a.created_at.localeCompare(b.created_at),
   );
   const shared = person.tags ?? [];
+  const datePlan = datePlanQuery.data;
+  const amUserA = userId === match.user_a;
+  const myConfirmed = datePlan ? (amUserA ? datePlan.confirmed_a : datePlan.confirmed_b) : false;
+  const theirConfirmed = datePlan ? (amUserA ? datePlan.confirmed_b : datePlan.confirmed_a) : false;
+  const editPlan = () => {
+    if (datePlan) {
+      setActivity(datePlan.activity);
+      setVenueName(datePlan.venue_name);
+      setTown(datePlan.town);
+      setScheduledAt(datePlan.scheduled_at ? toDateTimeLocal(datePlan.scheduled_at) : "");
+      setPlanNote(datePlan.note);
+    }
+    setPlanNotice("");
+    setPlanFormOpen(true);
+  };
+  const savePlan = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setPlanNotice("");
+    const details = {
+      activity: activity.trim(),
+      venue_name: venueName.trim(),
+      town: town.trim(),
+      scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+      note: planNote.trim(),
+    };
+    const result = datePlan
+      ? await supabase.from("date_plans").update(details).eq("match_id", match.id)
+      : await supabase
+          .from("date_plans")
+          .insert({ ...details, match_id: match.id, proposed_by: userId });
+    if (result.error) {
+      setPlanNotice("We couldn't save this plan. Refresh and try again.");
+      return;
+    }
+    setPlanFormOpen(false);
+    await client.invalidateQueries({ queryKey: ["date-plan", match.id] });
+  };
+  const confirmPlan = async () => {
+    if (!datePlan) return;
+    setPlanNotice("");
+    const { error } = await supabase
+      .from("date_plans")
+      .update(amUserA ? { confirmed_a: !myConfirmed } : { confirmed_b: !myConfirmed })
+      .eq("match_id", match.id);
+    if (error) {
+      setPlanNotice("We couldn't update your response. Please try again.");
+      return;
+    }
+    await client.invalidateQueries({ queryKey: ["date-plan", match.id] });
+  };
 
   return (
     <motion.div
@@ -453,6 +536,133 @@ function LiveThread({
             <>You both chose to connect.</>
           )}
         </div>
+        <section
+          aria-label="Date plan"
+          className="mb-5 rounded-2xl border border-border bg-background p-4"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="font-semibold">Make a plan</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                A simple plan, agreed on by both of you.
+              </p>
+            </div>
+            <button
+              onClick={editPlan}
+              disabled={datePlanQuery.isLoading || datePlanQuery.isError}
+              className="rounded-full bg-secondary px-4 py-2 text-sm font-semibold"
+            >
+              {datePlan ? "Edit" : "Suggest"}
+            </button>
+          </div>
+          {datePlan && (
+            <div className="mt-3 border-t border-border pt-3">
+              <p className="font-medium">
+                {datePlan.activity}
+                {datePlan.venue_name ? ` · ${datePlan.venue_name}` : ""}
+              </p>
+              <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" /> {datePlan.town}
+                {datePlan.scheduled_at && (
+                  <>
+                    <span>·</span>
+                    <CalendarDays className="h-4 w-4" />
+                    {new Intl.DateTimeFormat(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(datePlan.scheduled_at))}
+                  </>
+                )}
+              </p>
+              {datePlan.note && (
+                <p className="mt-2 text-sm text-muted-foreground">{datePlan.note}</p>
+              )}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => void confirmPlan()}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium ${myConfirmed ? "bg-primary text-primary-foreground" : "bg-secondary"}`}
+                >
+                  {myConfirmed && <Check className="h-4 w-4" />}
+                  {myConfirmed ? "You're in" : "I'm in"}
+                </button>
+                <span className="text-xs text-muted-foreground">
+                  {theirConfirmed ? "They’re in too" : "Waiting for their reply"}
+                </span>
+              </div>
+            </div>
+          )}
+          {planFormOpen && (
+            <form
+              onSubmit={(event) => void savePlan(event)}
+              className="mt-4 space-y-3 border-t border-border pt-4"
+            >
+              <input
+                required
+                minLength={2}
+                maxLength={80}
+                value={activity}
+                onChange={(event) => setActivity(event.target.value)}
+                placeholder="What would you like to do?"
+                className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+              <input
+                maxLength={120}
+                value={venueName}
+                onChange={(event) => setVenueName(event.target.value)}
+                placeholder="Venue (optional)"
+                className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  value={town}
+                  onChange={(event) => setTown(event.target.value)}
+                  placeholder="Town"
+                  className="min-w-0 rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(event) => setScheduledAt(event.target.value)}
+                  className="min-w-0 rounded-xl bg-secondary px-2 py-2.5 text-xs outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <textarea
+                maxLength={300}
+                value={planNote}
+                onChange={(event) => setPlanNote(event.target.value)}
+                placeholder="Add a note (optional)"
+                rows={2}
+                className="w-full resize-none rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground">
+                Choose a public place. Both confirmations reset if the plan changes.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPlanFormOpen(false)}
+                  className="rounded-full px-4 py-2 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+                >
+                  Save plan
+                </button>
+              </div>
+            </form>
+          )}
+          {(planNotice || datePlanQuery.isError) && (
+            <p role="status" className="mt-3 text-xs text-destructive">
+              {planNotice || "Date planning is temporarily unavailable."}
+            </p>
+          )}
+        </section>
         {messageQuery.isLoading ? (
           <p className="text-center text-sm text-muted-foreground">Loading messages…</p>
         ) : (

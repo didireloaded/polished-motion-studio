@@ -15,6 +15,13 @@
       "when": 1793281733190,
       "tag": "0001_profile_voice_intro",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793281733191,
+      "tag": "0002_match_date_plans",
+      "breakpoints": true
     }
   ]
 }

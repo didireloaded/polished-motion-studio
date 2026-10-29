@@ -47,6 +47,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      date_plans: {
+        Row: {
+          activity: string;
+          confirmed_a: boolean;
+          confirmed_b: boolean;
+          created_at: string;
+          match_id: string;
+          note: string;
+          proposed_by: string;
+          scheduled_at: string | null;
+          town: string;
+          updated_at: string;
+          venue_name: string;
+        };
+        Insert: {
+          activity: string;
+          confirmed_a?: boolean;
+          confirmed_b?: boolean;
+          created_at?: string;
+          match_id: string;
+          note?: string;
+          proposed_by: string;
+          scheduled_at?: string | null;
+          town: string;
+          updated_at?: string;
+          venue_name?: string;
+        };
+        Update: {
+          activity?: string;
+          confirmed_a?: boolean;
+          confirmed_b?: boolean;
+          created_at?: string;
+          match_id?: string;
+          note?: string;
+          proposed_by?: string;
+          scheduled_at?: string | null;
+          town?: string;
+          updated_at?: string;
+          venue_name?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "date_plans_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: true;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       matches: {
         Row: {
           created_at: string;
