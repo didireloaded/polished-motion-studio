@@ -23,6 +23,7 @@ export async function rankWithAi(apiKey: string, input: { me: unknown; candidate
   const result = streamText({
     model: provider.responses("openai/gpt-6-astra"),
     maxRetries: 0,
+    abortSignal: AbortSignal.timeout(12_000),
     instructions:
       "You rank dating profiles for compatibility. Only use refs from the candidate list. Pick up to 5 best matches. " +
       "For each, give one short, specific reason (max 20 words) grounded in the shared details. Never invent facts.",

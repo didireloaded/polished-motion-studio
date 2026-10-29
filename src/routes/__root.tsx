@@ -14,6 +14,8 @@ import { TabBar } from "../components/TabBar";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { startCrashReporting } from "../lib/telemetry";
+import { registerPwaWorker } from "../lib/push";
 
 function NotFoundComponent() {
   return (
@@ -124,6 +126,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    void startCrashReporting();
+    void registerPwaWorker().catch(() => undefined);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

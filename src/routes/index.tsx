@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 import { BrandLogo } from "@/components/BrandLogo";
+import { captureProductEvent } from "@/lib/telemetry";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -133,6 +134,7 @@ function Home() {
         setNotice(`Passed on ${p.name}.`);
         window.setTimeout(() => setNotice(""), 1500);
       }
+      if (liked) void captureProductEvent("like_sent");
       return true;
     }
     update((st) => {

@@ -8,6 +8,60 @@ export type Database = {
   };
   public: {
     Tables: {
+      notifications: {
+        Row: {
+          id: number;
+          user_id: string;
+          kind: "match" | "message" | "post_reply";
+          target_url: string;
+          created_at: string;
+          read_at: string | null;
+        };
+        Insert: {
+          id?: number;
+          user_id: string;
+          kind: "match" | "message" | "post_reply";
+          target_url: string;
+          created_at?: string;
+          read_at?: string | null;
+        };
+        Update: {
+          id?: number;
+          user_id?: string;
+          kind?: "match" | "message" | "post_reply";
+          target_url?: string;
+          created_at?: string;
+          read_at?: string | null;
+        };
+        Relationships: [];
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          endpoint?: string;
+          p256dh?: string;
+          auth?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       post_reactions: {
         Row: {
           post_id: string;

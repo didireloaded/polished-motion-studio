@@ -7,6 +7,7 @@ import { people, photo, update, useStore, timeAgo } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
+import { captureProductEvent } from "@/lib/telemetry";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 
@@ -594,6 +595,7 @@ function LiveThread({
       return;
     }
     await client.invalidateQueries({ queryKey: ["date-plan", match.id] });
+    if (!myConfirmed && theirConfirmed) void captureProductEvent("date_confirmed");
   };
 
   return (

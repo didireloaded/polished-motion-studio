@@ -805,6 +805,14 @@ function LiveProfile({
               </Link>
             </div>
           )}
+          {profile && (
+            <Link
+              to="/notifications"
+              className="mx-5 mb-5 flex justify-center rounded-full bg-secondary px-4 py-2.5 text-center text-xs font-semibold"
+            >
+              Notifications
+            </Link>
+          )}
           {!profile && (
             <p className="mx-5 mb-4 rounded-xl bg-secondary px-4 py-3 text-sm leading-5 text-muted-foreground">
               Complete your profile to appear in discovery. Only members who meet your preferences

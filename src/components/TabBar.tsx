@@ -22,6 +22,7 @@ export function TabBar() {
       "/safety",
       "/crossed-paths",
       "/date-plan",
+      "/notifications",
     ].includes(pathname)
   )
     return null;

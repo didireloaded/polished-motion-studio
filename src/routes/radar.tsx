@@ -22,6 +22,7 @@ import { VoiceIntroPlayer } from "@/components/voice-intro";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
+import { captureProductEvent } from "@/lib/telemetry";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
@@ -241,6 +242,7 @@ function NearbyPage() {
       return;
     }
     void client.invalidateQueries({ queryKey: ["event-interests", user.id] });
+    if (!interested) void captureProductEvent("event_interest");
   };
 
   const visibleEvents = user

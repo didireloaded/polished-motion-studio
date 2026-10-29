@@ -9,6 +9,8 @@ import {
   ShieldAlert,
   Users,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { analyticsConsent, productAnalyticsAvailable, setAnalyticsConsent } from "@/lib/telemetry";
 
 export const Route = createFileRoute("/safety")({
   head: () => ({ meta: [{ title: "Safety and privacy — Mutal" }] }),
@@ -51,6 +53,8 @@ const items = [
 ];
 
 function Safety() {
+  const [analyticsAllowed, setAnalyticsAllowed] = useState(false);
+  useEffect(() => setAnalyticsAllowed(analyticsConsent()), []);
   return (
     <main className="mx-auto min-h-svh max-w-md bg-white pb-10">
       <header className="flex h-14 items-center gap-3 px-5">
@@ -83,6 +87,25 @@ function Safety() {
           </li>
         ))}
       </ul>
+      {productAnalyticsAvailable && (
+        <label className="mx-4 mt-4 flex items-center justify-between gap-4 rounded-[14px] border border-border p-4">
+          <span>
+            <span className="block text-sm font-semibold">Help improve Mutal</span>
+            <span className="mt-1 block text-xs leading-4 text-muted-foreground">
+              Share anonymous feature-use counts. No profile, message, or location content is sent.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-5 w-5 shrink-0 accent-primary"
+            checked={analyticsAllowed}
+            onChange={(event) => {
+              setAnalyticsAllowed(event.target.checked);
+              void setAnalyticsConsent(event.target.checked);
+            }}
+          />
+        </label>
+      )}
       <div className="mx-4 mt-6 flex gap-3 rounded-[14px] bg-secondary p-4">
         <LockKeyhole className="h-5 w-5 shrink-0 text-muted-foreground" />
         <p className="text-xs leading-5 text-muted-foreground">

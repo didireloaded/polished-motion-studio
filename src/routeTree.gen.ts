@@ -15,6 +15,7 @@ import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as CrossedPathsRouteImport } from './routes/crossed-paths'
 import { Route as DatePlanRouteImport } from './routes/date-plan'
 import { Route as ModerationRouteImport } from './routes/moderation'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PostsRouteImport } from './routes/posts'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as SafetyRouteImport } from './routes/safety'
@@ -50,6 +51,11 @@ const DatePlanRoute = DatePlanRouteImport.update({
 const ModerationRoute = ModerationRouteImport.update({
   id: '/moderation',
   path: '/moderation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PostsRoute = PostsRouteImport.update({
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
   '/moderation': typeof ModerationRoute
+  '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
   '/safety': typeof SafetyRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
   '/moderation': typeof ModerationRoute
+  '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
   '/safety': typeof SafetyRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
   '/moderation': typeof ModerationRoute
+  '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
   '/safety': typeof SafetyRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/crossed-paths'
     | '/date-plan'
     | '/moderation'
+    | '/notifications'
     | '/posts'
     | '/radar'
     | '/safety'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/crossed-paths'
     | '/date-plan'
     | '/moderation'
+    | '/notifications'
     | '/posts'
     | '/radar'
     | '/safety'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/crossed-paths'
     | '/date-plan'
     | '/moderation'
+    | '/notifications'
     | '/posts'
     | '/radar'
     | '/safety'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   CrossedPathsRoute: typeof CrossedPathsRoute
   DatePlanRoute: typeof DatePlanRoute
   ModerationRoute: typeof ModerationRoute
+  NotificationsRoute: typeof NotificationsRoute
   PostsRoute: typeof PostsRoute
   RadarRoute: typeof RadarRoute
   SafetyRoute: typeof SafetyRoute
@@ -228,6 +241,13 @@ declare module '@tanstack/react-router' {
       path: '/moderation'
       fullPath: '/moderation'
       preLoaderRoute: typeof ModerationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts': {
@@ -282,6 +302,7 @@ const rootRouteChildren: RootRouteChildren = {
   CrossedPathsRoute: CrossedPathsRoute,
   DatePlanRoute: DatePlanRoute,
   ModerationRoute: ModerationRoute,
+  NotificationsRoute: NotificationsRoute,
   PostsRoute: PostsRoute,
   RadarRoute: RadarRoute,
   SafetyRoute: SafetyRoute,
