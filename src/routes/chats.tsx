@@ -20,7 +20,7 @@ export const Route = createFileRoute("/chats")({
 function Chats() {
   const s = useStore();
   const [openId, setOpenId] = useState<string | null>(null);
-  const list = people.filter((p) => s.liked.includes(p.id));
+  const list = people.filter((p) => s.matches.includes(p.id));
   const person = list.find((p) => p.id === openId);
 
   return (
@@ -28,12 +28,12 @@ function Chats() {
       <AnimatePresence mode="wait">
         {!person ? (
           <motion.div key="list" initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-            <PageHeader eyebrow="Connections" title="Chats" />
+            <PageHeader title="Chats" />
             {list.length === 0 ? (
               <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
                 <motion.div initial={{ opacity: 0, scale: 0.82 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: "spring", stiffness: 320, damping: 24 }} className="rounded-full bg-primary/15 p-4 text-primary"><MessagesSquare className="h-7 w-7" /></motion.div>
                 <p className="mt-4 font-semibold">No chats yet</p>
-                <p className="mt-1 text-sm text-muted-foreground">Like someone on Home to start a conversation.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Chats appear after you both choose to connect.</p>
                 <Link to="/" className="mt-5 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-glow">Discover people</Link>
               </div>
             ) : (
@@ -55,7 +55,7 @@ function Chats() {
                           <img src={photo(p, true)} alt="" className="h-12 w-12 rounded-full object-cover" />
                           <div className="min-w-0 flex-1">
                             <div className="flex justify-between"><p className="font-semibold">{p.name}</p>{last && <span className="text-xs text-muted-foreground">{timeAgo(last.at)}</span>}</div>
-                            <p className="truncate text-sm text-muted-foreground">{last ? last.text : "You liked each other's vibe. Say hi 👋"}</p>
+                            <p className="truncate text-sm text-muted-foreground">{last ? last.text : "You both chose to connect. Say hello."}</p>
                           </div>
                         </button>
                       </motion.li>

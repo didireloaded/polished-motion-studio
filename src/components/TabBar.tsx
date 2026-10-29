@@ -19,11 +19,8 @@ export function TabBar() {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
           return (
             <li key={to}>
-              <Link to={to} className="relative flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-[11px] font-medium">
-                {active && (
-                  <motion.span layoutId="tab-pill" className="absolute inset-0 rounded-full bg-primary/15" transition={{ type: "spring", stiffness: 500, damping: 35 }} />
-                )}
-                <motion.span whileTap={{ scale: 0.8 }} className={active ? "relative text-primary" : "relative text-muted-foreground"}>
+              <Link to={to} aria-current={active ? "page" : undefined} className="relative flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-[11px] font-medium">
+                <motion.span whileTap={{ scale: 0.9 }} className={active ? "relative text-primary" : "relative text-muted-foreground"}>
                   <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />
                 </motion.span>
                 <span className={active ? "relative text-foreground" : "relative text-muted-foreground"}>{label}</span>
@@ -38,10 +35,10 @@ export function TabBar() {
 
 export function PageHeader({ eyebrow, title, right }: { eyebrow?: string; title: string; right?: React.ReactNode }) {
   return (
-    <motion.header initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="flex items-end justify-between px-5 pb-4 pt-8">
+    <motion.header initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} className="flex min-h-[64px] items-center justify-between px-5 pb-3 pt-4">
       <div>
-        {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">{eyebrow}</p>}
-        <h1 className="mt-1 text-3xl font-extrabold">{title}</h1>
+        <h1 className="text-[25px] font-bold tracking-[-0.03em]">{title}</h1>
+        {eyebrow && <p className="mt-0.5 text-xs text-muted-foreground">{eyebrow}</p>}
       </div>
       {right}
     </motion.header>

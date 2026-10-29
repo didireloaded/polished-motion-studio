@@ -1,16 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart, X, Bookmark, Undo2, SlidersHorizontal, MapPin, Sparkles, ChevronUp } from "lucide-react";
+import { ArrowLeft, Bookmark, ChevronUp, Heart, MapPin, SlidersHorizontal, X } from "lucide-react";
 import { useMemo, useState } from "react";
-import { people, photo, towns, update, useStore, toggle, type Person } from "@/lib/namlink";
+import {
+  Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle,
+} from "@/components/ui/drawer";
+import { people, photo, sampleChoices, towns, update, useStore, toggle, type Person } from "@/lib/namlink";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NamLink — Meet someone a little closer" },
-      { name: "description", content: "Discover people across Namibia, one thoughtful profile at a time." },
-      { property: "og:title", content: "NamLink — Meet someone a little closer" },
-      { property: "og:description", content: "Discover people across Namibia, one thoughtful profile at a time." },
+      { title: "Discover — NamLink" },
+      { name: "description", content: "Discover people across Namibia." },
+      { property: "og:title", content: "Discover — NamLink" },
     ],
   }),
   component: Home,
@@ -18,78 +20,99 @@ export const Route = createFileRoute("/")({
 
 function Home() {
   const s = useStore();
-  const [town, setTown] = useState<string>("All");
-  const [filters, setFilters] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [town, setTown] = useState("All");
+  const [maxAge, setMaxAge] = useState(45);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [detail, setDetail] = useState<Person | null>(null);
+  const [notice, setNotice] = useState("");
   const deck = useMemo(
-    () => people.filter((p) => !s.liked.includes(p.id) && !s.passed.includes(p.id) && (town === "All" || p.town === town)),
-    [s.liked, s.passed, town],
+    () => people.filter((p) =>
+      !s.liked.includes(p.id) && !s.passed.includes(p.id) &&
+      (town === "All" || p.town === town) && p.age <= maxAge,
+    ),
+    [s.liked, s.passed, town, maxAge],
   );
   const current = deck[0];
   const last = [...s.passed].pop();
 
   const decide = (p: Person, liked: boolean) => {
-    setOpen(false);
-    update((st) => liked
-      ? { ...st, liked: [...st.liked, p.id], chats: st.chats[p.id] ? st.chats : { ...st.chats, [p.id]: [] } }
-      : { ...st, passed: [...st.passed, p.id] });
-    if (liked) { setToast(p.name); setTimeout(() => setToast(null), 1800); }
+    update((st) => {
+      if (!liked) return { ...st, passed: [...st.passed, p.id] };
+      const matches = p.mutualInterest && !st.matches.includes(p.id) ? [...st.matches, p.id] : st.matches;
+      return {
+        ...st,
+        liked: [...st.liked, p.id],
+        matches,
+        chats: matches.includes(p.id) && !st.chats[p.id] ? { ...st.chats, [p.id]: [] } : st.chats,
+      };
+    });
+    const message = liked
+      ? p.mutualInterest ? "A sample match with " + p.name + ". Open Chats to say hello." : "Like sent to " + p.name + ". If they like you too, you’ll match."
+      : "You passed on " + p.name + ".";
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2400);
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-md pb-28">
-      <header className="flex items-center justify-between px-5 pt-6">
-        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="font-display text-2xl font-extrabold">
-          nam<span className="text-primary">link</span>
-        </motion.div>
-        <div className="flex gap-2">
-          <IconBtn onClick={() => last && update((st) => ({ ...st, passed: st.passed.slice(0, -1) }))} disabled={!last} label="Undo pass"><Undo2 className="h-4 w-4" /></IconBtn>
-          <IconBtn onClick={() => setFilters((f) => !f)} label="Filters"><SlidersHorizontal className="h-4 w-4" /></IconBtn>
+    <main className="discover-shell mx-auto flex h-[calc(100svh-76px-env(safe-area-inset-bottom))] min-h-[560px] max-w-[440px] flex-col px-3 pt-2">
+      <header className="flex h-12 shrink-0 items-center justify-between px-1">
+        <Link to="/" aria-label="NamLink home" className="text-[21px] font-bold tracking-[-0.04em] text-foreground">NamLink</Link>
+        <div className="flex items-center gap-2">
+          {last && <IconButton label="Undo last pass" onClick={() => update((st) => ({ ...st, passed: st.passed.slice(0, -1) }))}><ArrowLeft className="h-4 w-4" /></IconButton>}
+          <IconButton label="Open filters" onClick={() => setFiltersOpen(true)}><SlidersHorizontal className="h-[18px] w-[18px]" /></IconButton>
         </div>
       </header>
 
-      <AnimatePresence>
-        {filters && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-            <div className="no-scrollbar flex gap-2 overflow-x-auto px-5 pt-4">
-              {["All", ...towns].map((t, i) => (
-                <motion.button key={t} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-                  onClick={() => setTown(t)}
-                  className={`shrink-0 rounded-full border px-4 py-1.5 text-sm transition-colors ${town === t ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground"}`}>
-                  {t}
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="relative mx-4 mt-4 h-[calc(100svh-280px)] min-h-[300px] max-h-[580px]">
-        <AnimatePresence>
-          {deck.slice(0, 3).reverse().map((p) => (
-            <Card key={p.id} person={p} depth={deck.indexOf(p)} open={open && p === current} setOpen={setOpen} />
+      <section aria-label="Discover sample profiles" className="relative mt-1 min-h-0 flex-1">
+        <AnimatePresence initial={false}>
+          {deck.slice(0, 2).reverse().map((person) => (
+            <ProfileCard key={person.id} person={person} depth={deck.indexOf(person)} onDetails={() => setDetail(person)} />
           ))}
         </AnimatePresence>
-        {!current && <Empty onReset={() => { setTown("All"); update((st) => ({ ...st, passed: [] })); }} />}
-      </div>
+        {!current && <Empty onReset={() => { setTown("All"); setMaxAge(45); update((st) => ({ ...st, passed: [] })); }} />}
+      </section>
 
       {current && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-5 flex items-center justify-center gap-5">
-          <RoundBtn size="md" onClick={() => decide(current, false)} label="Pass"><X className="h-6 w-6" /></RoundBtn>
-          <RoundBtn size="lg" primary onClick={() => decide(current, true)} label="Like"><Heart className="h-7 w-7" fill="currentColor" /></RoundBtn>
-          <RoundBtn size="md" onClick={() => update((st) => ({ ...st, saved: toggle(st.saved, current.id) }))} label="Save" active={s.saved.includes(current.id)}>
+        <div className="flex h-[76px] shrink-0 items-center justify-center gap-5">
+          <RoundButton label={"Pass on " + current.name} onClick={() => decide(current, false)} tone="quiet"><X className="h-5 w-5" /></RoundButton>
+          <RoundButton label={"Like " + current.name} onClick={() => decide(current, true)} tone="like"><Heart className="h-6 w-6" fill="currentColor" /></RoundButton>
+          <RoundButton label={s.saved.includes(current.id) ? "Remove " + current.name + " from saved profiles" : "Save " + current.name} onClick={() => update((st) => ({ ...st, saved: toggle(st.saved, current.id) }))} tone="quiet">
             <Bookmark className="h-5 w-5" fill={s.saved.includes(current.id) ? "currentColor" : "none"} />
-          </RoundBtn>
-        </motion.div>
+          </RoundButton>
+        </div>
       )}
 
+      <Drawer open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <DrawerContent className="mx-auto max-h-[82svh] max-w-[440px] rounded-t-[26px] border-border bg-card px-5 pb-[calc(20px+env(safe-area-inset-bottom))]">
+          <DrawerHeader className="flex flex-row items-start justify-between px-0 pb-4 text-left">
+            <div><DrawerTitle className="text-xl">Filters</DrawerTitle><DrawerDescription>Choose who appears in Discover.</DrawerDescription></div>
+            <DrawerClose aria-label="Close filters" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border p-2 text-muted-foreground"><X className="h-4 w-4" /></DrawerClose>
+          </DrawerHeader>
+          <label className="text-sm font-semibold" htmlFor="town-filter">Town</label>
+          <select id="town-filter" value={town} onChange={(e) => setTown(e.target.value)} className="input mt-2">
+            <option value="All">All Namibia</option>
+            {towns.map((place) => <option key={place}>{place}</option>)}
+          </select>
+          <div className="mt-6 flex items-center justify-between">
+            <label htmlFor="age-filter" className="text-sm font-semibold">Maximum age</label>
+            <span className="text-sm text-muted-foreground">18–{maxAge}</span>
+          </div>
+          <input id="age-filter" aria-label="Maximum age" type="range" min="18" max="45" value={maxAge} onChange={(e) => setMaxAge(Number(e.target.value))} className="mt-3 w-full accent-primary" />
+          <button onClick={() => setFiltersOpen(false)} className="mt-6 h-12 w-full rounded-2xl bg-primary text-sm font-semibold text-primary-foreground">Show profiles</button>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
+        <DrawerContent className="mx-auto max-h-[88svh] max-w-[440px] overflow-y-auto rounded-t-[26px] border-border bg-card px-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
+          {detail && <ProfileDetails person={detail} />}
+        </DrawerContent>
+      </Drawer>
+
       <AnimatePresence>
-        {toast && (
-          <motion.div initial={{ opacity: 0, scale: 0.6, y: 40 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -20 }}
-            transition={{ type: "spring", stiffness: 400, damping: 22 }}
-            className="glass fixed left-1/2 top-24 z-50 -translate-x-1/2 rounded-full border border-border px-5 py-3 text-sm shadow-float">
-            <Sparkles className="mr-2 inline h-4 w-4 text-primary" />You liked {toast} — say hi in <Link to="/chats" className="font-semibold text-primary">Chats</Link>
+        {notice && (
+          <motion.div role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+            className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-40 w-[min(92vw,400px)] -translate-x-1/2 rounded-2xl border border-border bg-card px-4 py-3 text-center text-sm shadow-float">
+            {notice}
           </motion.div>
         )}
       </AnimatePresence>
@@ -97,74 +120,87 @@ function Home() {
   );
 }
 
-function Card({ person: p, depth, open, setOpen }: { person: Person; depth: number; open: boolean; setOpen: (b: boolean) => void }) {
+function ProfileCard({ person, depth, onDetails }: {
+  person: Person; depth: number; onDetails: () => void;
+}) {
   const top = depth === 0;
-
   return (
-    <motion.article
-      className="absolute inset-0 overflow-hidden rounded-[2rem] bg-card text-white shadow-float"
+    <motion.article aria-label={"Sample profile, " + person.name + ", " + person.age + ", " + person.town}
+      className="absolute inset-0 overflow-hidden rounded-[22px] bg-secondary text-white shadow-float"
       style={{ zIndex: 10 - depth }}
-      initial={{ scale: 0.9, y: 30, opacity: 0 }}
-      animate={{ scale: 1 - depth * 0.05, y: depth * 16, opacity: depth > 1 ? 0.6 : 1 }}
-      exit={{ y: -38, opacity: 0, scale: 0.94, transition: { duration: 0.28 } }}
-      transition={{ type: "spring", stiffness: 260, damping: 26 }}
-    >
-      <div className="absolute inset-0 overflow-hidden">
-        <img src={photo(p)} alt={`${p.name}, illustrative profile`} draggable={false} className={`h-full w-full object-cover ${top ? "animate-drift" : ""}`} style={{ objectPosition: "center 30%" }} />
-      </div>
-      <div className="bg-scrim absolute inset-0" />
-
-      <motion.div layout className="absolute inset-x-0 bottom-0 p-6" transition={{ type: "spring", stiffness: 300, damping: 32 }}>
-        <motion.div layout="position">
-          <h2 className="text-4xl font-extrabold">{p.name} <span className="font-sans text-2xl font-normal text-white/75">{p.age}</span></h2>
-          <p className="mt-1 flex items-center gap-1 text-sm text-white/80"><MapPin className="h-3.5 w-3.5" />{p.town} · {p.job}</p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {p.tags.map((t, i) => (
-              <motion.span key={t} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 + i * 0.06 }} className="profile-glass rounded-full px-3 py-1 text-xs">{t}</motion.span>
-            ))}
-          </div>
-        </motion.div>
-        <AnimatePresence>
-          {open && (
-            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-              <p className="mt-4 text-[15px] leading-relaxed">{p.bio}</p>
-              <div className="mt-4 rounded-2xl bg-accent p-4 text-accent-foreground">
-                <p className="text-xs font-semibold uppercase tracking-widest opacity-70">{p.prompt}</p>
-                <p className="mt-1 font-display text-lg font-bold leading-snug">{p.answer}</p>
+      initial={{ scale: 0.96, y: 12, opacity: 0 }}
+      animate={{ scale: 1 - depth * 0.025, y: depth * 10, opacity: depth ? 0.72 : 1 }}
+      exit={{ y: -18, opacity: 0, scale: 0.97, transition: { duration: 0.22 } }}
+      transition={{ type: "spring", stiffness: 260, damping: 28 }}>
+      <img src={photo(person)} alt={"Sample profile photo of " + person.name} draggable={false}
+        className="absolute inset-0 h-full w-full select-none object-cover" style={{ objectPosition: person.photoPosition ?? "center 34%" }} />
+      <div className="absolute inset-0 bg-scrim" aria-hidden="true" />
+      {top && (
+        <>
+          <span className="absolute left-4 top-4 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm">Sample profile</span>
+          <div className="absolute inset-x-0 bottom-0 px-5 pb-5 pt-20">
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="truncate text-[30px] font-bold leading-tight tracking-[-0.035em]">{person.name}<span className="ml-2 text-[23px] font-medium text-white/85">{person.age}</span></h1>
+                <p className="mt-1 flex items-center gap-1.5 text-[14px] text-white/90">
+                  <MapPin className="h-4 w-4 shrink-0" />{person.town}<span aria-hidden="true">·</span><span className="truncate">{person.job}</span>
+                </p>
               </div>
-              <p className="mt-3 text-xs text-white/75">Looking for: {p.intent}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        {top && (
-          <button onClick={() => setOpen(!open)} className="mt-4 flex w-full items-center justify-center gap-1 text-xs font-medium text-white/80">
-            <motion.span animate={{ rotate: open ? 180 : 0 }}><ChevronUp className="h-4 w-4" /></motion.span>{open ? "Less" : "More about " + p.name}
-          </button>
-        )}
-      </motion.div>
+              <motion.button type="button" aria-label={"More about " + person.name} onClick={onDetails}
+                whileTap={{ scale: 0.9 }} className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                <motion.span animate={{ y: [0, -2, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}><ChevronUp className="h-5 w-5" /></motion.span>
+              </motion.button>
+            </div>
+          </div>
+        </>
+      )}
     </motion.article>
+  );
+}
+
+function ProfileDetails({ person }: { person: Person }) {
+  const answer = sampleChoices[person.id];
+  return (
+    <div className="pb-2">
+      <DrawerHeader className="flex flex-row items-start justify-between px-0 pb-4 text-left">
+        <div><p className="text-xs font-medium text-muted-foreground">Sample profile · {person.town}</p>
+          <DrawerTitle className="mt-1 text-[26px] font-bold tracking-tight">{person.name}, {person.age}</DrawerTitle>
+          <DrawerDescription className="mt-1">{person.job}</DrawerDescription></div>
+        <DrawerClose aria-label="Close profile details" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border p-2 text-muted-foreground"><X className="h-4 w-4" /></DrawerClose>
+      </DrawerHeader>
+      <div className="space-y-5">
+        <section><h3 className="text-sm font-semibold">A little about {person.name}</h3><p className="mt-2 text-[15px] leading-6 text-muted-foreground">{person.bio}</p></section>
+        <section className="rounded-2xl bg-secondary p-4"><p className="text-xs font-semibold text-muted-foreground">{person.prompt}</p><p className="mt-2 text-[16px] font-medium leading-6">{person.answer}</p></section>
+        <section><h3 className="text-sm font-semibold">Looking for</h3><p className="mt-1 text-sm text-muted-foreground">{person.intent}</p></section>
+        {answer && <section><h3 className="text-sm font-semibold">This or that</h3><div className="mt-2 rounded-2xl bg-secondary p-4"><p className="text-xs text-muted-foreground">{answer.prompt}</p><p className="mt-1 text-sm font-medium">{answer.answer}</p></div></section>}
+        <section><h3 className="text-sm font-semibold">Interests</h3><div className="mt-2 flex flex-wrap gap-2">{person.tags.map((tag) => <span key={tag} className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium">{tag}</span>)}</div></section>
+        <p className="border-t border-border pt-4 text-xs text-muted-foreground">Illustrative profile details for this preview.</p>
+      </div>
+    </div>
   );
 }
 
 function Empty({ onReset }: { onReset: () => void }) {
   return (
-    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="flex h-full flex-col items-center justify-center rounded-[2rem] border border-dashed border-border text-center">
-      <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="mb-4 rounded-full bg-primary/15 p-5 text-primary"><Heart className="h-8 w-8" /></motion.div>
-      <h2 className="text-2xl font-extrabold">You've seen everyone</h2>
-      <p className="mt-2 max-w-60 text-sm text-muted-foreground">New people show up as they join. Bring back the ones you passed?</p>
-      <button onClick={onReset} className="mt-6 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow">Start over</button>
-    </motion.div>
+    <div className="flex h-full flex-col items-center justify-center rounded-[22px] border border-border bg-card px-7 text-center">
+      <Heart className="h-8 w-8 text-primary" />
+      <h2 className="mt-4 text-xl font-semibold">You’re all caught up</h2>
+      <p className="mt-2 max-w-[260px] text-sm leading-5 text-muted-foreground">Try a wider age range or another town to see more sample profiles.</p>
+      <button onClick={onReset} className="mt-5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">Reset filters</button>
+    </div>
   );
 }
 
-function IconBtn({ children, onClick, disabled, label }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; label: string }) {
-  return <motion.button whileTap={{ scale: 0.85 }} aria-label={label} disabled={disabled} onClick={onClick} className="rounded-full border border-border bg-card p-2.5 text-foreground disabled:opacity-30">{children}</motion.button>;
+function IconButton({ children, label, onClick }: { children: React.ReactNode; label: string; onClick: () => void }) {
+  return <button type="button" aria-label={label} onClick={onClick} className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{children}</button>;
 }
 
-function RoundBtn({ children, onClick, label, primary, size, active }: { children: React.ReactNode; onClick: () => void; label: string; primary?: boolean; size: "md" | "lg"; active?: boolean }) {
+function RoundButton({ children, label, onClick, tone }: { children: React.ReactNode; label: string; onClick: () => void; tone: "quiet" | "like" }) {
   return (
-    <motion.button aria-label={label} onClick={onClick} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.85 }}
-      className={`flex items-center justify-center rounded-full ${size === "lg" ? "h-[4.5rem] w-[4.5rem]" : "h-14 w-14"} ${primary ? "bg-primary text-primary-foreground shadow-glow" : `border border-border bg-card ${active ? "text-primary" : "text-foreground"}`}`}>
+    <motion.button type="button" aria-label={label} onClick={onClick} whileTap={{ scale: 0.9 }}
+      className={tone === "like"
+        ? "flex h-[60px] w-[60px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        : "flex h-[52px] w-[52px] items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"}>
       {children}
     </motion.button>
   );

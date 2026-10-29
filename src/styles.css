@@ -47,8 +47,8 @@
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
   --color-glass: var(--glass);
-  --font-display: "Syne", "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -104,7 +104,11 @@
   }
 }
 
-@layer base { body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; } h1,h2,h3 { font-family: var(--font-display); letter-spacing: -0.02em; } }
+@layer base {
+  html { min-width: 320px; background: var(--background); }
+  body { min-height: 100svh; font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+  h1,h2,h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
+}
 @utility bg-scrim { background: var(--scrim); }
 @utility shadow-float { box-shadow: var(--shadow-float); }
 @utility shadow-glow { box-shadow: var(--shadow-glow); }

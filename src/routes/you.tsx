@@ -1,17 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
-import { Check, Heart, Bookmark, MessagesSquare, RotateCcw } from "lucide-react";
+import { Bookmark, Camera, Check, Heart, Mic, MessagesSquare, RotateCcw, Square } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { interests, people, photo, towns, update, useStore, toggle } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
+
+const choices = [
+  { id: "weekend", prompt: "A free Saturday", options: ["A road trip", "A slow morning"] },
+  { id: "evening", prompt: "An evening out", options: ["Live music", "Dinner for two"] },
+  { id: "coffee", prompt: "My coffee order", options: ["Flat white", "Iced coffee"] },
+];
 
 export const Route = createFileRoute("/you")({
   head: () => ({
     meta: [
-      { title: "Your profile — NamLink" },
-      { name: "description", content: "Shape how you show up on NamLink." },
-      { property: "og:title", content: "Your profile — NamLink" },
-      { property: "og:description", content: "Shape how you show up on NamLink." },
+      { title: "You — NamLink" },
+      { name: "description", content: "Edit your NamLink profile and stories." },
+      { property: "og:title", content: "You — NamLink" },
     ],
   }),
   component: You,
@@ -22,78 +27,167 @@ function You() {
   const [f, setF] = useState(s.profile);
   const [saved, setSaved] = useState(false);
   const [adult, setAdult] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [voiceError, setVoiceError] = useState("");
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
+  const recorder = useRef<MediaRecorder | null>(null);
+  const recorderStream = useRef<MediaStream | null>(null);
+  const savedAudio = useRef<string | null>(null);
+  const savedSelfie = useRef<string | null>(null);
   useEffect(() => setF(s.profile), [s.profile]);
+  useEffect(() => () => {
+    recorder.current?.stop();
+    recorderStream.current?.getTracks().forEach((track) => track.stop());
+    if (savedAudio.current) URL.revokeObjectURL(savedAudio.current);
+    if (savedSelfie.current) URL.revokeObjectURL(savedSelfie.current);
+  }, []);
+
   const valid = f.name.trim().length >= 2 && f.age >= 18 && f.age <= 99 && adult;
-  const save = () => { if (!valid) return; update((st) => ({ ...st, profile: { ...f, name: f.name.trim(), bio: f.bio.slice(0, 500) } })); setSaved(true); setTimeout(() => setSaved(false), 1600); };
+  const save = () => {
+    if (!valid) return;
+    update((st) => ({ ...st, profile: { ...f, name: f.name.trim(), bio: f.bio.slice(0, 500) } }));
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1600);
+  };
   const savedPeople = people.filter((p) => s.saved.includes(p.id));
 
+  const beginRecording = async () => {
+    setVoiceError("");
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") throw new Error("Voice recording is not supported in this browser.");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recorderStream.current = stream;
+      const instance = new MediaRecorder(stream);
+      const chunks: BlobPart[] = [];
+      instance.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      instance.onstop = () => {
+        stream.getTracks().forEach((track) => track.stop());
+        recorderStream.current = null;
+        if (chunks.length) {
+          const url = URL.createObjectURL(new Blob(chunks, { type: instance.mimeType || "audio/webm" }));
+          if (savedAudio.current) URL.revokeObjectURL(savedAudio.current);
+          savedAudio.current = url;
+          setAudioUrl(url);
+        }
+        setRecording(false);
+      };
+      recorder.current = instance;
+      instance.start();
+      setRecording(true);
+    } catch {
+      setVoiceError("Microphone access was unavailable. Check browser permission and try again.");
+    }
+  };
+
+  const captureSelfie = (file?: File) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    if (savedSelfie.current) URL.revokeObjectURL(savedSelfie.current);
+    savedSelfie.current = url;
+    setSelfieUrl(url);
+  };
+
   const stats = [
-    { icon: Heart, n: s.liked.length, l: "Liked" },
-    { icon: Bookmark, n: s.saved.length, l: "Saved" },
-    { icon: MessagesSquare, n: Object.values(s.chats).filter((m) => m.length).length, l: "Chatting" },
+    { icon: Heart, number: s.liked.length, label: "Likes sent" },
+    { icon: Bookmark, number: s.saved.length, label: "Saved" },
+    { icon: MessagesSquare, number: s.matches.length, label: "Connections" },
   ];
 
   return (
-    <main className="mx-auto max-w-md pb-32">
-      <PageHeader eyebrow="Profile" title={s.profile.name ? `Hi, ${s.profile.name}` : "You"} />
-      <div className="grid grid-cols-3 gap-3 px-5">
-        {stats.map(({ icon: I, n, l }, i) => (
-          <motion.div key={l} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }} className="rounded-2xl bg-card p-4">
-            <I className="h-4 w-4 text-primary" />
-            <motion.p key={n} initial={{ scale: 1.4 }} animate={{ scale: 1 }} className="mt-2 font-display text-2xl font-extrabold">{n}</motion.p>
-            <p className="text-xs text-muted-foreground">{l}</p>
-          </motion.div>
+    <main className="mx-auto max-w-md pb-28">
+      <PageHeader title={s.profile.name ? s.profile.name : "You"} />
+      <div className="grid grid-cols-3 gap-2 px-5">
+        {stats.map(({ icon: Icon, number, label }) => (
+          <div key={label} className="rounded-2xl border border-border bg-card px-3 py-3">
+            <div className="flex items-center gap-2"><Icon className="h-4 w-4 text-primary" /><span className="text-lg font-semibold tabular-nums">{number}</span></div>
+            <p className="mt-1 text-[11px] text-muted-foreground">{label}</p>
+          </div>
         ))}
       </div>
 
       {savedPeople.length > 0 && (
         <section className="mt-6 px-5">
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-widest text-primary">Saved</h2>
+          <h2 className="mb-3 text-[15px] font-semibold">Saved profiles</h2>
           <div className="no-scrollbar flex gap-3 overflow-x-auto">
-            {savedPeople.map((p) => (
-              <motion.div key={p.id} whileHover={{ y: -4 }} className="relative h-40 w-28 shrink-0 overflow-hidden rounded-2xl">
-                <img src={photo(p, true)} alt="" className="h-full w-full object-cover" />
+            {savedPeople.map((person) => (
+              <div key={person.id} className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl">
+                <img src={photo(person, true)} alt={"Sample profile photo of " + person.name} className="h-full w-full object-cover" />
                 <div className="bg-scrim absolute inset-0" />
-                <p className="absolute bottom-2 left-2 text-sm font-semibold text-white">{p.name}</p>
-              </motion.div>
+                <p className="absolute bottom-2 left-2 text-sm font-semibold text-white">{person.name}</p>
+              </div>
             ))}
           </div>
         </section>
       )}
 
-      <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="mx-5 mt-6 space-y-4 rounded-3xl bg-card p-5">
+      <section className="mx-5 mt-5 space-y-4 rounded-2xl border border-border bg-card p-4">
+        <h2 className="text-[16px] font-semibold">Your profile</h2>
         <Field label="First name"><input value={f.name} maxLength={40} onChange={(e) => setF({ ...f, name: e.target.value })} className="input" /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Age"><input type="number" min={18} max={99} value={f.age} onChange={(e) => setF({ ...f, age: Number(e.target.value) })} className="input" /></Field>
-          <Field label="Town"><select value={f.town} onChange={(e) => setF({ ...f, town: e.target.value })} className="input">{towns.map((t) => <option key={t}>{t}</option>)}</select></Field>
+          <Field label="Town"><select value={f.town} onChange={(e) => setF({ ...f, town: e.target.value })} className="input">{towns.map((place) => <option key={place}>{place}</option>)}</select></Field>
         </div>
         <Field label="Looking for">
-          <div className="flex gap-2">{["A relationship", "Open to exploring"].map((i) => (
-            <button key={i} onClick={() => setF({ ...f, intent: i })} className={`flex-1 rounded-xl border py-2 text-sm transition-colors ${f.intent === i ? "border-primary bg-primary/15 text-foreground" : "border-border text-muted-foreground"}`}>{i}</button>
+          <div className="flex gap-2">{["A relationship", "Open to exploring"].map((intent) => (
+            <button key={intent} type="button" onClick={() => setF({ ...f, intent })} className={"flex-1 rounded-xl border px-2 py-2.5 text-xs font-medium " + (f.intent === intent ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground")}>{intent}</button>
           ))}</div>
         </Field>
         <Field label="About you"><textarea rows={3} maxLength={500} value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} className="input resize-none" /></Field>
         <Field label="Interests">
-          <div className="flex flex-wrap gap-2">{interests.map((t) => {
-            const on = f.tags.includes(t);
-            return (
-              <motion.button key={t} whileTap={{ scale: 0.9 }} onClick={() => setF({ ...f, tags: toggle(f.tags, t) })}
-                className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${on ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"}`}>{t}</motion.button>
-            );
+          <div className="flex flex-wrap gap-2">{interests.map((tag) => {
+            const selected = f.tags.includes(tag);
+            return <button key={tag} type="button" aria-pressed={selected} onClick={() => setF({ ...f, tags: toggle(f.tags, tag) })}
+              className={"rounded-full border px-3 py-1.5 text-xs " + (selected ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground")}>{tag}</button>;
           })}</div>
         </Field>
         <label className="flex items-center gap-3 text-sm text-muted-foreground">
-          <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="h-4 w-4 accent-primary" />I confirm I'm 18 or older
+          <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="h-4 w-4 accent-primary" />I confirm I’m 18 or older
         </label>
-        <motion.button whileTap={{ scale: 0.96 }} disabled={!valid} onClick={save} className="relative flex w-full items-center justify-center overflow-hidden rounded-full bg-primary py-3.5 font-semibold text-primary-foreground shadow-glow disabled:opacity-40 disabled:shadow-none">
-          <AnimatePresence mode="wait">
-            {saved ? <motion.span key="ok" initial={{ y: 20 }} animate={{ y: 0 }} exit={{ y: -20 }} className="flex items-center gap-2"><Check className="h-5 w-5" />Saved</motion.span>
-              : <motion.span key="s" initial={{ y: 20 }} animate={{ y: 0 }} exit={{ y: -20 }}>Save profile</motion.span>}
-          </AnimatePresence>
-        </motion.button>
-      </motion.section>
+        <button type="button" disabled={!valid} onClick={save} className="flex h-11 w-full items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground disabled:opacity-45">
+          <AnimatePresence mode="wait">{saved ? <motion.span key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2"><Check className="h-4 w-4" />Saved</motion.span> : <motion.span key="save">Save profile</motion.span>}</AnimatePresence>
+        </button>
+      </section>
 
-      <button onClick={() => { if (confirm("Reset likes, passes, saves and chats?")) update((st) => ({ ...st, liked: [], passed: [], saved: [], chats: {} })); }}
+      <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center justify-between"><div><h2 className="text-[16px] font-semibold">This or that</h2><p className="mt-1 text-xs text-muted-foreground">A few quick answers help people get to know you.</p></div></div>
+        <div className="mt-4 space-y-4">
+          {choices.map((choice) => (
+            <fieldset key={choice.id}>
+              <legend className="mb-2 text-sm font-medium">{choice.prompt}</legend>
+              <div className="grid grid-cols-2 gap-2">{choice.options.map((answer) => (
+                <button key={answer} type="button" aria-pressed={f.choices[choice.id] === answer}
+                  onClick={() => setF({ ...f, choices: { ...f.choices, [choice.id]: answer } })}
+                  className={"rounded-xl border px-2 py-2.5 text-xs font-medium " + (f.choices[choice.id] === answer ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground")}>{answer}</button>
+              ))}</div>
+            </fieldset>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">Save your profile to keep these answers.</p>
+      </section>
+
+      <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3"><div className="rounded-xl bg-secondary p-2.5 text-primary"><Mic className="h-5 w-5" /></div><div><h2 className="text-[16px] font-semibold">Voice intro</h2><p className="mt-0.5 text-xs text-muted-foreground">Add a short hello to your profile.</p></div></div>
+        <div className="mt-4 flex gap-2">
+          {!recording ? <button type="button" onClick={beginRecording} className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground"><Mic className="h-4 w-4" />{audioUrl ? "Record again" : "Record intro"}</button>
+            : <button type="button" onClick={() => recorder.current?.stop()} className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-semibold"><Square className="h-4 w-4" />Stop recording</button>}
+          {audioUrl && <button type="button" onClick={() => { if (savedAudio.current) URL.revokeObjectURL(savedAudio.current); savedAudio.current = null; setAudioUrl(null); }} className="rounded-xl border border-border px-3 text-sm">Remove</button>}
+        </div>
+        {recording && <p role="status" className="mt-2 text-xs text-primary">Recording. Select Stop recording when you’re done.</p>}
+        {voiceError && <p role="alert" className="mt-2 text-xs text-destructive">{voiceError}</p>}
+        {audioUrl && <audio controls src={audioUrl} className="mt-3 w-full" aria-label="Preview voice intro" />}
+        <p className="mt-2 text-xs text-muted-foreground">Audio stays on this device in this preview; it is not uploaded.</p>
+      </section>
+
+      <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-4">
+        <div className="flex items-center gap-3"><div className="rounded-xl bg-secondary p-2.5 text-primary"><Camera className="h-5 w-5" /></div><div><h2 className="text-[16px] font-semibold">Selfie check</h2><p className="mt-0.5 text-xs text-muted-foreground">Your status: Not verified</p></div></div>
+        <label htmlFor="selfie-capture" className="mt-4 flex h-10 cursor-pointer items-center justify-center rounded-xl border border-border text-sm font-semibold">Take a selfie</label>
+        <input id="selfie-capture" className="sr-only" type="file" accept="image/*" capture="user" onChange={(e) => captureSelfie(e.target.files?.[0])} />
+        {selfieUrl && <img src={selfieUrl} alt="Selfie preview captured on this device" className="mt-3 max-h-64 w-full rounded-xl object-cover" />}
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">This preview cannot verify identity or upload a selfie. A real verification check needs a secure review service.</p>
+      </section>
+
+      <button type="button" onClick={() => { if (confirm("Reset likes, passes, saves, matches and chats?")) update((st) => ({ ...st, liked: [], passed: [], saved: [], matches: [], chats: {} })); }}
         className="mx-auto mt-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive"><RotateCcw className="h-4 w-4" />Reset my activity</button>
     </main>
   );
