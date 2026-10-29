@@ -43,6 +43,8 @@ function Home() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [hiddenRecommendations, setHiddenRecommendations] = useState<string[]>([]);
+  const [exitCue, setExitCue] = useState<{ id: string; direction: number } | null>(null);
   const sampleDeck = useMemo(
     () =>
       people.filter(
@@ -70,7 +72,12 @@ function Home() {
     voiceIntroPath: item.profile.voice_intro_path,
   }));
   const deck = user
-    ? liveDeck.filter((p) => (town === "All" || p.town === town) && p.age <= maxAge)
+    ? liveDeck.filter(
+        (p) =>
+          !hiddenRecommendations.includes(p.id) &&
+          (town === "All" || p.town === town) &&
+          p.age <= maxAge,
+      )
     : sampleDeck;
   const current = deck[0];
   const last = [...s.passed].pop();
@@ -87,10 +94,14 @@ function Home() {
 
   const decide = async (p: Person, liked: boolean) => {
     if (user) {
+      setExitCue({ id: p.id, direction: liked ? 1 : -1 });
+      setHiddenRecommendations((current) => [...current, p.id]);
       const { error } = await supabase
         .from("decisions")
         .insert({ actor_id: user.id, target_id: p.id, liked });
       if (error) {
+        setHiddenRecommendations((current) => current.filter((id) => id !== p.id));
+        setExitCue(null);
         setNotice(
           error.code === "23505"
             ? "You’ve already responded to this profile."
@@ -99,7 +110,7 @@ function Home() {
         window.setTimeout(() => setNotice(""), 2600);
         return false;
       }
-      await queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
+      void queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
       if (!liked) {
         setNotice(`Passed on ${p.name}.`);
         window.setTimeout(() => setNotice(""), 1500);
@@ -177,6 +188,7 @@ function Home() {
                   (person as Person & { recommendationReason?: string }).recommendationReason
                 }
                 onDecide={(liked) => decide(person, liked)}
+                exitDirection={exitCue?.id === person.id ? exitCue.direction : 0}
                 onBlocked={() => {
                   void queryClient.invalidateQueries({ queryKey: ["recommendations", user?.id] });
                 }}
@@ -336,6 +348,7 @@ function ProfileCard({
   userId,
   recommendationReason,
   onDecide,
+  exitDirection,
   onBlocked,
 }: {
   person: Person;
@@ -345,6 +358,7 @@ function ProfileCard({
   userId?: string | undefined;
   recommendationReason?: string | undefined;
   onDecide: (liked: boolean) => Promise<boolean>;
+  exitDirection: number;
   onBlocked?: (() => void) | undefined;
 }) {
   const top = depth === 0;
@@ -352,7 +366,6 @@ function ProfileCard({
   const rotate = useTransform(dragX, [-240, 0, 240], [-8, 0, 8]);
   const likeOpacity = useTransform(dragX, [0, 100], [0, 1]);
   const passOpacity = useTransform(dragX, [-100, 0], [1, 0]);
-  const [exitDirection, setExitDirection] = useState(0);
   return (
     <motion.article
       aria-label={
@@ -374,8 +387,7 @@ function ProfileCard({
         const crossedThreshold = Math.abs(info.offset.x) > window.innerWidth * 0.24;
         const flicked = Math.abs(info.velocity.x) > 700;
         if (top && !expanded && (crossedThreshold || flicked)) {
-          setExitDirection(direction);
-          if (!(await onDecide(direction > 0))) setExitDirection(0);
+          await onDecide(direction > 0);
         }
       }}
       initial={{ scale: 0.96, y: 12, opacity: 0 }}
