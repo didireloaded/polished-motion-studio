@@ -21,6 +21,7 @@ const items = [
     title: "Block or report",
     detail: "Open a member's profile, post, or chat to use the block and report controls.",
     available: true,
+    to: "/chats" as const,
   },
   {
     icon: Users,
@@ -45,6 +46,7 @@ const items = [
     title: "Pause my profile",
     detail: "Use your profile settings to manage your visibility.",
     available: true,
+    to: "/you" as const,
   },
 ];
 
@@ -58,7 +60,7 @@ function Safety() {
         <h1 className="flex-1 pr-5 text-center text-sm font-semibold">Safety and privacy</h1>
       </header>
       <ul className="space-y-2 px-4 pt-4">
-        {items.map(({ icon: Icon, title, detail, available }) => (
+        {items.map(({ icon: Icon, title, detail, available, to }) => (
           <li
             key={title}
             className="flex items-center gap-3 rounded-[14px] border border-border p-4"
@@ -68,7 +70,16 @@ function Safety() {
               <h2 className="text-sm font-semibold">{title}</h2>
               <p className="mt-1 text-xs leading-4 text-muted-foreground">{detail}</p>
             </div>
-            {available && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+            {available && to && (
+              <Link
+                to={to}
+                {...(to === "/chats" ? { search: { matchId: undefined } } : {})}
+                aria-label={`Open ${title}`}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            )}
           </li>
         ))}
       </ul>

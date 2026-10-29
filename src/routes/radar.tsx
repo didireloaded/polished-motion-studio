@@ -1,12 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, CalendarDays, ChevronRight, Footprints, Heart, MapPin, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  Clock3,
+  Footprints,
+  Heart,
+  MapPin,
+  Star,
+  Users,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { events, people, photo, towns, update, useStore } from "@/lib/namlink";
 import { useSession } from "@/hooks/use-session";
 import { type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
+import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { VoiceIntroPlayer } from "@/components/voice-intro";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
@@ -160,13 +171,6 @@ function NearbyPage() {
     [user, query.data, store.liked],
   );
   const visibleProfiles = profiles.filter((p) => town === "All" || p.town === town);
-  const counts = useMemo(
-    () =>
-      Object.fromEntries(
-        towns.map((place) => [place, profiles.filter((p) => p.town === place).length]),
-      ),
-    [profiles],
-  );
 
   if (!ready)
     return (
@@ -273,15 +277,18 @@ function NearbyPage() {
       </header>
       {panel === "nearby" && (
         <>
-          {!user && <DemoNotice />}
           <div className="relative">
             <TownMap
               town={town}
-              setTown={setTown}
-              counts={counts}
               profiles={profiles}
               demo={!user}
+              onSelectProfile={setSelectedProfile}
             />
+            {!user && (
+              <span className="absolute right-4 top-4 z-[400] rounded-full bg-white/95 px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground shadow-sm">
+                Sample map
+              </span>
+            )}
             <div className="absolute left-4 top-4 z-[400] rounded-full bg-white px-3 py-2 text-[11px] font-medium text-foreground shadow-sm">
               <label className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -298,16 +305,13 @@ function NearbyPage() {
                 </select>
               </label>
             </div>
-            <span className="absolute bottom-5 left-4 z-[400] rounded-full bg-white/95 px-3 py-1.5 text-[10px] text-muted-foreground">
-              Town areas · approximate
-            </span>
           </div>
           <div className="relative z-10 -mt-4 rounded-t-[20px] bg-white px-5 pb-5 pt-3 shadow-float">
             <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
             <div className="flex items-center justify-between">
               <h1 className="text-[16px] font-semibold">People nearby</h1>
               <span className="text-[11px] text-muted-foreground">
-                {visibleProfiles.length} in {town === "All" ? "Namibia" : town}
+                {visibleProfiles.length} in {town === "All" ? "Namibia" : town} · by town
               </span>
             </div>
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
@@ -390,7 +394,6 @@ function NearbyPage() {
               Meet people through shared interests
             </p>
           </div>
-          {!user && <DemoNotice />}
           {notice && (
             <p role="status" className="px-5 py-2 text-xs text-muted-foreground">
               {notice}
@@ -475,41 +478,89 @@ function NearbyPage() {
                       key={event.id}
                       className="overflow-hidden rounded-[15px] border border-border bg-card shadow-float"
                     >
-                      {event.sample && (
+                      {event.sample ? (
                         <img
                           src={events.find((item) => item.id === event.id)?.image}
                           alt=""
                           className="h-[135px] w-full object-cover"
                         />
+                      ) : (
+                        <div className="relative">
+                          <img
+                            src={
+                              event.town === "Swakopmund" || event.town === "Walvis Bay"
+                                ? "/design/event-beach.jpg"
+                                : "/design/event-rooftop.jpg"
+                            }
+                            alt="Illustrative scenery for the event town"
+                            className="h-[135px] w-full object-cover"
+                          />
+                          <span className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[10px] text-foreground">
+                            Illustrative photo
+                          </span>
+                        </div>
                       )}
                       <div className="px-3 pt-3">
-                        <div className="min-w-0">
+                        <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {event.town}
-                            {event.sample ? " · Sample idea" : ` · ${event.venue_name}`}
-                          </p>
-                          {!event.sample && (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {new Intl.DateTimeFormat(undefined, {
+                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                            {event.sample ? "Sample event" : `${attendees.length} interested`}
+                          </span>
+                        </div>
+                        <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <Clock3 className="h-3.5 w-3.5" />
+                          {event.sample
+                            ? events.find((item) => item.id === event.id)?.when
+                            : new Intl.DateTimeFormat(undefined, {
                                 dateStyle: "medium",
                                 timeStyle: "short",
                               }).format(new Date(event.starts_at))}
-                            </p>
-                          )}
-                        </div>
+                        </p>
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {event.sample
+                            ? events.find((item) => item.id === event.id)?.venue
+                            : event.venue_name}{" "}
+                          · {event.town}
+                        </p>
                       </div>
                       {event.details && (
                         <p className="px-3 pt-2 text-xs leading-5 text-muted-foreground">
                           {event.details}
                         </p>
                       )}
-                      {!event.sample && attendees.length > 0 && (
-                        <p className="px-3 pt-2 text-xs text-muted-foreground">
-                          Interested:{" "}
-                          {attendees.map((attendee) => attendee.display_name).join(", ")}
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 px-3 pt-3">
+                        {event.sample ? (
+                          <>
+                            <div className="flex -space-x-2" aria-hidden="true">
+                              {people.slice(0, 4).map((person) => (
+                                <img
+                                  key={person.id}
+                                  src={photo(person, true)}
+                                  alt=""
+                                  className="h-7 w-7 rounded-full border-2 border-white object-cover"
+                                />
+                              ))}
+                            </div>
+                            <span className="text-[11px] text-muted-foreground">
+                              Sample attendees
+                            </span>
+                          </>
+                        ) : attendees.length > 0 ? (
+                          <>
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-primary">
+                              <Users className="h-3.5 w-3.5" />
+                            </span>
+                            <span className="truncate text-[11px] text-muted-foreground">
+                              {attendees.map((attendee) => attendee.display_name).join(", ")}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">
+                            Be the first to show interest
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         aria-pressed={interested}
@@ -523,8 +574,9 @@ function NearbyPage() {
                                   : [...s.interestedEvents, event.id],
                               }))
                         }
-                        className={`mx-3 mb-3 mt-3 h-9 w-[calc(100%-1.5rem)] rounded-full text-xs font-semibold ${interested ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
+                        className={`mx-3 mb-3 mt-3 flex h-9 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 rounded-full text-xs font-semibold ${interested ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
                       >
+                        <Star className="h-3.5 w-3.5" />
                         {interested ? "Interested" : "I’m interested"}
                       </button>
                     </li>
@@ -549,6 +601,16 @@ function NearbyPage() {
         <DrawerContent className="mx-auto max-w-md rounded-t-[24px] bg-white px-5 pb-8">
           {selectedProfile && (
             <>
+              <ProfilePhoto
+                name={selectedProfile.display_name}
+                src={
+                  !user
+                    ? photo(people.find((person) => person.id === selectedProfile.id)!)
+                    : undefined
+                }
+                path={selectedProfile.photo_paths?.[0]}
+                className="h-44 w-full rounded-xl object-cover"
+              />
               <DrawerHeader className="px-0 text-left">
                 <DrawerTitle>
                   {selectedProfile.display_name}, {selectedProfile.age}
@@ -558,6 +620,11 @@ function NearbyPage() {
                 {selectedProfile.town} · {selectedProfile.intent}
               </p>
               <p className="mt-3 text-sm leading-6">{selectedProfile.bio}</p>
+              {selectedProfile.seeking && (
+                <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                  Looking for {selectedProfile.seeking}
+                </p>
+              )}
               {selectedProfile.voice_intro_path && (
                 <div className="mt-3">
                   <VoiceIntroPlayer path={selectedProfile.voice_intro_path} />
@@ -603,16 +670,14 @@ function NearbyPage() {
 
 function TownMap({
   town,
-  setTown,
-  counts,
   profiles,
   demo,
+  onSelectProfile,
 }: {
   town: string;
-  setTown: (town: string) => void;
-  counts: Record<string, number>;
   profiles: NearbyProfile[];
   demo: boolean;
+  onSelectProfile: (profile: NearbyProfile) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -633,9 +698,9 @@ function TownMap({
         ],
         maxBoundsViscosity: 0.85,
       }).setView(townCenters["Windhoek"]!, 12);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors",
+        attribution: "&copy; OpenStreetMap contributors, Humanitarian OpenStreetMap Team",
       }).addTo(instance);
       layer.current = L.layerGroup().addTo(instance);
       map.current = instance;
@@ -651,68 +716,78 @@ function TownMap({
   }, []);
   useEffect(() => {
     if (!map.current || !layer.current) return;
-    void import("leaflet").then((L) => {
+    let disposed = false;
+    void import("leaflet").then(async (L) => {
       const instance = map.current;
       const markers = layer.current;
       if (!instance || !markers) return;
       markers.clearLayers();
-      if (demo) {
-        profiles
-          .filter((profile) => town === "All" || profile.town === town)
-          .forEach((profile, index) => {
-            const center = townCenters[profile.town];
-            const person = people.find((item) => item.id === profile.id);
-            if (!center || !person) return;
-            const offsets: [number, number][] = [
-              [0.011, -0.013],
-              [-0.018, 0.015],
-              [0.021, 0.019],
-              [-0.012, -0.02],
-              [0.027, -0.008],
-              [-0.024, 0.004],
-            ];
-            const [lat, lng] = offsets[index % offsets.length]!;
-            const icon = L.divIcon({
-              className: "person-map-marker",
-              html: `<img src="${photo(person, true)}" alt="" />`,
-              iconSize: [48, 48],
-              iconAnchor: [24, 24],
-            });
-            L.marker([center[0] + lat, center[1] + lng], {
-              icon,
-              keyboard: true,
-              title: `${profile.display_name} · sample profile`,
-            }).addTo(markers);
-          });
-        if (town === "All") instance.setView([-21.8, 17.2], 5);
-        else if (townCenters[town]) instance.setView(townCenters[town], 12);
-        return;
-      }
-      for (const place of towns) {
-        const center = townCenters[place];
-        if (!center) continue;
-        const active = town === place;
-        const count = counts[place] ?? 0;
+      const shown = profiles
+        .filter((profile) => town === "All" || profile.town === town)
+        .slice(0, 30);
+      const photos = await Promise.all(
+        shown.map(async (profile) => {
+          if (demo)
+            return photo(
+              people.find((person) => person.id === profile.id)!,
+              true,
+            );
+          if (!profile.photo_paths?.[0]) return "";
+          const { data } = await supabase.storage
+            .from("profile-photos")
+            .createSignedUrl(profile.photo_paths[0], 3600);
+          return data?.signedUrl ?? "";
+        }),
+      );
+      if (disposed || !map.current || !layer.current) return;
+      const offsets: [number, number][] = [
+        [0.011, -0.013],
+        [-0.018, 0.015],
+        [0.021, 0.019],
+        [-0.012, -0.02],
+        [0.027, -0.008],
+        [-0.024, 0.004],
+      ];
+      const indexByTown = new Map<string, number>();
+      shown.forEach((profile, index) => {
+        const center = townCenters[profile.town];
+        if (!center) return;
+        const placeIndex = indexByTown.get(profile.town) ?? 0;
+        indexByTown.set(profile.town, placeIndex + 1);
+        const [lat, lng] = offsets[placeIndex % offsets.length]!;
+        const markerContent = document.createElement("div");
+        if (photos[index]) {
+          const img = document.createElement("img");
+          img.src = photos[index];
+          img.alt = "";
+          markerContent.append(img);
+        } else {
+          const initials = document.createElement("span");
+          initials.className = "person-map-initials";
+          initials.textContent = profile.display_name.slice(0, 1);
+          markerContent.append(initials);
+        }
         const icon = L.divIcon({
-          className: "town-map-marker",
-          html: `<span class="town-pin ${active ? "town-pin-active" : ""}" aria-hidden="true"><span>${count}</span></span>`,
-          iconSize: [38, 38],
-          iconAnchor: [19, 19],
+          className: "person-map-marker",
+          html: markerContent,
+          iconSize: [48, 48],
+          iconAnchor: [24, 24],
         });
-        const marker = L.marker(center, {
+        L.marker([center[0] + lat, center[1] + lng], {
           icon,
           keyboard: true,
-          title: `${place}: ${count} profiles`,
-        }).addTo(markers);
-        marker.on("click", () => {
-          setTown(place);
-          instance.flyTo(center, 12, { duration: 0.45 });
-        });
-      }
+          title: `${profile.display_name}${demo ? " · sample profile" : " · town-level placement"}`,
+        })
+          .addTo(markers)
+          .on("click", () => onSelectProfile(profile));
+      });
       if (town === "All") instance.setView([-21.8, 17.2], 5);
       else if (townCenters[town]) instance.setView(townCenters[town], 12);
     });
-  }, [town, counts, profiles, demo, setTown, mapReady]);
+    return () => {
+      disposed = true;
+    };
+  }, [town, profiles, demo, onSelectProfile, mapReady]);
   return (
     <div
       ref={container}

@@ -302,17 +302,26 @@ button:focus-visible {
   border: 0;
   background: transparent;
 }
-.person-map-marker img {
+.person-map-marker img,
+.person-map-initials {
+  display: block;
   width: 48px;
   height: 48px;
   border: 3px solid white;
   border-radius: 999px;
-  object-fit: cover;
   box-shadow: 0 3px 12px rgb(36 27 23 / 20%);
 }
 .person-map-marker img {
-  display: block;
+  object-fit: cover;
   min-width: 48px;
   max-width: 48px;
   width: 48px !important;
+}
+.person-map-initials {
+  background: var(--primary);
+  color: white;
+  text-align: center;
+  line-height: 42px;
+  font-size: 18px;
+  font-weight: 700;
 }

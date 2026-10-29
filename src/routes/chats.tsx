@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
+import { ProfilePhoto, SafetyActions } from "@/components/community";
 
 export const Route = createFileRoute("/chats")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -54,7 +54,6 @@ function Chats() {
             exit={{ opacity: 0, x: -30 }}
           >
             <PageHeader title="NamLink" />
-            <DemoNotice />
             {list.length === 0 ? (
               <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
                 <motion.div
@@ -82,6 +81,7 @@ function Chats() {
                   <h2 className="text-sm font-semibold">
                     {matches.length ? "New matches" : "Sample matches"}
                   </h2>
+                  <span className="text-[10px] text-muted-foreground">Demo mode</span>
                 </div>
                 <div className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-4">
                   {list.map((p, i) => (
@@ -266,7 +266,9 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
             <>
               <div className="flex items-center justify-between px-5 pb-2">
                 <h2 className="text-sm font-semibold">New matches</h2>
-                <span className="text-xs text-primary">See all</span>
+                <span className="text-xs text-muted-foreground">
+                  {data.matches.length} total · scroll to see all
+                </span>
               </div>
               <div className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-4">
                 {data.matches.map((match) => {

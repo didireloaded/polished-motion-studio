@@ -15,7 +15,7 @@ import { people, photo, towns, update, useStore, toggle, type Person } from "@/l
 import { useSession } from "@/hooks/use-session";
 import { getRecommendations, type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
+import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 
 export const Route = createFileRoute("/")({
@@ -170,7 +170,6 @@ function Home() {
           </IconButton>
         </div>
       </header>
-      {!user && <DemoNotice />}
       {user && recs.data?.notice && (
         <p role="status" className="px-2 pb-2 text-center text-xs text-muted-foreground">
           {recs.data.notice}
@@ -236,7 +235,7 @@ function Home() {
             }}
           />
         )}
-        {current && !recs.isLoading && (
+        {current && !recs.isLoading && expandedId !== current.id && (
           <div className="absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-8 pointer-events-none">
             <RoundButton
               label={"Pass on " + current.name}
@@ -465,7 +464,7 @@ function ProfileCard({
             </motion.span>
           </>
         )}
-        {top && !userId && (
+        {top && !userId && !expanded && (
           <span className="absolute left-4 top-4 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm">
             Sample profile
           </span>
@@ -522,7 +521,7 @@ function ProfileCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2 }}
-            className="min-h-0 flex-1 overflow-y-auto px-5 pb-24 pt-4 text-foreground"
+            className="min-h-0 flex-1 overflow-y-auto px-5 pb-16 pt-4 text-foreground"
           >
             <div className="space-y-3">
               <div>
@@ -589,6 +588,18 @@ function ProfileCard({
           </motion.div>
         )}
       </AnimatePresence>
+      {top && expanded && (
+        <motion.button
+          type="button"
+          aria-label={`Like ${person.name}`}
+          onClick={() => void onDecide(true)}
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute bottom-5 right-5 z-20 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-float"
+        >
+          <Heart className="h-6 w-6 fill-current" />
+        </motion.button>
+      )}
     </motion.article>
   );
 }

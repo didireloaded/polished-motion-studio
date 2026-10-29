@@ -58,6 +58,34 @@ function Moderation() {
       }));
     },
   });
+  const selfies = useQuery({
+    queryKey: ["moderation-selfies"],
+    enabled: authorized,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("selfie_verifications")
+        .select("user_id,image_path,status,submitted_at")
+        .eq("status", "pending")
+        .order("submitted_at", { ascending: true })
+        .limit(50);
+      if (error) throw error;
+      return data;
+    },
+  });
+  const reviewSelfie = async (memberId: string, status: "approved" | "rejected") => {
+    if (!user || !authorized) return;
+    setNotice("");
+    const { error } = await supabase
+      .from("selfie_verifications")
+      .update({ status, reviewed_at: new Date().toISOString(), reviewed_by: user.id })
+      .eq("user_id", memberId)
+      .eq("status", "pending");
+    if (error) setNotice("We couldn't review this selfie.");
+    else {
+      setNotice(`Selfie ${status}.`);
+      void queryClient.invalidateQueries({ queryKey: ["moderation-selfies"] });
+    }
+  };
 
   const review = async (reportId: string, status: Report["status"], note: string) => {
     if (status === "open") return;
@@ -95,6 +123,24 @@ function Moderation() {
           {notice}
         </p>
       )}
+      <section className="px-5">
+        <h2 className="text-base font-semibold">Selfies awaiting review</h2>
+        {selfies.isLoading ? (
+          <p className="mt-2 text-xs text-muted-foreground">Loading selfies…</p>
+        ) : selfies.isError ? (
+          <p role="alert" className="mt-2 text-xs text-destructive">
+            Selfies couldn't be loaded.
+          </p>
+        ) : !selfies.data?.length ? (
+          <p className="mt-2 text-xs text-muted-foreground">No selfies awaiting review.</p>
+        ) : (
+          <ul className="mt-3 space-y-3">
+            {selfies.data.map((item) => (
+              <SelfieCard key={item.user_id} item={item} onReview={reviewSelfie} />
+            ))}
+          </ul>
+        )}
+      </section>
       {reports.isLoading ? (
         <p className="px-5 text-sm text-muted-foreground">Loading reports…</p>
       ) : reports.isError ? (
@@ -111,6 +157,69 @@ function Moderation() {
         </ul>
       )}
     </main>
+  );
+}
+
+function SelfieCard({
+  item,
+  onReview,
+}: {
+  item: { user_id: string; image_path: string; submitted_at: string };
+  onReview: (id: string, status: "approved" | "rejected") => Promise<void>;
+}) {
+  const [url, setUrl] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    const { data, error } = await supabase.storage
+      .from("verification-selfies")
+      .createSignedUrl(item.image_path, 300);
+    if (!error && data?.signedUrl) setUrl(data.signedUrl);
+  };
+  const submit = async (status: "approved" | "rejected") => {
+    setBusy(true);
+    await onReview(item.user_id, status);
+    setBusy(false);
+  };
+  return (
+    <li className="rounded-2xl border border-border p-4">
+      <p className="text-xs font-semibold">Member {item.user_id.slice(0, 8)}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Submitted {new Date(item.submitted_at).toLocaleString()}
+      </p>
+      {url ? (
+        <img
+          src={url}
+          alt="Private selfie submitted for review"
+          className="mt-3 h-56 w-full rounded-xl object-cover"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="mt-3 text-xs font-semibold text-primary"
+        >
+          View private selfie
+        </button>
+      )}
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          disabled={busy || !url}
+          onClick={() => void submit("approved")}
+          className="h-9 flex-1 rounded-full bg-primary text-xs font-semibold text-white disabled:opacity-50"
+        >
+          Approve
+        </button>
+        <button
+          type="button"
+          disabled={busy || !url}
+          onClick={() => void submit("rejected")}
+          className="h-9 flex-1 rounded-full bg-secondary text-xs font-semibold disabled:opacity-50"
+        >
+          Reject
+        </button>
+      </div>
+    </li>
   );
 }
 

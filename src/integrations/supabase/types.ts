@@ -8,6 +8,65 @@ export type Database = {
   };
   public: {
     Tables: {
+      post_reactions: {
+        Row: {
+          post_id: string;
+          user_id: string;
+          liked: boolean;
+          saved: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          post_id: string;
+          user_id: string;
+          liked?: boolean;
+          saved?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          post_id?: string;
+          user_id?: string;
+          liked?: boolean;
+          saved?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "post_reactions_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      selfie_verifications: {
+        Row: {
+          user_id: string;
+          image_path: string;
+          status: string;
+          submitted_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+        };
+        Insert: {
+          user_id: string;
+          image_path: string;
+          status?: string;
+          submitted_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+        Update: {
+          user_id?: string;
+          image_path?: string;
+          status?: string;
+          submitted_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+        };
+        Relationships: [];
+      };
       blocks: {
         Row: {
           blocked_id: string;

@@ -1,6 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { LockKeyhole, MapPin, MessageCircle, PenSquare, Send, Trash2, X } from "lucide-react";
+import {
+  Bookmark,
+  Heart,
+  LockKeyhole,
+  MapPin,
+  MessageCircle,
+  PenSquare,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   Drawer,
@@ -15,15 +25,19 @@ import {
   towns,
   update,
   useStore,
+  toggle,
   timeAgo,
   type Post,
+  type Person,
   type PrivateReply,
 } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DemoNotice, SafetyActions } from "@/components/community";
+import { SafetyActions } from "@/components/community";
+import { ProfilePhoto } from "@/components/community";
+import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 
 type View = "Feed" | "Your posts" | "Your replies";
 
@@ -49,6 +63,7 @@ function Posts() {
   const [inboxPost, setInboxPost] = useState<Post | null>(null);
   const [replyText, setReplyText] = useState("");
   const [notice, setNotice] = useState("");
+  const [selectedAuthor, setSelectedAuthor] = useState<Person | null>(null);
   const ownPosts = s.posts.filter((post) => post.mine);
   const ownReplies = useMemo(
     () =>
@@ -149,7 +164,6 @@ function Posts() {
           </button>
         }
       />
-      <DemoNotice />
       {composeOpen && (
         <div className="mx-5 rounded-2xl border border-border bg-card p-4">
           <label htmlFor="post-compose" className="sr-only">
@@ -308,26 +322,39 @@ function Posts() {
                 className="border-b border-border bg-card px-5 py-4"
               >
                 <div className="flex items-center gap-2.5">
-                  {people.find((person) => person.name === post.authorName) ? (
-                    <img
-                      src={
-                        people.find((person) => person.name === post.authorName)!.designPhoto ??
-                        `/editorial/${people.find((person) => person.name === post.authorName)!.photo}-small.jpg`
-                      }
-                      alt=""
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-semibold">
-                      {post.authorName?.slice(0, 1) || "M"}
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[13px] font-semibold">{post.authorName || "Member"}</span>
-                    <p className="text-[11px] text-muted-foreground">
-                      {post.town} · {timeAgo(post.at)}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedAuthor(
+                        people.find((person) => person.name === post.authorName) ?? null,
+                      )
+                    }
+                    aria-label={`View ${post.authorName}'s sample profile`}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                  >
+                    {people.find((person) => person.name === post.authorName) ? (
+                      <img
+                        src={
+                          people.find((person) => person.name === post.authorName)!.designPhoto ??
+                          `/editorial/${people.find((person) => person.name === post.authorName)!.photo}-small.jpg`
+                        }
+                        alt=""
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-semibold">
+                        {post.authorName?.slice(0, 1) || "M"}
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[13px] font-semibold">
+                        {post.authorName || "Member"}
+                      </span>
+                      <p className="text-[11px] text-muted-foreground">
+                        {post.town} · {timeAgo(post.at)}
+                      </p>
+                    </div>
+                  </button>
                   {post.sample && (
                     <span className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">
                       Sample
@@ -335,6 +362,37 @@ function Posts() {
                   )}
                 </div>
                 <p className="mt-3 text-[14px] leading-6">{post.text}</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    aria-label={s.likedPosts.includes(post.id) ? "Unlike post" : "Like post"}
+                    aria-pressed={s.likedPosts.includes(post.id)}
+                    onClick={() =>
+                      update((st) => ({ ...st, likedPosts: toggle(st.likedPosts, post.id) }))
+                    }
+                    className={`flex items-center gap-1 text-xs ${s.likedPosts.includes(post.id) ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Heart
+                      className={`h-4 w-4 ${s.likedPosts.includes(post.id) ? "fill-current" : ""}`}
+                    />
+                    {s.likedPosts.includes(post.id) ? "Liked" : "Like"}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={s.savedPosts.includes(post.id) ? "Unsave post" : "Save post"}
+                    aria-pressed={s.savedPosts.includes(post.id)}
+                    onClick={() =>
+                      update((st) => ({ ...st, savedPosts: toggle(st.savedPosts, post.id) }))
+                    }
+                    className={
+                      s.savedPosts.includes(post.id) ? "text-primary" : "text-muted-foreground"
+                    }
+                  >
+                    <Bookmark
+                      className={`h-4 w-4 ${s.savedPosts.includes(post.id) ? "fill-current" : ""}`}
+                    />
+                  </button>
+                </div>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -421,6 +479,63 @@ function Posts() {
           >
             Send private reply
           </button>
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer open={!!selectedAuthor} onOpenChange={(open) => !open && setSelectedAuthor(null)}>
+        <DrawerContent className="mx-auto max-w-md rounded-t-[24px] bg-white pb-8">
+          {selectedAuthor && (
+            <div className="px-5">
+              <DrawerHeader className="px-0 text-left">
+                <DrawerTitle>
+                  {selectedAuthor.name}, {selectedAuthor.age}
+                </DrawerTitle>
+              </DrawerHeader>
+              <img
+                src={selectedAuthor.designPhoto ?? `/editorial/${selectedAuthor.photo}.jpg`}
+                alt={`${selectedAuthor.name}'s sample profile`}
+                className="h-48 w-full rounded-xl object-cover"
+              />
+              <p className="mt-3 text-xs text-muted-foreground">
+                {selectedAuthor.town} · Sample profile
+              </p>
+              <p className="mt-3 text-sm leading-6">{selectedAuthor.bio}</p>
+              <p className="mt-3 text-xs font-semibold">Looking for {selectedAuthor.intent}</p>
+              <SampleVoiceIntro />
+              <button
+                type="button"
+                disabled={s.liked.includes(selectedAuthor.id)}
+                onClick={() =>
+                  update((st) => ({
+                    ...st,
+                    liked: st.liked.includes(selectedAuthor.id)
+                      ? st.liked
+                      : [...st.liked, selectedAuthor.id],
+                    matches:
+                      selectedAuthor.mutualInterest && !st.matches.includes(selectedAuthor.id)
+                        ? [...st.matches, selectedAuthor.id]
+                        : st.matches,
+                    chats:
+                      selectedAuthor.mutualInterest && !st.chats[selectedAuthor.id]
+                        ? { ...st.chats, [selectedAuthor.id]: [] }
+                        : st.chats,
+                  }))
+                }
+                className="mt-4 h-11 w-full rounded-full bg-primary text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {s.liked.includes(selectedAuthor.id) ? "Liked" : `Like ${selectedAuthor.name}`}
+              </button>
+              {s.matches.includes(selectedAuthor.id) && (
+                <Link
+                  to="/chats"
+                  search={{ matchId: undefined }}
+                  className="mt-2 flex h-10 items-center justify-center rounded-full border border-primary text-sm font-semibold text-primary"
+                >
+                  Open chat
+                </Link>
+              )}
+            </div>
+          )}
         </DrawerContent>
       </Drawer>
 
@@ -513,6 +628,20 @@ function LivePosts({ userId }: { userId: string }) {
   const [replyTo, setReplyTo] = useState<LivePost | null>(null);
   const [replyBody, setReplyBody] = useState("");
   const [notice, setNotice] = useState("");
+  const [selectedAuthorId, setSelectedAuthorId] = useState<string | null>(null);
+  const authorQuery = useQuery({
+    queryKey: ["post-author-profile", selectedAuthorId],
+    enabled: !!selectedAuthorId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id,display_name,age,town,bio,intent,tags,voice_intro_path,photo_paths")
+        .eq("id", selectedAuthorId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
   const postsQuery = useQuery({
     queryKey: ["posts", userId],
     queryFn: async () => {
@@ -523,6 +652,17 @@ function LivePosts({ userId }: { userId: string }) {
         .limit(50);
       if (error) throw error;
       return data as LivePost[];
+    },
+  });
+  const reactionsQuery = useQuery({
+    queryKey: ["post-reactions", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("post_reactions")
+        .select("post_id,liked,saved")
+        .eq("user_id", userId);
+      if (error) throw error;
+      return data;
     },
   });
   const repliesQuery = useQuery({
@@ -548,6 +688,40 @@ function LivePosts({ userId }: { userId: string }) {
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["posts", userId] });
     void client.invalidateQueries({ queryKey: ["post-replies", userId] });
+  };
+  const toggleReaction = async (postId: string, field: "liked" | "saved") => {
+    const previous = reactionsQuery.data?.find((item) => item.post_id === postId);
+    const next = {
+      liked: previous?.liked ?? false,
+      saved: previous?.saved ?? false,
+      [field]: !previous?.[field],
+    };
+    const result =
+      next.liked || next.saved
+        ? await supabase
+            .from("post_reactions")
+            .upsert({ post_id: postId, user_id: userId, ...next })
+        : await supabase
+            .from("post_reactions")
+            .delete()
+            .eq("post_id", postId)
+            .eq("user_id", userId);
+    if (result.error) setNotice("We couldn't update this post. Please try again.");
+    else void client.invalidateQueries({ queryKey: ["post-reactions", userId] });
+  };
+  const likeAuthor = async () => {
+    if (!selectedAuthorId || selectedAuthorId === userId) return;
+    const { error } = await supabase
+      .from("decisions")
+      .insert({ actor_id: userId, target_id: selectedAuthorId, liked: true });
+    setNotice(
+      error
+        ? error.code === "23505"
+          ? "You already responded to this profile."
+          : "We couldn't send that like."
+        : "Like sent. A chat opens if they like you back.",
+    );
+    if (!error) setSelectedAuthorId(null);
   };
 
   const submitPost = async () => {
@@ -732,18 +906,26 @@ function LivePosts({ userId }: { userId: string }) {
         <ul className="mt-3 space-y-2 px-5">
           {visiblePosts.map((post) => {
             const postReplies = replies.filter((reply) => reply.post_id === post.id);
+            const reaction = reactionsQuery.data?.find((item) => item.post_id === post.id);
             return (
               <li key={post.id} className="border-b border-border bg-card px-5 py-4">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-semibold text-primary">
-                    {post.author_name.slice(0, 1)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[13px] font-semibold">{post.author_name}</span>
-                    <p className="text-[11px] text-muted-foreground">
-                      {post.town} · {timeAgo(new Date(post.created_at).getTime())}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAuthorId(post.author_id)}
+                    className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                    aria-label={`View ${post.author_name}'s profile`}
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-semibold text-primary">
+                      {post.author_name.slice(0, 1)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="text-[13px] font-semibold">{post.author_name}</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {post.town} · {timeAgo(new Date(post.created_at).getTime())}
+                      </span>
+                    </span>
+                  </button>
                   {post.author_id === userId && (
                     <button
                       type="button"
@@ -755,6 +937,27 @@ function LivePosts({ userId }: { userId: string }) {
                   )}
                 </div>
                 <p className="mt-2 text-[15px] leading-6">{post.body}</p>
+                <div className="mt-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    aria-label={reaction?.liked ? "Unlike post" : "Like post"}
+                    aria-pressed={!!reaction?.liked}
+                    onClick={() => void toggleReaction(post.id, "liked")}
+                    className={`flex items-center gap-1 text-xs ${reaction?.liked ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Heart className={`h-4 w-4 ${reaction?.liked ? "fill-current" : ""}`} />
+                    {reaction?.liked ? "Liked" : "Like"}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={reaction?.saved ? "Unsave post" : "Save post"}
+                    aria-pressed={!!reaction?.saved}
+                    onClick={() => void toggleReaction(post.id, "saved")}
+                    className={reaction?.saved ? "text-primary" : "text-muted-foreground"}
+                  >
+                    <Bookmark className={`h-4 w-4 ${reaction?.saved ? "fill-current" : ""}`} />
+                  </button>
+                </div>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -890,6 +1093,60 @@ function LivePosts({ userId }: { userId: string }) {
           >
             Send private reply
           </button>
+        </DrawerContent>
+      </Drawer>
+      <Drawer open={!!selectedAuthorId} onOpenChange={(open) => !open && setSelectedAuthorId(null)}>
+        <DrawerContent className="mx-auto max-w-md rounded-t-[24px] bg-white px-5 pb-8">
+          {authorQuery.data ? (
+            <>
+              <DrawerHeader className="px-0 text-left">
+                <DrawerTitle>
+                  {authorQuery.data.display_name}, {authorQuery.data.age}
+                </DrawerTitle>
+              </DrawerHeader>
+              <ProfilePhoto
+                name={authorQuery.data.display_name}
+                path={authorQuery.data.photo_paths?.[0]}
+                className="h-48 w-full rounded-xl object-cover"
+              />
+              <p className="mt-3 text-xs text-muted-foreground">
+                {authorQuery.data.town} · {authorQuery.data.intent}
+              </p>
+              <p className="mt-3 text-sm leading-6">{authorQuery.data.bio}</p>
+              {authorQuery.data.voice_intro_path && (
+                <div className="mt-3">
+                  <VoiceIntroPlayer path={authorQuery.data.voice_intro_path} />
+                </div>
+              )}
+              {selectedAuthorId !== userId && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => void likeAuthor()}
+                    className="mt-5 h-11 w-full rounded-full bg-primary text-sm font-semibold text-white"
+                  >
+                    Like {authorQuery.data.display_name}
+                  </button>
+                  <p className="mt-2 text-center text-xs text-muted-foreground">
+                    Chat opens when interest is mutual.
+                  </p>
+                  <SafetyActions
+                    userId={userId}
+                    targetId={selectedAuthorId!}
+                    targetName={authorQuery.data.display_name}
+                    onBlocked={() => {
+                      setSelectedAuthorId(null);
+                      refresh();
+                    }}
+                  />
+                </>
+              )}
+            </>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              {authorQuery.isLoading ? "Loading profile…" : "This profile is unavailable."}
+            </p>
+          )}
         </DrawerContent>
       </Drawer>
     </main>

@@ -226,6 +226,8 @@ export type State = {
   posts: Post[];
   postReplies: Record<string, PrivateReply[]>;
   interestedEvents: string[];
+  likedPosts: string[];
+  savedPosts: string[];
   profile: {
     name: string;
     age: number;
@@ -245,6 +247,8 @@ const initial: State = {
   chats: {},
   postReplies: {},
   interestedEvents: [],
+  likedPosts: [],
+  savedPosts: [],
   posts: [
     {
       id: "s1",
@@ -303,6 +307,8 @@ function load() {
         matches: saved.matches ?? [],
         postReplies: saved.postReplies ?? {},
         interestedEvents: saved.interestedEvents ?? [],
+        likedPosts: saved.likedPosts ?? [],
+        savedPosts: saved.savedPosts ?? [],
         profile: { ...initial.profile, ...saved.profile, choices: saved.profile?.choices ?? {} },
       };
     }
