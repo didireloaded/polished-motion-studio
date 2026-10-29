@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as PostsRouteImport } from './routes/posts'
 import { Route as RadarRouteImport } from './routes/radar'
@@ -18,6 +19,11 @@ import { Route as YouRouteImport } from './routes/you'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatsRoute = ChatsRouteImport.update({
@@ -43,6 +49,7 @@ const YouRoute = YouRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
@@ -65,14 +74,15 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/chats' | '/posts' | '/radar' | '/you'
+  fullPaths: '/' | '/auth' | '/chats' | '/posts' | '/radar' | '/you'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/chats' | '/posts' | '/radar' | '/you'
-  id: '__root__' | '/' | '/chats' | '/posts' | '/radar' | '/you'
+  to: '/' | '/auth' | '/chats' | '/posts' | '/radar' | '/you'
+  id: '__root__' | '/' | '/auth' | '/chats' | '/posts' | '/radar' | '/you'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRoute
   ChatsRoute: typeof ChatsRoute
   PostsRoute: typeof PostsRoute
   RadarRoute: typeof RadarRoute
@@ -86,6 +96,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chats': {
@@ -121,6 +138,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRoute,
   ChatsRoute: ChatsRoute,
   PostsRoute: PostsRoute,
   RadarRoute: RadarRoute,
