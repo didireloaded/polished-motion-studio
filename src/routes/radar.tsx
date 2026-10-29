@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { events, people, photo, towns, update, useStore } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
+import { type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
 import { VoiceIntroPlayer } from "@/components/voice-intro";
@@ -111,7 +112,11 @@ function NearbyPage() {
       else {
         setNotice("");
         void client.invalidateQueries({ queryKey: ["nearby", user.id] });
-        void client.invalidateQueries({ queryKey: ["recommendations", user.id] });
+        client.setQueryData<RecommendationResult>(["recommendations", user.id], (current) =>
+          current
+            ? { ...current, items: current.items.filter((item) => item.profile.id !== profile.id) }
+            : current,
+        );
       }
     } else {
       update((value) =>
