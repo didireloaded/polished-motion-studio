@@ -3,14 +3,15 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Link } from "@tanstack/react-router";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
-      { title: "Sign in — NamLink" },
-      { name: "description", content: "Sign in or create your NamLink account." },
-      { property: "og:title", content: "Sign in — NamLink" },
-      { property: "og:description", content: "Sign in or create your NamLink account." },
+      { title: "Sign in — Mutal" },
+      { name: "description", content: "Sign in or create your Mutal account." },
+      { property: "og:title", content: "Sign in — Mutal" },
+      { property: "og:description", content: "Sign in or create your Mutal account." },
     ],
   }),
   component: AuthPage,
@@ -87,7 +88,7 @@ function AuthPage() {
         ‹ Back
       </Link>
       <div className="mt-6 text-center">
-        <p className="brand-wordmark text-[29px]">♡ NamLink</p>
+        <BrandLogo className="mx-auto h-10" />
         <p className="mt-1 text-[11px] text-muted-foreground">Same land. Real connections.</p>
       </div>
       <img

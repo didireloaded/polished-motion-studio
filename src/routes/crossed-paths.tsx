@@ -7,7 +7,7 @@ import { SampleVoiceIntro } from "@/components/voice-intro";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 export const Route = createFileRoute("/crossed-paths")({
-  head: () => ({ meta: [{ title: "Crossed paths — NamLink" }] }),
+  head: () => ({ meta: [{ title: "Crossed paths — Mutal" }] }),
   component: CrossedPaths,
 });
 

@@ -20,13 +20,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { VoiceIntroPlayer } from "@/components/voice-intro";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
     meta: [
-      { title: "Nearby — NamLink" },
+      { title: "Nearby — Mutal" },
       { name: "description", content: "Explore people and local plans by town." },
-      { property: "og:title", content: "Nearby — NamLink" },
+      { property: "og:title", content: "Nearby — Mutal" },
     ],
   }),
   component: NearbyPage,
@@ -255,7 +256,7 @@ function NearbyPage() {
     <main className="mx-auto max-w-md pb-24">
       <header className="flex h-[58px] items-center justify-between px-5">
         {panel === "nearby" ? (
-          <span className="brand-wordmark">NamLink</span>
+          <BrandLogo />
         ) : (
           <button
             type="button"
@@ -263,7 +264,7 @@ function NearbyPage() {
             className="flex items-center gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span className="brand-wordmark">NamLink</span>
+            <BrandLogo />
           </button>
         )}
         <button

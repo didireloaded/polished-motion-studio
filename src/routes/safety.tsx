@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/safety")({
-  head: () => ({ meta: [{ title: "Safety and privacy — NamLink" }] }),
+  head: () => ({ meta: [{ title: "Safety and privacy — Mutal" }] }),
   component: Safety,
 });
 

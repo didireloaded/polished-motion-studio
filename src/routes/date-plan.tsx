@@ -9,7 +9,7 @@ export const Route = createFileRoute("/date-plan")({
   validateSearch: (search: Record<string, unknown>) => ({
     matchId: typeof search["matchId"] === "string" ? search["matchId"] : undefined,
   }),
-  head: () => ({ meta: [{ title: "Date plan — NamLink" }] }),
+  head: () => ({ meta: [{ title: "Date plan — Mutal" }] }),
   component: DatePlan,
 });
 

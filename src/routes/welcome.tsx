@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const Route = createFileRoute("/welcome")({
-  head: () => ({ meta: [{ title: "Welcome — NamLink" }] }),
+  head: () => ({ meta: [{ title: "Welcome — Mutal" }] }),
   component: Welcome,
 });
 
@@ -15,7 +16,7 @@ function Welcome() {
       />
       <div className="bg-scrim absolute inset-0" aria-hidden="true" />
       <div className="relative mt-auto px-8 pb-[calc(36px+env(safe-area-inset-bottom))] text-center">
-        <p className="text-[38px] font-bold tracking-[-0.06em]">NamLink</p>
+        <BrandLogo dark className="mx-auto h-[58px] rounded-lg" />
         <p className="mt-2 text-[18px] font-medium leading-6">
           Meet people worth knowing
           <br />

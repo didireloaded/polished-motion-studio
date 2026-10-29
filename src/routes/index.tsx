@@ -17,13 +17,14 @@ import { getRecommendations, type RecommendationResult } from "@/lib/recommend.f
 import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Discover — NamLink" },
+      { title: "Discover — Mutal" },
       { name: "description", content: "Discover people across Namibia." },
-      { property: "og:title", content: "Discover — NamLink" },
+      { property: "og:title", content: "Discover — Mutal" },
     ],
   }),
   component: Home,
@@ -153,8 +154,8 @@ function Home() {
   return (
     <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-2">
       <header className="flex h-[58px] shrink-0 items-center justify-between px-2">
-        <Link to="/" aria-label="NamLink home" className="brand-wordmark">
-          NamLink
+        <Link to="/" aria-label="Mutal home">
+          <BrandLogo />
         </Link>
         <div className="flex items-center gap-2">
           {last && (

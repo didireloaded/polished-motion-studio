@@ -44,9 +44,9 @@ type View = "Feed" | "Your posts" | "Your replies";
 export const Route = createFileRoute("/posts")({
   head: () => ({
     meta: [
-      { title: "Posts — NamLink" },
+      { title: "Posts — Mutal" },
       { name: "description", content: "Local posts with private replies around Namibia." },
-      { property: "og:title", content: "Posts — NamLink" },
+      { property: "og:title", content: "Posts — Mutal" },
     ],
   }),
   component: Posts,
@@ -152,7 +152,7 @@ function Posts() {
   return (
     <main className="mx-auto max-w-md pb-28">
       <PageHeader
-        title="NamLink"
+        title="Mutal"
         right={
           <button
             type="button"
@@ -806,7 +806,7 @@ function LivePosts({ userId }: { userId: string }) {
   return (
     <main className="mx-auto max-w-md pb-28">
       <PageHeader
-        title="NamLink"
+        title="Mutal"
         right={
           <button
             type="button"

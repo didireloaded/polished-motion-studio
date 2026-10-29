@@ -30,9 +30,9 @@ const choices = [
 export const Route = createFileRoute("/you")({
   head: () => ({
     meta: [
-      { title: "You — NamLink" },
-      { name: "description", content: "Edit your NamLink profile and stories." },
-      { property: "og:title", content: "You — NamLink" },
+      { title: "You — Mutal" },
+      { name: "description", content: "Edit your Mutal profile and stories." },
+      { property: "og:title", content: "You — Mutal" },
     ],
   }),
   component: You,
@@ -139,7 +139,7 @@ function You() {
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="NamLink" />
+      <PageHeader title="Mutal" />
       <div className="mx-5 mb-3 overflow-hidden rounded-[15px] border border-border bg-white shadow-float">
         <img
           src="/design/lead-man.jpg"
@@ -725,7 +725,7 @@ function LiveProfile({
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="NamLink" />
+      <PageHeader title="Mutal" />
       {loading ? (
         <p className="px-5 py-8 text-sm text-muted-foreground">Loading your profile…</p>
       ) : (

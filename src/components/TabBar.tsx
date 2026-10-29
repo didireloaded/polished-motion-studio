@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Compass, MapPin, NotebookText, MessageCircle, UserRound } from "lucide-react";
+import { BrandLogo } from "./BrandLogo";
 
 const tabs = [
   { to: "/", label: "Discover", icon: Compass },
@@ -72,12 +73,8 @@ export function PageHeader({
       className="flex min-h-[56px] items-center justify-between px-5 pb-2 pt-3"
     >
       <div>
-        <h1
-          className={
-            title === "NamLink" ? "brand-wordmark" : "text-[20px] font-semibold tracking-[-0.035em]"
-          }
-        >
-          {title}
+        <h1 className={title === "Mutal" ? "" : "text-[20px] font-semibold tracking-[-0.035em]"}>
+          {title === "Mutal" ? <BrandLogo /> : title}
         </h1>
         {eyebrow && <p className="mt-0.5 text-[12px] text-muted-foreground">{eyebrow}</p>}
       </div>

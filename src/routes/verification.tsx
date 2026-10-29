@@ -6,7 +6,7 @@ import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/verification")({
-  head: () => ({ meta: [{ title: "Verification — NamLink" }] }),
+  head: () => ({ meta: [{ title: "Verification — Mutal" }] }),
   component: Verification,
 });
 
@@ -91,7 +91,7 @@ function Verification() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
       </header>
-      <h1 className="text-[22px] font-semibold">Help keep NamLink safe</h1>
+      <h1 className="text-[22px] font-semibold">Help keep Mutal safe</h1>
       <p className="mt-2 text-sm leading-5 text-muted-foreground">
         A recent selfie helps us review who is behind a profile.
       </p>

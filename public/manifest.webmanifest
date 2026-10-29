@@ -1,0 +1,35 @@
+{
+  "name": "Mutal",
+  "short_name": "Mutal",
+  "description": "Mutal dating app",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1B1E22",
+  "theme_color": "#1B1E22",
+  "icons": [
+    {
+      "src": "/icons/mutal-regular-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/mutal-regular-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/mutal-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/mutal-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

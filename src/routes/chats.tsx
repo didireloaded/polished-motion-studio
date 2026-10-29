@@ -16,9 +16,9 @@ export const Route = createFileRoute("/chats")({
   }),
   head: () => ({
     meta: [
-      { title: "Chats — NamLink" },
+      { title: "Chats — Mutal" },
       { name: "description", content: "Your conversations with the people you've liked." },
-      { property: "og:title", content: "Chats — NamLink" },
+      { property: "og:title", content: "Chats — Mutal" },
       { property: "og:description", content: "Your conversations with the people you've liked." },
     ],
   }),
@@ -53,7 +53,7 @@ function Chats() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
           >
-            <PageHeader title="NamLink" />
+            <PageHeader title="Mutal" />
             {list.length === 0 ? (
               <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
                 <motion.div
@@ -248,7 +248,7 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
     <main className="mx-auto max-w-md pb-28">
       {!openMatch ? (
         <>
-          <PageHeader title="NamLink" />
+          <PageHeader title="Mutal" />
           {matchesQuery.isLoading ? (
             <p className="px-5 py-8 text-center text-sm text-muted-foreground">
               Loading conversations…
