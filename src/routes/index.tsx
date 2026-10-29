@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
 import { ArrowLeft, Bookmark, ChevronUp, Heart, MapPin, SlidersHorizontal, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -97,14 +97,14 @@ function Home() {
             : "We couldn't save your response. Please try again.",
         );
         window.setTimeout(() => setNotice(""), 2600);
-        return;
+        return false;
       }
       await queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
       if (!liked) {
         setNotice(`Passed on ${p.name}.`);
         window.setTimeout(() => setNotice(""), 1500);
       }
-      return;
+      return true;
     }
     update((st) => {
       if (!liked) return { ...st, passed: [...st.passed, p.id] };
@@ -121,6 +121,7 @@ function Home() {
       setNotice("Passed.");
       window.setTimeout(() => setNotice(""), 1500);
     }
+    return true;
   };
 
   return (
@@ -175,17 +176,14 @@ function Home() {
                 recommendationReason={
                   (person as Person & { recommendationReason?: string }).recommendationReason
                 }
+                onDecide={(liked) => decide(person, liked)}
                 onBlocked={() => {
                   void queryClient.invalidateQueries({ queryKey: ["recommendations", user?.id] });
                 }}
               />
             ))}
         </AnimatePresence>
-        {recs.isLoading && user && (
-          <div className="flex h-full items-center justify-center rounded-[22px] border border-border bg-card text-sm text-muted-foreground">
-            Finding compatible people…
-          </div>
-        )}
+        {recs.isLoading && user && <ProfileCardSkeleton />}
         {!current && !recs.isLoading && (
           <Empty
             needsProfile={!!user && recs.data?.notice === "Create your profile first."}
@@ -247,6 +245,16 @@ function Home() {
               fill={s.saved.includes(current.id) ? "currentColor" : "none"}
             />
           </RoundButton>
+        </div>
+      )}
+      {recs.isLoading && user && (
+        <div
+          aria-hidden="true"
+          className="flex h-[76px] shrink-0 items-center justify-center gap-5"
+        >
+          <span className="h-14 w-14 animate-pulse rounded-full bg-secondary" />
+          <span className="h-[68px] w-[68px] animate-pulse rounded-full bg-secondary" />
+          <span className="h-14 w-14 animate-pulse rounded-full bg-secondary" />
         </div>
       )}
 
@@ -327,6 +335,7 @@ function ProfileCard({
   onDetails,
   userId,
   recommendationReason,
+  onDecide,
   onBlocked,
 }: {
   person: Person;
@@ -335,9 +344,15 @@ function ProfileCard({
   onDetails: () => void;
   userId?: string | undefined;
   recommendationReason?: string | undefined;
+  onDecide: (liked: boolean) => Promise<boolean>;
   onBlocked?: (() => void) | undefined;
 }) {
   const top = depth === 0;
+  const dragX = useMotionValue(0);
+  const rotate = useTransform(dragX, [-240, 0, 240], [-8, 0, 8]);
+  const likeOpacity = useTransform(dragX, [0, 100], [0, 1]);
+  const passOpacity = useTransform(dragX, [-100, 0], [1, 0]);
+  const [exitDirection, setExitDirection] = useState(0);
   return (
     <motion.article
       aria-label={
@@ -348,11 +363,29 @@ function ProfileCard({
         ", " +
         person.town
       }
-      className="absolute inset-0 flex flex-col overflow-hidden rounded-[22px] bg-card text-white shadow-float"
-      style={{ zIndex: 10 - depth }}
+      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[22px] bg-card text-white shadow-float"
+      style={{ zIndex: 10 - depth, x: dragX, rotate }}
+      drag={top && !expanded ? "x" : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.72}
+      dragMomentum={false}
+      onDragEnd={async (_, info) => {
+        const direction = info.offset.x > 0 ? 1 : -1;
+        const crossedThreshold = Math.abs(info.offset.x) > window.innerWidth * 0.24;
+        const flicked = Math.abs(info.velocity.x) > 700;
+        if (top && !expanded && (crossedThreshold || flicked)) {
+          setExitDirection(direction);
+          if (!(await onDecide(direction > 0))) setExitDirection(0);
+        }
+      }}
       initial={{ scale: 0.96, y: 12, opacity: 0 }}
       animate={{ scale: 1 - depth * 0.025, y: depth * 10, opacity: depth ? 0.72 : 1 }}
-      exit={{ y: -18, opacity: 0, scale: 0.97, transition: { duration: 0.22 } }}
+      exit={{
+        x: exitDirection * 520,
+        rotate: exitDirection * 8,
+        opacity: 0,
+        transition: { duration: 0.28 },
+      }}
       transition={{ type: "spring", stiffness: 260, damping: 28 }}
     >
       <motion.div
@@ -367,6 +400,24 @@ function ProfileCard({
           className="absolute inset-0 h-full w-full select-none object-cover"
         />
         <div className="bg-scrim absolute inset-0" aria-hidden="true" />
+        {top && !expanded && (
+          <>
+            <motion.span
+              style={{ opacity: likeOpacity }}
+              className="absolute left-5 top-7 -rotate-12 rounded-lg border-2 border-white px-3 py-1 text-xl font-extrabold tracking-wider text-white"
+              aria-hidden="true"
+            >
+              LIKE
+            </motion.span>
+            <motion.span
+              style={{ opacity: passOpacity }}
+              className="absolute right-5 top-7 rotate-12 rounded-lg border-2 border-white px-3 py-1 text-xl font-extrabold tracking-wider text-white"
+              aria-hidden="true"
+            >
+              PASS
+            </motion.span>
+          </>
+        )}
         {top && !userId && (
           <span className="absolute left-4 top-4 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm">
             Sample profile
@@ -406,6 +457,18 @@ function ProfileCard({
               </motion.span>
             </motion.button>
           </div>
+          {!expanded && person.tags.length > 0 && (
+            <div className="mt-2 flex gap-1.5">
+              {person.tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </motion.div>
       <AnimatePresence initial={false}>
@@ -454,6 +517,26 @@ function ProfileCard({
         )}
       </AnimatePresence>
     </motion.article>
+  );
+}
+
+function ProfileCardSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-label="Loading profiles"
+      className="absolute inset-0 animate-pulse overflow-hidden rounded-[22px] border border-border bg-secondary"
+    >
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-foreground/35" />
+      <div className="absolute inset-x-5 bottom-5 space-y-3">
+        <div className="h-7 w-44 rounded-full bg-background/45" />
+        <div className="h-4 w-36 rounded-full bg-background/35" />
+        <div className="flex gap-2">
+          <div className="h-6 w-20 rounded-full bg-background/35" />
+          <div className="h-6 w-16 rounded-full bg-background/35" />
+        </div>
+      </div>
+    </div>
   );
 }
 
