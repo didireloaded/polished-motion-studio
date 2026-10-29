@@ -32,7 +32,17 @@ type NearbyProfile = {
   intent: string;
   seeking: string;
   voice_intro_path: string | null;
+  photo_paths?: string[];
 };
+type CommunityEvent = {
+  id: string;
+  title: string;
+  town: string;
+  venue_name: string;
+  details: string;
+  starts_at: string;
+};
+type EventInterest = { event_id: string; user_id: string; display_name: string };
 
 const townCenters: Record<string, [number, number]> = {
   Windhoek: [-22.56, 17.08],
@@ -53,6 +63,7 @@ const sampleProfiles: NearbyProfile[] = people.map((p) => ({
   intent: p.intent,
   seeking: p.answer,
   voice_intro_path: null,
+  photo_paths: [],
 }));
 
 function NearbyPage() {
@@ -60,6 +71,12 @@ function NearbyPage() {
   const { user, ready } = useSession();
   const [town, setTown] = useState("All");
   const [notice, setNotice] = useState("");
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventVenue, setEventVenue] = useState("");
+  const [eventTown, setEventTown] = useState("Windhoek");
+  const [eventDate, setEventDate] = useState("");
+  const [eventDetails, setEventDetails] = useState("");
+  const [eventBusy, setEventBusy] = useState(false);
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["nearby", user?.id],
@@ -68,7 +85,7 @@ function NearbyPage() {
       const [{ data, error }, { data: decisions, error: decisionsError }] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id,display_name,age,town,bio,tags,intent,seeking,voice_intro_path")
+          .select("id,display_name,age,town,bio,tags,intent,seeking,voice_intro_path,photo_paths")
           .neq("id", user!.id)
           .eq("active", true)
           .order("created_at", { ascending: false })
@@ -79,6 +96,59 @@ function NearbyPage() {
       if (decisionsError) throw decisionsError;
       const alreadySeen = new Set((decisions ?? []).map((decision) => decision.target_id));
       return (data as NearbyProfile[]).filter((profile) => !alreadySeen.has(profile.id));
+    },
+  });
+  const rolesQuery = useQuery({
+    queryKey: ["my-roles", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user!.id);
+      if (error) throw error;
+      return data.map((row) => row.role);
+    },
+  });
+  const canManageEvents = rolesQuery.data?.some((role) => role === "moderator" || role === "admin");
+  const communityEventsQuery = useQuery({
+    queryKey: ["community-events"],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("community_events")
+        .select("id,title,town,venue_name,details,starts_at")
+        .eq("active", true)
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at", { ascending: true });
+      if (error) throw error;
+      return data as CommunityEvent[];
+    },
+  });
+  const communityEventIds = communityEventsQuery.data?.map((event) => event.id) ?? [];
+  const eventInterestQuery = useQuery({
+    queryKey: ["event-interests", user?.id, communityEventIds],
+    enabled: !!user && communityEventIds.length > 0,
+    queryFn: async () => {
+      const { data: rsvps, error } = await supabase
+        .from("event_rsvps")
+        .select("event_id,user_id")
+        .in("event_id", communityEventIds);
+      if (error) throw error;
+      const userIds = [...new Set((rsvps ?? []).map((rsvp) => rsvp.user_id))];
+      if (!userIds.length) return [] as EventInterest[];
+      const { data: memberProfiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id,display_name")
+        .in("id", userIds);
+      if (profilesError) throw profilesError;
+      const names = new Map(
+        (memberProfiles ?? []).map((profile) => [profile.id, profile.display_name]),
+      );
+      return (rsvps ?? []).flatMap((rsvp) => {
+        const displayName = names.get(rsvp.user_id);
+        return displayName ? [{ ...rsvp, display_name: displayName }] : [];
+      });
     },
   });
   const profiles = useMemo(
@@ -128,6 +198,51 @@ function NearbyPage() {
       window.setTimeout(() => setNotice(""), 1600);
     }
   };
+
+  const createCommunityEvent = async () => {
+    if (!user || !eventTitle.trim() || !eventVenue.trim() || !eventDate) return;
+    setEventBusy(true);
+    const { error } = await supabase.from("community_events").insert({
+      title: eventTitle.trim(),
+      town: eventTown,
+      venue_name: eventVenue.trim(),
+      details: eventDetails.trim(),
+      starts_at: new Date(eventDate).toISOString(),
+      created_by: user.id,
+    });
+    setEventBusy(false);
+    if (error) {
+      setNotice("We couldn't add this event. Please try again.");
+      return;
+    }
+    setEventTitle("");
+    setEventVenue("");
+    setEventDate("");
+    setEventDetails("");
+    setNotice("Event published.");
+    void client.invalidateQueries({ queryKey: ["community-events"] });
+  };
+
+  const toggleEventInterest = async (eventId: string, interested: boolean) => {
+    if (!user) return;
+    const result = interested
+      ? await supabase.from("event_rsvps").delete().eq("event_id", eventId).eq("user_id", user.id)
+      : await supabase.from("event_rsvps").insert({ event_id: eventId, user_id: user.id });
+    if (result.error) {
+      setNotice("We couldn't update your event interest. Please try again.");
+      return;
+    }
+    void client.invalidateQueries({ queryKey: ["event-interests", user.id] });
+  };
+
+  const visibleEvents = user
+    ? (communityEventsQuery.data ?? [])
+        .filter((event) => town === "All" || event.town === town)
+        .map((event) => ({ ...event, sample: false }))
+    : events
+        .filter((event) => town === "All" || event.town === town)
+        .map((event) => ({ ...event, venue_name: "", details: "", starts_at: "", sample: true }));
+  const eventInterests = eventInterestQuery.data ?? [];
 
   return (
     <main className="mx-auto max-w-md pb-28">
@@ -228,6 +343,7 @@ function NearbyPage() {
                   {user && (
                     <ProfilePhoto
                       name={profile.display_name}
+                      path={profile.photo_paths?.[0]}
                       className="h-[58px] w-[58px] rounded-xl object-cover"
                     />
                   )}
@@ -294,43 +410,135 @@ function NearbyPage() {
           </div>
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
         </div>
+        {canManageEvents && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void createCommunityEvent();
+            }}
+            className="mt-3 space-y-2 rounded-2xl border border-border bg-card p-4"
+          >
+            <p className="text-sm font-semibold">Publish a local event</p>
+            <input
+              required
+              maxLength={100}
+              value={eventTitle}
+              onChange={(event) => setEventTitle(event.target.value)}
+              placeholder="Event name"
+              className="input"
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={eventTown}
+                onChange={(event) => setEventTown(event.target.value)}
+                className="input min-w-0"
+              >
+                {towns.map((place) => (
+                  <option key={place}>{place}</option>
+                ))}
+              </select>
+              <input
+                required
+                type="datetime-local"
+                value={eventDate}
+                onChange={(event) => setEventDate(event.target.value)}
+                className="input min-w-0 px-2 text-xs"
+              />
+            </div>
+            <input
+              required
+              maxLength={120}
+              value={eventVenue}
+              onChange={(event) => setEventVenue(event.target.value)}
+              placeholder="Public venue"
+              className="input"
+            />
+            <textarea
+              maxLength={500}
+              rows={2}
+              value={eventDetails}
+              onChange={(event) => setEventDetails(event.target.value)}
+              placeholder="A few details"
+              className="input resize-none"
+            />
+            <button
+              type="submit"
+              disabled={eventBusy}
+              className="h-10 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+            >
+              {eventBusy ? "Publishing…" : "Publish event"}
+            </button>
+          </form>
+        )}
         <ul className="mt-3 space-y-2">
-          {events
-            .filter((event) => town === "All" || event.town === town)
-            .map((event) => {
-              const interested = store.interestedEvents.includes(event.id);
+          {user && communityEventsQuery.isLoading ? (
+            <li className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+              Loading local events…
+            </li>
+          ) : (
+            visibleEvents.map((event) => {
+              const attendees = eventInterests.filter((interest) => interest.event_id === event.id);
+              const interested = user
+                ? attendees.some((interest) => interest.user_id === user.id)
+                : store.interestedEvents.includes(event.id);
               return (
                 <li key={event.id} className="rounded-2xl border border-border bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold">{event.title}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {event.town} · Preview event
+                        {event.town}
+                        {event.sample ? " · Sample idea" : ` · ${event.venue_name}`}
                       </p>
+                      {!event.sample && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {new Intl.DateTimeFormat(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          }).format(new Date(event.starts_at))}
+                        </p>
+                      )}
                     </div>
                     <button
                       type="button"
                       aria-pressed={interested}
                       onClick={() =>
-                        update((s) => ({
-                          ...s,
-                          interestedEvents: interested
-                            ? s.interestedEvents.filter((id) => id !== event.id)
-                            : [...s.interestedEvents, event.id],
-                        }))
+                        user
+                          ? void toggleEventInterest(event.id, interested)
+                          : update((s) => ({
+                              ...s,
+                              interestedEvents: interested
+                                ? s.interestedEvents.filter((id) => id !== event.id)
+                                : [...s.interestedEvents, event.id],
+                            }))
                       }
                       className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold ${interested ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
                     >
                       {interested ? "Interested" : "I’m interested"}
                     </button>
                   </div>
+                  {event.details && (
+                    <p className="mt-2 text-sm leading-5 text-muted-foreground">{event.details}</p>
+                  )}
+                  {!event.sample && attendees.length > 0 && (
+                    <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                      Interested: {attendees.map((attendee) => attendee.display_name).join(", ")}
+                    </p>
+                  )}
                 </li>
               );
-            })}
+            })
+          )}
+          {user && !communityEventsQuery.isLoading && visibleEvents.length === 0 && (
+            <li className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
+              No upcoming events have been posted for this area yet.
+            </li>
+          )}
         </ul>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          Interest is saved on this device in the preview. Event attendance isn’t shared with other
-          members yet.
+          {user
+            ? "Your interest is visible to members who can also see your profile. Choose public places and meet safely."
+            : "Sample interests are saved on this device in the preview."}
         </p>
       </section>
     </main>

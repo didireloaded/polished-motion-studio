@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatsRouteImport } from './routes/chats'
+import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as PostsRouteImport } from './routes/posts'
 import { Route as RadarRouteImport } from './routes/radar'
 import { Route as YouRouteImport } from './routes/you'
@@ -29,6 +30,11 @@ const AuthRoute = AuthRouteImport.update({
 const ChatsRoute = ChatsRouteImport.update({
   id: '/chats',
   path: '/chats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ModerationRoute = ModerationRouteImport.update({
+  id: '/moderation',
+  path: '/moderation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PostsRoute = PostsRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
+  '/moderation': typeof ModerationRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
   '/you': typeof YouRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
+  '/moderation': typeof ModerationRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
   '/you': typeof YouRoute
@@ -68,22 +76,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
+  '/moderation': typeof ModerationRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
   '/you': typeof YouRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/chats' | '/posts' | '/radar' | '/you'
+  fullPaths:
+    '/' | '/auth' | '/chats' | '/moderation' | '/posts' | '/radar' | '/you'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/chats' | '/posts' | '/radar' | '/you'
-  id: '__root__' | '/' | '/auth' | '/chats' | '/posts' | '/radar' | '/you'
+  to: '/' | '/auth' | '/chats' | '/moderation' | '/posts' | '/radar' | '/you'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/chats'
+    | '/moderation'
+    | '/posts'
+    | '/radar'
+    | '/you'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   ChatsRoute: typeof ChatsRoute
+  ModerationRoute: typeof ModerationRoute
   PostsRoute: typeof PostsRoute
   RadarRoute: typeof RadarRoute
   YouRoute: typeof YouRoute
@@ -110,6 +129,13 @@ declare module '@tanstack/react-router' {
       path: '/chats'
       fullPath: '/chats'
       preLoaderRoute: typeof ChatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/moderation': {
+      id: '/moderation'
+      path: '/moderation'
+      fullPath: '/moderation'
+      preLoaderRoute: typeof ModerationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/posts': {
@@ -140,6 +166,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   ChatsRoute: ChatsRoute,
+  ModerationRoute: ModerationRoute,
   PostsRoute: PostsRoute,
   RadarRoute: RadarRoute,
   YouRoute: YouRoute,

@@ -70,7 +70,8 @@ function Home() {
     bio: item.profile.bio,
     intent: item.profile.intent,
     recommendationReason: item.reason,
-    voiceIntroPath: item.profile.voice_intro_path,
+    voiceIntroPath: item.profile.voice_intro_path ?? null,
+    photoPaths: item.profile.photo_paths ?? [],
   }));
   const deck = user
     ? liveDeck.filter(
@@ -417,6 +418,7 @@ function ProfileCard({
         <ProfilePhoto
           name={person.name}
           src={person.photo ? photo(person) : undefined}
+          path={person.photoPaths?.[0]}
           className="absolute inset-0 h-full w-full select-none object-cover"
         />
         <div className="bg-scrim absolute inset-0" aria-hidden="true" />
@@ -504,6 +506,18 @@ function ProfileCard({
             <div className="space-y-3">
               <p className="text-[13px] leading-5 text-muted-foreground">{person.bio}</p>
               {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
+              {person.photoPaths && person.photoPaths.length > 1 && (
+                <div className="no-scrollbar flex gap-2 overflow-x-auto">
+                  {person.photoPaths.slice(1).map((path) => (
+                    <ProfilePhoto
+                      key={path}
+                      name={person.name}
+                      path={path}
+                      className="h-24 w-20 shrink-0 rounded-xl object-cover"
+                    />
+                  ))}
+                </div>
+              )}
               {recommendationReason && (
                 <p className="rounded-xl bg-accent/50 p-3 text-xs leading-5">
                   <span className="font-semibold">Why you two: </span>

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { LockKeyhole, MapPin, MessageCircle, Send, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -456,6 +456,9 @@ type LivePost = {
   created_at: string;
 };
 type LiveReply = {
+  accepted_at: string | null;
+  accepted_by: string | null;
+  accepted_match_id: string | null;
   id: string;
   post_id: string;
   sender_id: string;
@@ -466,6 +469,7 @@ type LiveReply = {
 
 function LivePosts({ userId }: { userId: string }) {
   const client = useQueryClient();
+  const navigate = useNavigate({ from: "/posts" });
   const [body, setBody] = useState("");
   const [town, setTown] = useState<string>("Windhoek");
   const [view, setView] = useState<View>("Feed");
@@ -490,7 +494,9 @@ function LivePosts({ userId }: { userId: string }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("post_replies")
-        .select("id,post_id,sender_id,sender_name,body,created_at")
+        .select(
+          "id,post_id,sender_id,sender_name,body,created_at,accepted_at,accepted_by,accepted_match_id",
+        )
         .order("created_at", { ascending: false })
         .limit(100);
       if (error) throw error;
@@ -568,6 +574,22 @@ function LivePosts({ userId }: { userId: string }) {
       .eq("author_id", userId);
     setNotice(error ? "We couldn't delete the post." : "Post deleted.");
     refresh();
+  };
+
+  const acceptReply = async (reply: LiveReply) => {
+    const { data: matchId, error } = await supabase.rpc("accept_post_reply", {
+      _reply_id: reply.id,
+    });
+    if (error || !matchId) {
+      setNotice(
+        error?.code === "42501"
+          ? "This reply can’t be accepted. It may no longer be available."
+          : "We couldn't connect you. Please try again.",
+      );
+      return;
+    }
+    refresh();
+    await navigate({ to: "/chats", search: { matchId } });
   };
 
   return (
@@ -701,6 +723,23 @@ function LivePosts({ userId }: { userId: string }) {
                       <div key={reply.id} className="rounded-xl bg-secondary p-3">
                         <p className="text-xs font-semibold">{reply.sender_name}</p>
                         <p className="mt-1 text-sm">{reply.body}</p>
+                        {reply.accepted_match_id ? (
+                          <Link
+                            to="/chats"
+                            search={{ matchId: reply.accepted_match_id }}
+                            className="mt-3 inline-flex h-9 items-center rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground"
+                          >
+                            Open chat
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void acceptReply(reply)}
+                            className="mt-3 h-9 rounded-full bg-primary px-4 text-xs font-semibold text-primary-foreground"
+                          >
+                            Accept and start chat
+                          </button>
+                        )}
                         <SafetyActions
                           userId={userId}
                           targetId={reply.sender_id}
@@ -711,6 +750,22 @@ function LivePosts({ userId }: { userId: string }) {
                     ))}
                   </div>
                 )}
+                {post.author_id !== userId &&
+                  postReplies.some((reply) => reply.accepted_match_id) && (
+                    <div className="mt-3">
+                      <Link
+                        to="/chats"
+                        search={{
+                          matchId:
+                            postReplies.find((reply) => reply.accepted_match_id)
+                              ?.accepted_match_id ?? "",
+                        }}
+                        className="text-xs font-semibold text-primary"
+                      >
+                        Your reply was accepted · Open chat
+                      </Link>
+                    </div>
+                  )}
                 {post.author_id !== userId && (
                   <div className="mt-3 border-t border-border pt-3">
                     <SafetyActions

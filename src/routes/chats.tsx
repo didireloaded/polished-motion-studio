@@ -11,6 +11,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
 
 export const Route = createFileRoute("/chats")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    matchId: typeof search["matchId"] === "string" ? search["matchId"] : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Chats — NamLink" },
@@ -25,6 +28,7 @@ export const Route = createFileRoute("/chats")({
 function Chats() {
   const s = useStore();
   const { user, ready } = useSession();
+  const { matchId } = Route.useSearch();
   const [openId, setOpenId] = useState<string | null>(null);
   const list = people.filter((p) => s.matches.includes(p.id));
   const person = list.find((p) => p.id === openId);
@@ -33,7 +37,10 @@ function Chats() {
     return (
       <main className="mx-auto max-w-md px-5 py-10 text-sm text-muted-foreground">Loading…</main>
     );
-  if (user) return <LiveChats key={user.id} userId={user.id} />;
+  if (user)
+    return (
+      <LiveChats key={user.id} userId={user.id} {...(matchId ? { initialMatchId: matchId } : {})} />
+    );
 
   return (
     <main className="mx-auto max-w-md pb-28">
@@ -160,11 +167,12 @@ type ChatProfile = {
   tags: string[];
   intent: string;
   seeking: string;
+  photo_paths: string[];
 };
 
-function LiveChats({ userId }: { userId: string }) {
+function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?: string }) {
   const client = useQueryClient();
-  const [openMatchId, setOpenMatchId] = useState<string | null>(null);
+  const [openMatchId, setOpenMatchId] = useState<string | null>(initialMatchId ?? null);
   const matchesQuery = useQuery({
     queryKey: ["matches", userId],
     queryFn: async () => {
@@ -181,7 +189,7 @@ function LiveChats({ userId }: { userId: string }) {
       const [profiles, messages] = await Promise.all([
         supabase
           .from("profiles")
-          .select("id,display_name,age,town,bio,tags,intent,seeking")
+          .select("id,display_name,age,town,bio,tags,intent,seeking,photo_paths")
           .in("id", counterpartIds),
         supabase
           .from("messages")
@@ -256,6 +264,7 @@ function LiveChats({ userId }: { userId: string }) {
                     >
                       <ProfilePhoto
                         name={p.display_name}
+                        path={p.photo_paths?.[0]}
                         className="h-16 w-16 rounded-full border-2 border-primary object-cover p-0.5"
                       />
                       <p className="mt-1 text-xs">{p.display_name}</p>
@@ -277,6 +286,7 @@ function LiveChats({ userId }: { userId: string }) {
                       >
                         <ProfilePhoto
                           name={p.display_name}
+                          path={p.photo_paths?.[0]}
                           className="h-12 w-12 rounded-full object-cover"
                         />
                         <div className="min-w-0 flex-1">
@@ -573,7 +583,11 @@ function LiveThread({
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <ProfilePhoto name={person.display_name} className="h-10 w-10 rounded-full object-cover" />
+        <ProfilePhoto
+          name={person.display_name}
+          path={person.photo_paths?.[0]}
+          className="h-10 w-10 rounded-full object-cover"
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{person.display_name}</p>
           <p className="text-xs text-muted-foreground">{person.town}</p>

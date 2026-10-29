@@ -15,9 +15,9 @@ import { interests, people, photo, towns, update, useStore, toggle } from "@/lib
 import { PageHeader } from "@/components/TabBar";
 import { Link } from "@tanstack/react-router";
 import { useSession, useMyProfile } from "@/hooks/use-session";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { DemoNotice } from "@/components/community";
+import { DemoNotice, ProfilePhoto } from "@/components/community";
 import { VoiceIntroRecorder } from "@/components/voice-intro";
 
 const choices = [
@@ -465,10 +465,22 @@ function LiveProfile({
     pref_max_age: number | null;
     pref_town: string | null;
     voice_intro_path: string | null;
+    photo_paths: string[];
   } | null;
   loading: boolean;
 }) {
   const queryClient = useQueryClient();
+  const roles = useQuery({
+    queryKey: ["my-roles", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId);
+      if (error) throw error;
+      return data.map(({ role }) => role);
+    },
+  });
   const [name, setName] = useState(profile?.display_name ?? "");
   const [age, setAge] = useState(profile?.age ?? 18);
   const [town, setTown] = useState(profile?.town ?? "Windhoek");
@@ -482,6 +494,8 @@ function LiveProfile({
   const [adult, setAdult] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [photosBusy, setPhotosBusy] = useState(false);
+  const [photosNotice, setPhotosNotice] = useState("");
 
   useEffect(() => {
     if (!profile) return;
@@ -498,6 +512,7 @@ function LiveProfile({
   }, [profile]);
 
   const save = async () => {
+    const currentProfile = profile;
     if (name.trim().length < 2 || age < 18 || age > 99 || !town || !adult || minAge > maxAge)
       return;
     setBusy(true);
@@ -514,6 +529,8 @@ function LiveProfile({
       pref_min_age: minAge,
       pref_max_age: maxAge,
       pref_town: prefTown || null,
+      voice_intro_path: currentProfile?.voice_intro_path ?? null,
+      photo_paths: currentProfile?.photo_paths ?? [],
     });
     setBusy(false);
     if (error) {
@@ -521,6 +538,89 @@ function LiveProfile({
       return;
     }
     setNotice("Profile saved. Your preferences will shape your recommendations.");
+  };
+
+  const refreshPhotoConsumers = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["my-profile", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["recommendations", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["nearby", userId] }),
+      queryClient.invalidateQueries({ queryKey: ["matches", userId] }),
+    ]);
+  };
+
+  const uploadPhotos = async (selected: FileList | null) => {
+    if (!selected || !profile) return;
+    const files = Array.from(selected);
+    const remaining = 6 - (profile.photo_paths?.length ?? 0);
+    if (!files.length) return;
+    if (files.length > remaining) {
+      setPhotosNotice(`You can add ${remaining} more photo${remaining === 1 ? "" : "s"}.`);
+      return;
+    }
+    if (
+      files.some(
+        (file) =>
+          !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+          file.size > 5 * 1024 * 1024,
+      )
+    ) {
+      setPhotosNotice("Choose JPEG, PNG or WebP photos up to 5 MB each.");
+      return;
+    }
+    setPhotosBusy(true);
+    setPhotosNotice("");
+    const uploaded: string[] = [];
+    for (const file of files) {
+      const extension =
+        file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+      const path = `${userId}/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage.from("profile-photos").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (error) {
+        if (uploaded.length) await supabase.storage.from("profile-photos").remove(uploaded);
+        setPhotosBusy(false);
+        setPhotosNotice("A photo couldn't be uploaded. Please check the file and try again.");
+        return;
+      }
+      uploaded.push(path);
+    }
+    const { error } = await supabase
+      .from("profiles")
+      .update({ photo_paths: [...(profile.photo_paths ?? []), ...uploaded] })
+      .eq("id", userId);
+    if (error) {
+      await supabase.storage.from("profile-photos").remove(uploaded);
+      setPhotosBusy(false);
+      setPhotosNotice("Your photos uploaded but couldn't be added to your profile. Try again.");
+      return;
+    }
+    setPhotosBusy(false);
+    setPhotosNotice("Photos added to your profile.");
+    await refreshPhotoConsumers();
+  };
+
+  const removePhoto = async (path: string) => {
+    if (!profile || photosBusy) return;
+    setPhotosBusy(true);
+    setPhotosNotice("");
+    const { error } = await supabase
+      .from("profiles")
+      .update({ photo_paths: profile.photo_paths.filter((photoPath) => photoPath !== path) })
+      .eq("id", userId);
+    if (error) {
+      setPhotosBusy(false);
+      setPhotosNotice("We couldn't remove this photo from your profile.");
+      return;
+    }
+    const { error: cleanupError } = await supabase.storage.from("profile-photos").remove([path]);
+    setPhotosBusy(false);
+    setPhotosNotice(
+      cleanupError ? "Photo removed. Storage cleanup will retry later." : "Photo removed.",
+    );
+    await refreshPhotoConsumers();
   };
 
   if (!loading && !profile)
@@ -550,6 +650,62 @@ function LiveProfile({
             </p>
           )}
           {profile && <VoiceIntroRecorder userId={userId} initialPath={profile.voice_intro_path} />}
+          {profile && (
+            <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold">Your photos</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Up to six clear photos · JPEG, PNG or WebP · 5 MB each
+                  </p>
+                </div>
+                <Camera className="h-4 w-4 text-primary" />
+              </div>
+              {!!profile.photo_paths?.length && (
+                <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+                  {profile.photo_paths.map((path) => (
+                    <div key={path} className="relative shrink-0">
+                      <ProfilePhoto
+                        name={profile.display_name}
+                        path={path}
+                        className="h-24 w-20 rounded-xl object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void removePhoto(path)}
+                        disabled={photosBusy}
+                        aria-label="Remove profile photo"
+                        className="absolute right-1 top-1 rounded-full bg-foreground/75 px-2 py-1 text-[10px] font-medium text-white disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {(profile.photo_paths?.length ?? 0) < 6 && (
+                <label className="mt-3 inline-flex h-10 cursor-pointer items-center rounded-full bg-secondary px-4 text-sm font-semibold">
+                  {photosBusy ? "Saving photos…" : "Choose photos"}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    multiple
+                    disabled={photosBusy}
+                    onChange={(event) => {
+                      void uploadPhotos(event.target.files);
+                      event.currentTarget.value = "";
+                    }}
+                    className="sr-only"
+                  />
+                </label>
+              )}
+              {photosNotice && (
+                <p role="status" className="mt-2 text-xs text-muted-foreground">
+                  {photosNotice}
+                </p>
+              )}
+            </section>
+          )}
           <section className="mx-5 space-y-4 rounded-2xl border border-border bg-card p-4">
             <Field label="First name">
               <input
@@ -666,6 +822,14 @@ function LiveProfile({
               </select>
             </Field>
           </section>
+          {roles.data?.some((role) => role === "moderator" || role === "admin") && (
+            <Link
+              to="/moderation"
+              className="mx-5 mt-4 inline-flex h-10 items-center rounded-full bg-secondary px-4 text-sm font-semibold"
+            >
+              Review member reports
+            </Link>
+          )}
           <label className="mx-5 mt-4 flex items-center gap-3 text-sm text-muted-foreground">
             <input
               type="checkbox"

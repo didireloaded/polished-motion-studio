@@ -47,6 +47,7 @@ export type Person = {
   photoPosition?: string;
   recommendationReason?: string;
   voiceIntroPath?: string | null;
+  photoPaths?: string[];
 };
 
 export const people: Person[] = [

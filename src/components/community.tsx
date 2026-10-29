@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Flag, ShieldBan, X } from "lucide-react";
 import {
   Drawer,
@@ -25,13 +26,28 @@ export function DemoNotice() {
 export function ProfilePhoto({
   name,
   src,
+  path,
   className = "",
 }: {
   name: string;
   src?: string | undefined;
+  path?: string | undefined;
   className?: string;
 }) {
-  if (src) return <img src={src} alt={`${name}'s profile`} className={className} />;
+  const signedPhoto = useQuery({
+    queryKey: ["signed-profile-photo", path],
+    enabled: !!path,
+    staleTime: 50 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("profile-photos")
+        .createSignedUrl(path!, 60 * 60);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+  const image = src ?? signedPhoto.data;
+  if (image) return <img src={image} alt={`${name}'s profile`} className={className} />;
   return (
     <div
       aria-label={`${name}'s profile photo`}

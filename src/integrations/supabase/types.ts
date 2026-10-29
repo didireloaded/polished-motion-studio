@@ -47,6 +47,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      community_events: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          created_by: string;
+          details: string;
+          id: string;
+          starts_at: string;
+          title: string;
+          town: string;
+          venue_name: string;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          created_by: string;
+          details?: string;
+          id?: string;
+          starts_at: string;
+          title: string;
+          town: string;
+          venue_name: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          created_by?: string;
+          details?: string;
+          id?: string;
+          starts_at?: string;
+          title?: string;
+          town?: string;
+          venue_name?: string;
+        };
+        Relationships: [];
+      };
+      event_rsvps: {
+        Row: { created_at: string; event_id: string; user_id: string };
+        Insert: { created_at?: string; event_id: string; user_id: string };
+        Update: { created_at?: string; event_id?: string; user_id?: string };
+        Relationships: [
+          {
+            foreignKeyName: "event_rsvps_event_id_fkey";
+            columns: ["event_id"];
+            isOneToOne: false;
+            referencedRelation: "community_events";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       date_plans: {
         Row: {
           activity: string;
@@ -196,6 +246,9 @@ export type Database = {
       };
       post_replies: {
         Row: {
+          accepted_at: string | null;
+          accepted_by: string | null;
+          accepted_match_id: string | null;
           body: string;
           created_at: string;
           id: string;
@@ -204,6 +257,9 @@ export type Database = {
           sender_name: string;
         };
         Insert: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          accepted_match_id?: string | null;
           body: string;
           created_at?: string;
           id?: string;
@@ -212,6 +268,9 @@ export type Database = {
           sender_name: string;
         };
         Update: {
+          accepted_at?: string | null;
+          accepted_by?: string | null;
+          accepted_match_id?: string | null;
           body?: string;
           created_at?: string;
           id?: string;
@@ -225,6 +284,13 @@ export type Database = {
             columns: ["post_id"];
             isOneToOne: false;
             referencedRelation: "posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "post_replies_accepted_match_id_fkey";
+            columns: ["accepted_match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
             referencedColumns: ["id"];
           },
         ];
@@ -268,6 +334,7 @@ export type Database = {
           pref_max_age: number | null;
           pref_min_age: number | null;
           pref_town: string | null;
+          photo_paths: string[];
           seeking: string;
           tags: string[];
           town: string;
@@ -285,6 +352,7 @@ export type Database = {
           pref_max_age?: number | null;
           pref_min_age?: number | null;
           pref_town?: string | null;
+          photo_paths?: string[];
           seeking?: string;
           tags?: string[];
           town: string;
@@ -302,6 +370,7 @@ export type Database = {
           pref_max_age?: number | null;
           pref_min_age?: number | null;
           pref_town?: string | null;
+          photo_paths?: string[];
           seeking?: string;
           tags?: string[];
           town?: string;
@@ -319,6 +388,7 @@ export type Database = {
           post_id: string | null;
           reported_id: string;
           reporter_id: string;
+          status: "open" | "reviewed" | "actioned" | "dismissed";
         };
         Insert: {
           category: string;
@@ -328,6 +398,7 @@ export type Database = {
           post_id?: string | null;
           reported_id: string;
           reporter_id: string;
+          status?: "open" | "reviewed" | "actioned" | "dismissed";
         };
         Update: {
           category?: string;
@@ -337,6 +408,28 @@ export type Database = {
           post_id?: string | null;
           reported_id?: string;
           reporter_id?: string;
+          status?: "open" | "reviewed" | "actioned" | "dismissed";
+        };
+        Relationships: [];
+      };
+      report_reviews: {
+        Row: {
+          moderator_note: string;
+          report_id: string;
+          reviewed_at: string;
+          reviewed_by: string;
+        };
+        Insert: {
+          moderator_note?: string;
+          report_id: string;
+          reviewed_at?: string;
+          reviewed_by: string;
+        };
+        Update: {
+          moderator_note?: string;
+          report_id?: string;
+          reviewed_at?: string;
+          reviewed_by?: string;
         };
         Relationships: [];
       };
@@ -363,6 +456,11 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_post_reply: { Args: { _reply_id: string }; Returns: string };
+      review_report: {
+        Args: { _moderator_note?: string; _report_id: string; _status: string };
+        Returns: undefined;
+      };
       update_date_plan: {
         Args: {
           p_activity: string;
