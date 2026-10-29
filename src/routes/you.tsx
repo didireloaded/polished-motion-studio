@@ -1,9 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { Bookmark, Camera, Check, Heart, Mic, MessagesSquare, RotateCcw, Square } from "lucide-react";
+import {
+  Bookmark,
+  Camera,
+  Check,
+  Heart,
+  Mic,
+  MessagesSquare,
+  RotateCcw,
+  Square,
+} from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { interests, people, photo, towns, update, useStore, toggle } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
+import { Link } from "@tanstack/react-router";
+import { useSession, useMyProfile } from "@/hooks/use-session";
+import { supabase } from "@/integrations/supabase/client";
+import { DemoNotice } from "@/components/community";
 
 const choices = [
   { id: "weekend", prompt: "A free Saturday", options: ["A road trip", "A slow morning"] },
@@ -24,6 +37,8 @@ export const Route = createFileRoute("/you")({
 
 function You() {
   const s = useStore();
+  const { user, ready } = useSession();
+  const liveProfile = useMyProfile(user?.id);
   const [f, setF] = useState(s.profile);
   const [saved, setSaved] = useState(false);
   const [adult, setAdult] = useState(false);
@@ -36,12 +51,15 @@ function You() {
   const savedAudio = useRef<string | null>(null);
   const savedSelfie = useRef<string | null>(null);
   useEffect(() => setF(s.profile), [s.profile]);
-  useEffect(() => () => {
-    recorder.current?.stop();
-    recorderStream.current?.getTracks().forEach((track) => track.stop());
-    if (savedAudio.current) URL.revokeObjectURL(savedAudio.current);
-    if (savedSelfie.current) URL.revokeObjectURL(savedSelfie.current);
-  }, []);
+  useEffect(
+    () => () => {
+      recorder.current?.stop();
+      recorderStream.current?.getTracks().forEach((track) => track.stop());
+      if (savedAudio.current) URL.revokeObjectURL(savedAudio.current);
+      if (savedSelfie.current) URL.revokeObjectURL(savedSelfie.current);
+    },
+    [],
+  );
 
   const valid = f.name.trim().length >= 2 && f.age >= 18 && f.age <= 99 && adult;
   const save = () => {
@@ -55,17 +73,22 @@ function You() {
   const beginRecording = async () => {
     setVoiceError("");
     try {
-      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") throw new Error("Voice recording is not supported in this browser.");
+      if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined")
+        throw new Error("Voice recording is not supported in this browser.");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       recorderStream.current = stream;
       const instance = new MediaRecorder(stream);
       const chunks: BlobPart[] = [];
-      instance.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      instance.ondataavailable = (event) => {
+        if (event.data.size) chunks.push(event.data);
+      };
       instance.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
         recorderStream.current = null;
         if (chunks.length) {
-          const url = URL.createObjectURL(new Blob(chunks, { type: instance.mimeType || "audio/webm" }));
+          const url = URL.createObjectURL(
+            new Blob(chunks, { type: instance.mimeType || "audio/webm" }),
+          );
           if (savedAudio.current) URL.revokeObjectURL(savedAudio.current);
           savedAudio.current = url;
           setAudioUrl(url);
@@ -94,13 +117,33 @@ function You() {
     { icon: MessagesSquare, number: s.matches.length, label: "Connections" },
   ];
 
+  if (!ready)
+    return (
+      <main className="mx-auto max-w-md px-5 py-10 text-sm text-muted-foreground">
+        Loading your account…
+      </main>
+    );
+  if (user)
+    return (
+      <LiveProfile
+        key={user.id}
+        userId={user.id}
+        profile={liveProfile.data ?? null}
+        loading={liveProfile.isLoading}
+      />
+    );
+
   return (
     <main className="mx-auto max-w-md pb-28">
+      <DemoNotice />
       <PageHeader title={s.profile.name ? s.profile.name : "You"} />
       <div className="grid grid-cols-3 gap-2 px-5">
         {stats.map(({ icon: Icon, number, label }) => (
           <div key={label} className="rounded-2xl border border-border bg-card px-3 py-3">
-            <div className="flex items-center gap-2"><Icon className="h-4 w-4 text-primary" /><span className="text-lg font-semibold tabular-nums">{number}</span></div>
+            <div className="flex items-center gap-2">
+              <Icon className="h-4 w-4 text-primary" />
+              <span className="text-lg font-semibold tabular-nums">{number}</span>
+            </div>
             <p className="mt-1 text-[11px] text-muted-foreground">{label}</p>
           </div>
         ))}
@@ -111,10 +154,19 @@ function You() {
           <h2 className="mb-3 text-[15px] font-semibold">Saved profiles</h2>
           <div className="no-scrollbar flex gap-3 overflow-x-auto">
             {savedPeople.map((person) => (
-              <div key={person.id} className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl">
-                <img src={photo(person, true)} alt={"Sample profile photo of " + person.name} className="h-full w-full object-cover" />
+              <div
+                key={person.id}
+                className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl"
+              >
+                <img
+                  src={photo(person, true)}
+                  alt={"Sample profile photo of " + person.name}
+                  className="h-full w-full object-cover"
+                />
                 <div className="bg-scrim absolute inset-0" />
-                <p className="absolute bottom-2 left-2 text-sm font-semibold text-white">{person.name}</p>
+                <p className="absolute bottom-2 left-2 text-sm font-semibold text-white">
+                  {person.name}
+                </p>
               </div>
             ))}
           </div>
@@ -123,76 +175,530 @@ function You() {
 
       <section className="mx-5 mt-5 space-y-4 rounded-2xl border border-border bg-card p-4">
         <h2 className="text-[16px] font-semibold">Your profile</h2>
-        <Field label="First name"><input value={f.name} maxLength={40} onChange={(e) => setF({ ...f, name: e.target.value })} className="input" /></Field>
+        <Field label="First name">
+          <input
+            value={f.name}
+            maxLength={40}
+            onChange={(e) => setF({ ...f, name: e.target.value })}
+            className="input"
+          />
+        </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Age"><input type="number" min={18} max={99} value={f.age} onChange={(e) => setF({ ...f, age: Number(e.target.value) })} className="input" /></Field>
-          <Field label="Town"><select value={f.town} onChange={(e) => setF({ ...f, town: e.target.value })} className="input">{towns.map((place) => <option key={place}>{place}</option>)}</select></Field>
+          <Field label="Age">
+            <input
+              type="number"
+              min={18}
+              max={99}
+              value={f.age}
+              onChange={(e) => setF({ ...f, age: Number(e.target.value) })}
+              className="input"
+            />
+          </Field>
+          <Field label="Town">
+            <select
+              value={f.town}
+              onChange={(e) => setF({ ...f, town: e.target.value })}
+              className="input"
+            >
+              {towns.map((place) => (
+                <option key={place}>{place}</option>
+              ))}
+            </select>
+          </Field>
         </div>
         <Field label="Looking for">
-          <div className="flex gap-2">{["A relationship", "Open to exploring"].map((intent) => (
-            <button key={intent} type="button" onClick={() => setF({ ...f, intent })} className={"flex-1 rounded-xl border px-2 py-2.5 text-xs font-medium " + (f.intent === intent ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground")}>{intent}</button>
-          ))}</div>
+          <div className="flex gap-2">
+            {["A relationship", "Open to exploring"].map((intent) => (
+              <button
+                key={intent}
+                type="button"
+                onClick={() => setF({ ...f, intent })}
+                className={
+                  "flex-1 rounded-xl border px-2 py-2.5 text-xs font-medium " +
+                  (f.intent === intent
+                    ? "border-primary bg-primary/10 text-foreground"
+                    : "border-border text-muted-foreground")
+                }
+              >
+                {intent}
+              </button>
+            ))}
+          </div>
         </Field>
-        <Field label="About you"><textarea rows={3} maxLength={500} value={f.bio} onChange={(e) => setF({ ...f, bio: e.target.value })} className="input resize-none" /></Field>
+        <Field label="About you">
+          <textarea
+            rows={3}
+            maxLength={500}
+            value={f.bio}
+            onChange={(e) => setF({ ...f, bio: e.target.value })}
+            className="input resize-none"
+          />
+        </Field>
         <Field label="Interests">
-          <div className="flex flex-wrap gap-2">{interests.map((tag) => {
-            const selected = f.tags.includes(tag);
-            return <button key={tag} type="button" aria-pressed={selected} onClick={() => setF({ ...f, tags: toggle(f.tags, tag) })}
-              className={"rounded-full border px-3 py-1.5 text-xs " + (selected ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground")}>{tag}</button>;
-          })}</div>
+          <div className="flex flex-wrap gap-2">
+            {interests.map((tag) => {
+              const selected = f.tags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setF({ ...f, tags: toggle(f.tags, tag) })}
+                  className={
+                    "rounded-full border px-3 py-1.5 text-xs " +
+                    (selected
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border text-muted-foreground")
+                  }
+                >
+                  {tag}
+                </button>
+              );
+            })}
+          </div>
         </Field>
         <label className="flex items-center gap-3 text-sm text-muted-foreground">
-          <input type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} className="h-4 w-4 accent-primary" />I confirm I’m 18 or older
+          <input
+            type="checkbox"
+            checked={adult}
+            onChange={(e) => setAdult(e.target.checked)}
+            className="h-4 w-4 accent-primary"
+          />
+          I confirm I’m 18 or older
         </label>
-        <button type="button" disabled={!valid} onClick={save} className="flex h-11 w-full items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground disabled:opacity-45">
-          <AnimatePresence mode="wait">{saved ? <motion.span key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2"><Check className="h-4 w-4" />Saved</motion.span> : <motion.span key="save">Save profile</motion.span>}</AnimatePresence>
+        <button
+          type="button"
+          disabled={!valid}
+          onClick={save}
+          className="flex h-11 w-full items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground disabled:opacity-45"
+        >
+          <AnimatePresence mode="wait">
+            {saved ? (
+              <motion.span
+                key="saved"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-2"
+              >
+                <Check className="h-4 w-4" />
+                Saved
+              </motion.span>
+            ) : (
+              <motion.span key="save">Save profile</motion.span>
+            )}
+          </AnimatePresence>
         </button>
       </section>
 
       <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center justify-between"><div><h2 className="text-[16px] font-semibold">This or that</h2><p className="mt-1 text-xs text-muted-foreground">A few quick answers help people get to know you.</p></div></div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-[16px] font-semibold">This or that</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              A few quick answers help people get to know you.
+            </p>
+          </div>
+        </div>
         <div className="mt-4 space-y-4">
           {choices.map((choice) => (
             <fieldset key={choice.id}>
               <legend className="mb-2 text-sm font-medium">{choice.prompt}</legend>
-              <div className="grid grid-cols-2 gap-2">{choice.options.map((answer) => (
-                <button key={answer} type="button" aria-pressed={f.choices[choice.id] === answer}
-                  onClick={() => setF({ ...f, choices: { ...f.choices, [choice.id]: answer } })}
-                  className={"rounded-xl border px-2 py-2.5 text-xs font-medium " + (f.choices[choice.id] === answer ? "border-primary bg-primary/10 text-foreground" : "border-border text-muted-foreground")}>{answer}</button>
-              ))}</div>
+              <div className="grid grid-cols-2 gap-2">
+                {choice.options.map((answer) => (
+                  <button
+                    key={answer}
+                    type="button"
+                    aria-pressed={f.choices[choice.id] === answer}
+                    onClick={() => setF({ ...f, choices: { ...f.choices, [choice.id]: answer } })}
+                    className={
+                      "rounded-xl border px-2 py-2.5 text-xs font-medium " +
+                      (f.choices[choice.id] === answer
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border text-muted-foreground")
+                    }
+                  >
+                    {answer}
+                  </button>
+                ))}
+              </div>
             </fieldset>
           ))}
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">Save your profile to keep these answers.</p>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Save your profile to keep these answers.
+        </p>
       </section>
 
       <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center gap-3"><div className="rounded-xl bg-secondary p-2.5 text-primary"><Mic className="h-5 w-5" /></div><div><h2 className="text-[16px] font-semibold">Voice intro</h2><p className="mt-0.5 text-xs text-muted-foreground">Add a short hello to your profile.</p></div></div>
-        <div className="mt-4 flex gap-2">
-          {!recording ? <button type="button" onClick={beginRecording} className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground"><Mic className="h-4 w-4" />{audioUrl ? "Record again" : "Record intro"}</button>
-            : <button type="button" onClick={() => recorder.current?.stop()} className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-semibold"><Square className="h-4 w-4" />Stop recording</button>}
-          {audioUrl && <button type="button" onClick={() => { if (savedAudio.current) URL.revokeObjectURL(savedAudio.current); savedAudio.current = null; setAudioUrl(null); }} className="rounded-xl border border-border px-3 text-sm">Remove</button>}
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-secondary p-2.5 text-primary">
+            <Mic className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-[16px] font-semibold">Voice intro</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Add a short hello to your profile.
+            </p>
+          </div>
         </div>
-        {recording && <p role="status" className="mt-2 text-xs text-primary">Recording. Select Stop recording when you’re done.</p>}
-        {voiceError && <p role="alert" className="mt-2 text-xs text-destructive">{voiceError}</p>}
-        {audioUrl && <audio controls src={audioUrl} className="mt-3 w-full" aria-label="Preview voice intro" />}
-        <p className="mt-2 text-xs text-muted-foreground">Audio stays on this device in this preview; it is not uploaded.</p>
+        <div className="mt-4 flex gap-2">
+          {!recording ? (
+            <button
+              type="button"
+              onClick={beginRecording}
+              className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-primary text-sm font-semibold text-primary-foreground"
+            >
+              <Mic className="h-4 w-4" />
+              {audioUrl ? "Record again" : "Record intro"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => recorder.current?.stop()}
+              className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-semibold"
+            >
+              <Square className="h-4 w-4" />
+              Stop recording
+            </button>
+          )}
+          {audioUrl && (
+            <button
+              type="button"
+              onClick={() => {
+                if (savedAudio.current) URL.revokeObjectURL(savedAudio.current);
+                savedAudio.current = null;
+                setAudioUrl(null);
+              }}
+              className="rounded-xl border border-border px-3 text-sm"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+        {recording && (
+          <p role="status" className="mt-2 text-xs text-primary">
+            Recording. Select Stop recording when you’re done.
+          </p>
+        )}
+        {voiceError && (
+          <p role="alert" className="mt-2 text-xs text-destructive">
+            {voiceError}
+          </p>
+        )}
+        {audioUrl && (
+          <audio controls src={audioUrl} className="mt-3 w-full" aria-label="Preview voice intro" />
+        )}
+        <p className="mt-2 text-xs text-muted-foreground">
+          Audio stays on this device in this preview; it is not uploaded.
+        </p>
       </section>
 
       <section className="mx-5 mt-4 rounded-2xl border border-border bg-card p-4">
-        <div className="flex items-center gap-3"><div className="rounded-xl bg-secondary p-2.5 text-primary"><Camera className="h-5 w-5" /></div><div><h2 className="text-[16px] font-semibold">Selfie check</h2><p className="mt-0.5 text-xs text-muted-foreground">Your status: Not verified</p></div></div>
-        <label htmlFor="selfie-capture" className="mt-4 flex h-10 cursor-pointer items-center justify-center rounded-xl border border-border text-sm font-semibold">Take a selfie</label>
-        <input id="selfie-capture" className="sr-only" type="file" accept="image/*" capture="user" onChange={(e) => captureSelfie(e.target.files?.[0])} />
-        {selfieUrl && <img src={selfieUrl} alt="Selfie preview captured on this device" className="mt-3 max-h-64 w-full rounded-xl object-cover" />}
-        <p className="mt-2 text-xs leading-5 text-muted-foreground">This preview cannot verify identity or upload a selfie. A real verification check needs a secure review service.</p>
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-secondary p-2.5 text-primary">
+            <Camera className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-[16px] font-semibold">Selfie check</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Your status: Not verified</p>
+          </div>
+        </div>
+        <label
+          htmlFor="selfie-capture"
+          className="mt-4 flex h-10 cursor-pointer items-center justify-center rounded-xl border border-border text-sm font-semibold"
+        >
+          Take a selfie
+        </label>
+        <input
+          id="selfie-capture"
+          className="sr-only"
+          type="file"
+          accept="image/*"
+          capture="user"
+          onChange={(e) => captureSelfie(e.target.files?.[0])}
+        />
+        {selfieUrl && (
+          <img
+            src={selfieUrl}
+            alt="Selfie preview captured on this device"
+            className="mt-3 max-h-64 w-full rounded-xl object-cover"
+          />
+        )}
+        <p className="mt-2 text-xs leading-5 text-muted-foreground">
+          This preview cannot verify identity or upload a selfie. A real verification check needs a
+          secure review service.
+        </p>
       </section>
 
-      <button type="button" onClick={() => { if (confirm("Reset likes, passes, saves, matches and chats?")) update((st) => ({ ...st, liked: [], passed: [], saved: [], matches: [], chats: {} })); }}
-        className="mx-auto mt-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive"><RotateCcw className="h-4 w-4" />Reset my activity</button>
+      <button
+        type="button"
+        onClick={() => {
+          if (confirm("Reset likes, passes, saves, matches and chats?"))
+            update((st) => ({ ...st, liked: [], passed: [], saved: [], matches: [], chats: {} }));
+        }}
+        className="mx-auto mt-6 flex items-center gap-2 text-sm text-muted-foreground hover:text-destructive"
+      >
+        <RotateCcw className="h-4 w-4" />
+        Reset my activity
+      </button>
+    </main>
+  );
+}
+
+function LiveProfile({
+  userId,
+  profile,
+  loading,
+}: {
+  userId: string;
+  profile: {
+    display_name: string;
+    age: number;
+    town: string;
+    bio: string;
+    tags: string[];
+    intent: string;
+    seeking: string;
+    pref_min_age: number | null;
+    pref_max_age: number | null;
+    pref_town: string | null;
+  } | null;
+  loading: boolean;
+}) {
+  const [name, setName] = useState(profile?.display_name ?? "");
+  const [age, setAge] = useState(profile?.age ?? 18);
+  const [town, setTown] = useState(profile?.town ?? "Windhoek");
+  const [bio, setBio] = useState(profile?.bio ?? "");
+  const [tags, setTags] = useState(profile?.tags ?? []);
+  const [intent, setIntent] = useState(profile?.intent ?? "A relationship");
+  const [seeking, setSeeking] = useState(profile?.seeking ?? "");
+  const [minAge, setMinAge] = useState(profile?.pref_min_age ?? 18);
+  const [maxAge, setMaxAge] = useState(profile?.pref_max_age ?? 99);
+  const [prefTown, setPrefTown] = useState(profile?.pref_town ?? "");
+  const [adult, setAdult] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    if (!profile) return;
+    setName(profile.display_name);
+    setAge(profile.age);
+    setTown(profile.town);
+    setBio(profile.bio);
+    setTags(profile.tags ?? []);
+    setIntent(profile.intent);
+    setSeeking(profile.seeking);
+    setMinAge(profile.pref_min_age ?? 18);
+    setMaxAge(profile.pref_max_age ?? 99);
+    setPrefTown(profile.pref_town ?? "");
+  }, [profile]);
+
+  const save = async () => {
+    if (name.trim().length < 2 || age < 18 || age > 99 || !town || !adult || minAge > maxAge)
+      return;
+    setBusy(true);
+    setNotice("");
+    const { error } = await supabase.from("profiles").upsert({
+      id: userId,
+      display_name: name.trim(),
+      age,
+      town,
+      bio: bio.trim().slice(0, 500),
+      tags: tags.slice(0, 10),
+      intent,
+      seeking: seeking.trim().slice(0, 400),
+      pref_min_age: minAge,
+      pref_max_age: maxAge,
+      pref_town: prefTown || null,
+    });
+    setBusy(false);
+    if (error) {
+      setNotice("We couldn't save your profile. Please check your connection and try again.");
+      return;
+    }
+    setNotice("Profile saved. Your preferences will shape your recommendations.");
+  };
+
+  return (
+    <main className="mx-auto max-w-md pb-28">
+      <PageHeader
+        title={name ? `Hi, ${name}` : "Your profile"}
+        eyebrow={
+          profile ? "Your profile and preferences" : "A few details before we find people for you"
+        }
+      />
+      {loading ? (
+        <p className="px-5 py-8 text-sm text-muted-foreground">Loading your profile…</p>
+      ) : (
+        <>
+          {!profile && (
+            <p className="mx-5 mb-4 rounded-xl bg-secondary px-4 py-3 text-sm leading-5 text-muted-foreground">
+              Complete your profile to appear in discovery. Only members who meet your preferences
+              will be recommended.
+            </p>
+          )}
+          <section className="mx-5 space-y-4 rounded-2xl border border-border bg-card p-4">
+            <Field label="First name">
+              <input
+                value={name}
+                maxLength={40}
+                onChange={(e) => setName(e.target.value)}
+                className="input"
+                autoComplete="given-name"
+              />
+            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Age">
+                <input
+                  type="number"
+                  min={18}
+                  max={99}
+                  value={age}
+                  onChange={(e) => setAge(Number(e.target.value))}
+                  className="input"
+                />
+              </Field>
+              <Field label="Town">
+                <select value={town} onChange={(e) => setTown(e.target.value)} className="input">
+                  {towns.map((place) => (
+                    <option key={place}>{place}</option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+            <Field label="What kind of connection are you looking for?">
+              <textarea
+                rows={3}
+                maxLength={400}
+                value={seeking}
+                onChange={(e) => setSeeking(e.target.value)}
+                className="input resize-none"
+                placeholder="Tell us what matters to you in a connection…"
+              />
+            </Field>
+            <Field label="Relationship intent">
+              <select value={intent} onChange={(e) => setIntent(e.target.value)} className="input">
+                <option>A relationship</option>
+                <option>Something casual</option>
+                <option>Friends first</option>
+                <option>Still figuring it out</option>
+              </select>
+            </Field>
+            <Field label="About you">
+              <textarea
+                rows={3}
+                maxLength={500}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="input resize-none"
+              />
+            </Field>
+            <Field label="Interests">
+              <div className="flex flex-wrap gap-2">
+                {interests.map((tag) => {
+                  const selected = tags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        setTags(
+                          selected ? tags.filter((t) => t !== tag) : [...tags, tag].slice(0, 10),
+                        )
+                      }
+                      className={`rounded-full border px-3 py-1.5 text-xs ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"}`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          </section>
+          <section className="mx-5 mt-4 space-y-3 rounded-2xl border border-border bg-card p-4">
+            <h2 className="text-sm font-semibold">Who you’d like to meet</h2>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Minimum age">
+                <input
+                  type="number"
+                  min={18}
+                  max={99}
+                  value={minAge}
+                  onChange={(e) => setMinAge(Number(e.target.value))}
+                  className="input"
+                />
+              </Field>
+              <Field label="Maximum age">
+                <input
+                  type="number"
+                  min={18}
+                  max={99}
+                  value={maxAge}
+                  onChange={(e) => setMaxAge(Number(e.target.value))}
+                  className="input"
+                />
+              </Field>
+            </div>
+            <Field label="Town preference">
+              <select
+                value={prefTown}
+                onChange={(e) => setPrefTown(e.target.value)}
+                className="input"
+              >
+                <option value="">Any town</option>
+                {towns.map((place) => (
+                  <option key={place}>{place}</option>
+                ))}
+              </select>
+            </Field>
+          </section>
+          <label className="mx-5 mt-4 flex items-center gap-3 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={adult}
+              onChange={(e) => setAdult(e.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            I confirm I’m at least 18
+          </label>
+          {notice && (
+            <p role="status" className="mx-5 mt-3 text-sm text-muted-foreground">
+              {notice}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={busy || !adult || name.trim().length < 2 || minAge > maxAge}
+            onClick={() => void save()}
+            className="mx-5 mt-4 flex h-11 w-[calc(100%-2.5rem)] items-center justify-center rounded-xl bg-primary font-semibold text-primary-foreground disabled:opacity-45"
+          >
+            {busy ? "Saving…" : profile ? "Save profile" : "Create profile"}
+          </button>
+          <p className="mx-5 mt-3 text-xs text-muted-foreground">
+            Your description and interests are used to rank compatible profiles. Your email and
+            account ID are never shown on your profile.
+          </p>
+        </>
+      )}
+      <button
+        type="button"
+        onClick={() => {
+          void supabase.auth.signOut();
+        }}
+        className="mx-5 mt-8 text-sm font-medium text-muted-foreground"
+      >
+        Sign out
+      </button>
     </main>
   );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div><p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>{children}</div>;
+  return (
+    <div>
+      <p className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</p>
+      {children}
+    </div>
+  );
 }

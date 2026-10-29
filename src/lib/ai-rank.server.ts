@@ -29,7 +29,13 @@ export async function rankWithAi(apiKey: string, input: { me: unknown; candidate
     prompt: JSON.stringify(input),
     output: Output.object({ schema }),
     providerOptions: {
-      openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] },
+      openai: {
+        forceReasoning: true,
+        reasoningEffort: "low",
+        reasoningSummary: "auto",
+        store: false,
+        include: ["reasoning.encrypted_content"],
+      },
     },
   });
   return await result.output;

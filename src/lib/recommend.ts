@@ -55,7 +55,11 @@ export function toModelCandidates(list: MemberProfile[]) {
 }
 
 /** Keeps only refs that map to eligible candidates; dedupes; trims reasons. */
-export function validateModelOutput(output: unknown, eligible: MemberProfile[], limit = 5): Recommendation[] {
+export function validateModelOutput(
+  output: unknown,
+  eligible: MemberProfile[],
+  limit = 5,
+): Recommendation[] {
   const items = (output as { recommendations?: unknown })?.recommendations;
   if (!Array.isArray(items)) return [];
   const byRef = new Map(eligible.map((c, i) => [`c${i + 1}`, c.id]));
@@ -75,16 +79,28 @@ export function validateModelOutput(output: unknown, eligible: MemberProfile[], 
 }
 
 /** Deterministic fallback: shared interests, same town, same intent. */
-export function fallbackRank(me: MemberProfile, eligible: MemberProfile[], limit = 5): Recommendation[] {
+export function fallbackRank(
+  me: MemberProfile,
+  eligible: MemberProfile[],
+  limit = 5,
+): Recommendation[] {
   return eligible
     .map((c) => {
       const shared = c.tags.filter((t) => me.tags.includes(t));
-      const score = shared.length * 2 + (c.town === me.town ? 2 : 0) + (c.intent === me.intent ? 1 : 0);
+      const score =
+        shared.length * 2 + (c.town === me.town ? 2 : 0) + (c.intent === me.intent ? 1 : 0);
       const bits: string[] = [];
-      if (shared.length) bits.push(`You both enjoy ${shared.slice(0, 2).join(" and ").toLowerCase()}`);
+      if (shared.length)
+        bits.push(`You both enjoy ${shared.slice(0, 2).join(" and ").toLowerCase()}`);
       if (c.town === me.town) bits.push(`also in ${c.town}`);
       if (c.intent === me.intent) bits.push(`also looking for ${c.intent.toLowerCase()}`);
-      return { id: c.id, score, reason: bits.length ? capitalize(bits.join(", ")) + "." : `Based in ${c.town}, looking for ${c.intent.toLowerCase()}.` };
+      return {
+        id: c.id,
+        score,
+        reason: bits.length
+          ? capitalize(bits.join(", ")) + "."
+          : `Based in ${c.town}, looking for ${c.intent.toLowerCase()}.`,
+      };
     })
     .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
     .slice(0, limit)
