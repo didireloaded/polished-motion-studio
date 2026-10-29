@@ -127,18 +127,18 @@ function Chats() {
                           <div className="min-w-0 flex-1">
                             <div className="flex justify-between">
                               <p className="font-semibold">{p.name}</p>
-                              {last && (
-                                <span className="text-xs text-muted-foreground">
-                                  {timeAgo(last.at)}
-                                </span>
-                              )}
+                              <span className="text-xs text-muted-foreground">
+                                {last
+                                  ? timeAgo(last.at)
+                                  : ["10:24", "09:18", "Yesterday", "Yesterday"][i % 4]}
+                              </span>
                             </div>
                             <p className="truncate text-sm text-muted-foreground">
                               {last
                                 ? last.text
                                 : matches.length
                                   ? "You both chose to connect. Say hello."
-                                  : "Tap to preview a conversation"}
+                                  : (sampleChatPreviews[p.name] ?? "Tap to preview a conversation")}
                             </p>
                           </div>
                         </button>
@@ -158,6 +158,13 @@ function Chats() {
 }
 
 type MatchRow = { id: string; user_a: string; user_b: string; created_at: string };
+
+const sampleChatPreviews: Record<string, string> = {
+  Leandra: "Hey! That sounds amazing 😊",
+  Daniel: "Are you free this weekend?",
+  Leah: "That place looks great!",
+  Amara: "Let's do it! Can't wait 🌅",
+};
 
 function toDateTimeLocal(value: string) {
   const date = new Date(value);
