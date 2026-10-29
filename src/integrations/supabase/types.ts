@@ -14,16 +14,277 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      decisions: {
+        Row: {
+          actor_id: string
+          created_at: string
+          liked: boolean
+          target_id: string
+        }
+        Insert: {
+          actor_id: string
+          created_at?: string
+          liked: boolean
+          target_id: string
+        }
+        Update: {
+          actor_id?: string
+          created_at?: string
+          liked?: boolean
+          target_id?: string
+        }
+        Relationships: []
+      }
+      matches: {
+        Row: {
+          created_at: string
+          id: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          match_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          match_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          match_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_match_id_fkey"
+            columns: ["match_id"]
+            isOneToOne: false
+            referencedRelation: "matches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_replies: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          post_id: string
+          sender_id: string
+          sender_name: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          post_id: string
+          sender_id: string
+          sender_name: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          post_id?: string
+          sender_id?: string
+          sender_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_replies_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          author_id: string
+          author_name: string
+          body: string
+          created_at: string
+          id: string
+          town: string
+        }
+        Insert: {
+          author_id: string
+          author_name: string
+          body: string
+          created_at?: string
+          id?: string
+          town: string
+        }
+        Update: {
+          author_id?: string
+          author_name?: string
+          body?: string
+          created_at?: string
+          id?: string
+          town?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          active: boolean
+          age: number
+          bio: string
+          created_at: string
+          display_name: string
+          id: string
+          intent: string
+          pref_max_age: number | null
+          pref_min_age: number | null
+          pref_town: string | null
+          seeking: string
+          tags: string[]
+          town: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          age: number
+          bio?: string
+          created_at?: string
+          display_name: string
+          id: string
+          intent?: string
+          pref_max_age?: number | null
+          pref_min_age?: number | null
+          pref_town?: string | null
+          seeking?: string
+          tags?: string[]
+          town: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          age?: number
+          bio?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          intent?: string
+          pref_max_age?: number | null
+          pref_min_age?: number | null
+          pref_town?: string | null
+          seeking?: string
+          tags?: string[]
+          town?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          category: string
+          created_at: string
+          details: string
+          id: string
+          post_id: string | null
+          reported_id: string
+          reporter_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          details?: string
+          id?: string
+          post_id?: string | null
+          reported_id: string
+          reporter_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          details?: string
+          id?: string
+          post_id?: string | null
+          reported_id?: string
+          reporter_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      can_chat: { Args: { _match_id: string; _user: string }; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_blocked_between: { Args: { _a: string; _b: string }; Returns: boolean }
+      post_author: { Args: { _post: string }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +411,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
