@@ -1,8 +1,8 @@
-# NamLink design preview
+# Mobile dating app preview
 
-A light, photo-led mobile interface for a Namibia-focused dating app. The five tabs are Home, Nearby, Posts, Chats, and You. Nearby lets people browse by town; it does not track or reveal live location. Motion responds to navigation, town selection, cards, and messages, with reduced-motion support.
+A warm, photo-led dating app experience for members in Namibia. The five tabs are Home, Nearby, Posts, Chats, and You. Home uses a compact profile card with an expanding detail view; likes stay quiet until interest is mutual.
 
-## Run
+## Run locally
 
 Requires Node.js 22 or newer.
 
@@ -11,21 +11,24 @@ npm ci
 npm run dev
 ```
 
-Run `npm run build`, `npm test`, and `npx tsc --noEmit` before pushing.
+`npm run build` creates a production build. `npm run lint` runs ESLint.
 
-## Preview boundary
+## App behavior
 
-This repository is the visual and interaction prototype from Lovable. The people and posts are fictional samples. Likes, posts, and sample chat messages are stored in the current browser with localStorage. There is no account sign-in, real member discovery, private reply delivery, or background GPS in this repository yet. The existing hosted NamLink development preview has separate server-backed community features.
+- Signed-in members use Lovable Cloud Supabase for accounts, profiles, recommendations, decisions, matches, chats, posts, blocks, and reports. Signed-out visitors see clearly labeled sample content saved locally.
+- First sign-in leads to a short profile setup covering age, town, connection intent, a short description, and interests.
+- Home recommendations use the server-side AI ranking flow with its existing eligibility checks and fallback ranking. A Like does not show a confirmation toast.
+- Voice intros can be recorded for up to 30 seconds, played back, and saved to a private storage bucket. Storage rules allow the owner to manage a recording and eligible members to listen to active, unblocked profiles.
+- Nearby uses OpenStreetMap tiles and town-level profile pins. It does not request precise location or track background movement. Crossed-path alerts are not implemented in this web app; they require a separate, explicit location opt-in and native background-location support.
+- Event listings are preview content. Interest is saved locally in this preview and is not shared with other members.
 
-The `sites-fullstack` branch preserves the source of that hosted development preview. It has a different runtime and is not automatically updated by changes to this branch.
+## Project structure
 
-The interface uses visible Like and Pass controls. The photo stack does not require a swipe gesture. The Nearby screen presents place and people, without a scanner or simulated distance.
+- `src/routes/`: app tabs and sign-in
+- `src/components/voice-intro.tsx`: voice recording, private upload, and playback
+- `src/components/TabBar.tsx`: shared bottom navigation and page heading
+- `src/integrations/supabase/`: client, auth middleware, and generated database types
+- `drizzle/migrations/`: database schema changes, including the private voice-intro bucket and policies
+- `src/lib/namlink.ts`: sample profiles, event previews, and signed-out demo state
 
-## Source
-
-- `src/routes/`: five tab screens
-- `src/components/TabBar.tsx`: shared navigation and headings
-- `src/styles.css`: warm light palette, typography, and motion styles
-- `src/lib/namlink.ts`: sample people and browser preview state
-
-This project remains connected to [Lovable](https://lovable.dev/projects/01804eef-1c82-496a-b1ef-dacee9edd43c); commits pushed to `main` sync back to its editor.
+The repository is connected to [Lovable](https://lovable.dev/projects/01804eef-1c82-496a-b1ef-dacee9edd43c). Commits pushed to `main` sync to its editor.
