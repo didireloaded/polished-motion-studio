@@ -67,7 +67,7 @@ function AuthPage() {
 
   return (
     <main className="mx-auto max-w-md px-5 pb-28 pt-10">
-      <h1 className="text-[27px] font-bold tracking-[-0.03em]">
+      <h1 className="text-[23px] font-semibold tracking-[-0.02em]">
         {mode === "in" ? "Welcome back" : "Join NamLink"}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">We only ask for an email and password.</p>

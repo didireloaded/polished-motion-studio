@@ -66,7 +66,8 @@ export const getRecommendations = createServerFn({ method: "POST" })
     if (!apiKey)
       return {
         source: "fallback",
-        notice: "AI suggestions are not configured yet; showing simple matches.",
+        notice:
+          "Personalized suggestions are taking a break. Here are profiles that fit your preferences.",
         items: hydrate(fallbackRank(me, eligible)),
       };
 
@@ -86,7 +87,7 @@ export const getRecommendations = createServerFn({ method: "POST" })
       if (recs.length) return { source: "ai", items: hydrate(recs) };
       return {
         source: "fallback",
-        notice: "Showing simple matches for now.",
+        notice: "Showing profiles that fit your preferences.",
         items: hydrate(fallbackRank(me, eligible)),
       };
     } catch (err) {
@@ -94,8 +95,8 @@ export const getRecommendations = createServerFn({ method: "POST" })
       console.error("AI ranking failed", status ?? "", err instanceof Error ? err.message : "");
       const notice =
         status === 402
-          ? "AI credits have run out; showing simple matches."
-          : "AI suggestions are unavailable right now; showing simple matches.";
+          ? "Personalized suggestions are temporarily unavailable. Here are profiles that fit your preferences."
+          : "Some suggestions are temporarily unavailable. Here are profiles that fit your preferences.";
       return { source: "fallback", notice, items: hydrate(fallbackRank(me, eligible)) };
     }
   });

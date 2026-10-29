@@ -766,7 +766,7 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
           />
         ))}
       </div>
-      <h1 className="text-[25px] font-bold tracking-[-0.03em]">{titles[step]}</h1>
+      <h1 className="text-[22px] font-semibold tracking-[-0.02em]">{titles[step]}</h1>
       {step === 0 && (
         <>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">

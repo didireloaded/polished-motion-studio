@@ -22,7 +22,7 @@ export function TabBar() {
               <Link
                 to={to}
                 aria-current={active ? "page" : undefined}
-                className="relative flex flex-col items-center gap-0.5 rounded-full px-4 py-1.5 text-[11px] font-medium"
+                className="relative flex min-w-[58px] flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-medium"
               >
                 <motion.span
                   whileTap={{ scale: 0.9 }}
@@ -57,11 +57,11 @@ export function PageHeader({
     <motion.header
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex min-h-[64px] items-center justify-between px-5 pb-3 pt-4"
+      className="flex min-h-[58px] items-center justify-between px-5 pb-2 pt-3"
     >
       <div>
-        <h1 className="text-[25px] font-bold tracking-[-0.03em]">{title}</h1>
-        {eyebrow && <p className="mt-0.5 text-xs text-muted-foreground">{eyebrow}</p>}
+        <h1 className="text-[21px] font-semibold tracking-[-0.02em]">{title}</h1>
+        {eyebrow && <p className="mt-0.5 text-[13px] text-muted-foreground">{eyebrow}</p>}
       </div>
       {right}
     </motion.header>
