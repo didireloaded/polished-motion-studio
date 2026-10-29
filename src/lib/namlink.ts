@@ -38,6 +38,7 @@ export type Person = {
   town: string;
   job: string;
   photo: string;
+  designPhoto?: string;
   tags: string[];
   prompt: string;
   answer: string;
@@ -53,11 +54,12 @@ export type Person = {
 export const people: Person[] = [
   {
     id: "p1",
-    name: "Ndapewa",
+    name: "Leandra",
     age: 26,
     town: "Windhoek",
-    job: "Architect & weekend explorer",
+    job: "Marketing Executive",
     photo: "ndapewa",
+    designPhoto: "/design/lead-woman.jpg",
     photoPosition: "68% 34%",
     tags: ["Art & design", "Coffee", "Road trips"],
     prompt: "The way to my heart is",
@@ -126,6 +128,7 @@ export const people: Person[] = [
     town: "Walvis Bay",
     job: "Ocean air, every day",
     photo: "daniel",
+    designPhoto: "/design/lead-man.jpg",
     tags: ["Beach days", "Coffee", "Photography"],
     prompt: "Let’s make a plan to",
     answer:
@@ -163,7 +166,7 @@ export const people: Person[] = [
 ];
 
 export const photo = (p: Person, small = false) =>
-  `/editorial/${p.photo}${small ? "-small" : ""}.jpg`;
+  p.designPhoto ?? `/editorial/${p.photo}${small ? "-small" : ""}.jpg`;
 
 export type Msg = { id: string; from: "me" | "them"; text: string; at: number };
 export type Post = {
@@ -186,9 +189,33 @@ export type PrivateReply = {
   sample?: boolean;
 };
 export const events = [
-  { id: "e1", title: "Coffee and a coastal walk", town: "Swakopmund", sample: true },
-  { id: "e2", title: "First Friday gallery visit", town: "Windhoek", sample: true },
-  { id: "e3", title: "Sunrise at Dune 7", town: "Walvis Bay", sample: true },
+  {
+    id: "e1",
+    title: "Sunset Social",
+    town: "Windhoek",
+    sample: true,
+    venue: "A rooftop in Windhoek",
+    image: "/design/event-rooftop.jpg",
+    when: "Sat, 26 Apr · 16:00",
+  },
+  {
+    id: "e2",
+    title: "Beach Day Hangout",
+    town: "Swakopmund",
+    sample: true,
+    venue: "Long Beach",
+    image: "/design/event-beach.jpg",
+    when: "Sun, 4 May · 11:00",
+  },
+  {
+    id: "e3",
+    title: "Sunrise at Dune 7",
+    town: "Walvis Bay",
+    sample: true,
+    venue: "Dune 7",
+    image: "/editorial/dunes.jpg",
+    when: "Sat, 10 May · 06:30",
+  },
 ];
 export type State = {
   liked: string[];

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { LockKeyhole, MapPin, MessageCircle, Send, Trash2, X } from "lucide-react";
+import { LockKeyhole, MapPin, MessageCircle, PenSquare, Send, Trash2, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   Drawer,
@@ -42,6 +42,7 @@ function Posts() {
   const s = useStore();
   const { user, ready } = useSession();
   const [text, setText] = useState("");
+  const [composeOpen, setComposeOpen] = useState(false);
   const [town, setTown] = useState<string>(s.profile.town);
   const [view, setView] = useState<View>("Feed");
   const [replyTo, setReplyTo] = useState<Post | null>(null);
@@ -135,56 +136,72 @@ function Posts() {
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="Posts" />
-      <DemoNotice />
-      <div className="mx-5 rounded-2xl border border-border bg-card p-4">
-        <label htmlFor="post-compose" className="sr-only">
-          Write a post
-        </label>
-        <textarea
-          id="post-compose"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          maxLength={300}
-          rows={3}
-          placeholder="Share a plan or ask the community…"
-          className="w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
-        />
-        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-          <select
-            aria-label="Post town"
-            value={town}
-            onChange={(e) => setTown(e.target.value)}
-            className="max-w-[55%] rounded-xl bg-secondary px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      <PageHeader
+        title="NamLink"
+        right={
+          <button
+            type="button"
+            onClick={() => setComposeOpen((value) => !value)}
+            aria-label="Write a post"
+            className="text-primary"
           >
-            {towns.map((place) => (
-              <option key={place}>{place}</option>
-            ))}
-          </select>
-          <div className="flex items-center gap-3">
-            <span className="text-xs tabular-nums text-muted-foreground">{300 - text.length}</span>
-            <button
-              type="button"
-              disabled={text.trim().length < 3}
-              onClick={submitPost}
-              className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-45"
+            <PenSquare className="h-5 w-5" />
+          </button>
+        }
+      />
+      <DemoNotice />
+      {composeOpen && (
+        <div className="mx-5 rounded-2xl border border-border bg-card p-4">
+          <label htmlFor="post-compose" className="sr-only">
+            Write a post
+          </label>
+          <textarea
+            id="post-compose"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={300}
+            rows={3}
+            placeholder="Share a plan or ask the community…"
+            className="w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
+          />
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+            <select
+              aria-label="Post town"
+              value={town}
+              onChange={(e) => setTown(e.target.value)}
+              className="max-w-[55%] rounded-xl bg-secondary px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Send className="h-4 w-4" />
-              Post
-            </button>
+              {towns.map((place) => (
+                <option key={place}>{place}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-3">
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {300 - text.length}
+              </span>
+              <button
+                type="button"
+                disabled={text.trim().length < 3}
+                onClick={submitPost}
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-45"
+              >
+                <Send className="h-4 w-4" />
+                Post
+              </button>
+            </div>
           </div>
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <LockKeyhole className="h-3.5 w-3.5" />
+            Your name is shown. Replies are private to you and the author.
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Preview only · activity stays on this device.
+          </p>
         </div>
-        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <LockKeyhole className="h-3.5 w-3.5" />
-          Your name is shown. Replies are private to you and the author.
-        </p>
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          Preview only · activity stays on this device.
-        </p>
-      </div>
+      )}
 
       <div
-        className="no-scrollbar mt-5 flex gap-1 overflow-x-auto border-b border-border px-5"
+        className="no-scrollbar mt-1 flex gap-1 overflow-x-auto border-b border-border px-5"
         role="tablist"
         aria-label="Post views"
       >
@@ -288,17 +305,36 @@ function Posts() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2, delay: Math.min(index, 4) * 0.025 }}
-                className="rounded-2xl border border-border bg-card p-4"
+                className="border-b border-border bg-card px-5 py-4"
               >
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-semibold">{post.authorName || "Member"}</span>
+                <div className="flex items-center gap-2.5">
+                  {people.find((person) => person.name === post.authorName) ? (
+                    <img
+                      src={
+                        people.find((person) => person.name === post.authorName)!.designPhoto ??
+                        `/editorial/${people.find((person) => person.name === post.authorName)!.photo}-small.jpg`
+                      }
+                      alt=""
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-semibold">
+                      {post.authorName?.slice(0, 1) || "M"}
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[13px] font-semibold">{post.authorName || "Member"}</span>
+                    <p className="text-[11px] text-muted-foreground">
+                      {post.town} · {timeAgo(post.at)}
+                    </p>
+                  </div>
                   {post.sample && (
                     <span className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">
                       Sample
                     </span>
                   )}
                 </div>
-                <p className="mt-2 text-[15px] leading-6">{post.text}</p>
+                <p className="mt-3 text-[14px] leading-6">{post.text}</p>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -471,6 +507,7 @@ function LivePosts({ userId }: { userId: string }) {
   const client = useQueryClient();
   const navigate = useNavigate({ from: "/posts" });
   const [body, setBody] = useState("");
+  const [composeOpen, setComposeOpen] = useState(false);
   const [town, setTown] = useState<string>("Windhoek");
   const [view, setView] = useState<View>("Feed");
   const [replyTo, setReplyTo] = useState<LivePost | null>(null);
@@ -594,49 +631,65 @@ function LivePosts({ userId }: { userId: string }) {
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="Posts" />
-      <section className="mx-5 rounded-2xl border border-border bg-card p-4">
-        <label htmlFor="live-post-compose" className="sr-only">
-          Write a post
-        </label>
-        <textarea
-          id="live-post-compose"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
-          maxLength={300}
-          rows={3}
-          placeholder="Share a plan or ask the community…"
-          className="w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
-        />
-        <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
-          <select
-            aria-label="Post town"
-            value={town}
-            onChange={(e) => setTown(e.target.value)}
-            className="max-w-[55%] rounded-xl bg-secondary px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      <PageHeader
+        title="NamLink"
+        right={
+          <button
+            type="button"
+            onClick={() => setComposeOpen((value) => !value)}
+            aria-label="Write a post"
+            className="text-primary"
           >
-            {towns.map((place) => (
-              <option key={place}>{place}</option>
-            ))}
-          </select>
-          <div className="flex items-center gap-3">
-            <span className="text-xs tabular-nums text-muted-foreground">{300 - body.length}</span>
-            <button
-              type="button"
-              disabled={body.trim().length < 3}
-              onClick={() => void submitPost()}
-              className="h-9 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-45"
+            <PenSquare className="h-5 w-5" />
+          </button>
+        }
+      />
+      {composeOpen && (
+        <section className="mx-5 rounded-2xl border border-border bg-card p-4">
+          <label htmlFor="live-post-compose" className="sr-only">
+            Write a post
+          </label>
+          <textarea
+            id="live-post-compose"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            maxLength={300}
+            rows={3}
+            placeholder="Share a plan or ask the community…"
+            className="w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
+          />
+          <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
+            <select
+              aria-label="Post town"
+              value={town}
+              onChange={(e) => setTown(e.target.value)}
+              className="max-w-[55%] rounded-xl bg-secondary px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Post
-            </button>
+              {towns.map((place) => (
+                <option key={place}>{place}</option>
+              ))}
+            </select>
+            <div className="flex items-center gap-3">
+              <span className="text-xs tabular-nums text-muted-foreground">
+                {300 - body.length}
+              </span>
+              <button
+                type="button"
+                disabled={body.trim().length < 3}
+                onClick={() => void submitPost()}
+                className="h-9 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-45"
+              >
+                Post
+              </button>
+            </div>
           </div>
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Your name is shown. Replies are private to you and the author.
-        </p>
-      </section>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Your name is shown. Replies are private to you and the author.
+          </p>
+        </section>
+      )}
       <div
-        className="no-scrollbar mt-5 flex gap-1 overflow-x-auto border-b border-border px-5"
+        className="no-scrollbar mt-1 flex gap-1 overflow-x-auto border-b border-border px-5"
         role="tablist"
         aria-label="Post views"
       >
@@ -680,9 +733,17 @@ function LivePosts({ userId }: { userId: string }) {
           {visiblePosts.map((post) => {
             const postReplies = replies.filter((reply) => reply.post_id === post.id);
             return (
-              <li key={post.id} className="rounded-2xl border border-border bg-card p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[13px] font-semibold">{post.author_name}</span>
+              <li key={post.id} className="border-b border-border bg-card px-5 py-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent text-sm font-semibold text-primary">
+                    {post.author_name.slice(0, 1)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[13px] font-semibold">{post.author_name}</span>
+                    <p className="text-[11px] text-muted-foreground">
+                      {post.town} · {timeAgo(new Date(post.created_at).getTime())}
+                    </p>
+                  </div>
                   {post.author_id === userId && (
                     <button
                       type="button"

@@ -137,8 +137,39 @@ function You() {
 
   return (
     <main className="mx-auto max-w-md pb-28">
+      <PageHeader title="NamLink" />
       <DemoNotice />
-      <PageHeader title={s.profile.name ? s.profile.name : "You"} />
+      <div className="mx-5 mb-5 overflow-hidden rounded-[15px] border border-border bg-white shadow-float">
+        <img
+          src="/design/lead-man.jpg"
+          alt="Sample profile portrait"
+          className="h-[190px] w-full object-cover object-[center_38%]"
+        />
+        <div className="p-3">
+          <p className="text-[17px] font-semibold">
+            {s.profile.name || "Alex"} <span className="text-sm font-normal">{s.profile.age}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">{s.profile.town} · Sample profile preview</p>
+          <p className="mt-2 text-xs leading-5">
+            {s.profile.bio ||
+              "Design, travel, good food and great company. Always up for a road trip."}
+          </p>
+        </div>
+      </div>
+      <div className="mx-5 mb-5 flex gap-2">
+        <Link
+          to="/safety"
+          className="flex-1 rounded-full bg-secondary px-4 py-2.5 text-center text-xs font-semibold"
+        >
+          Safety settings
+        </Link>
+        <Link
+          to="/verification"
+          className="flex-1 rounded-full bg-secondary px-4 py-2.5 text-center text-xs font-semibold"
+        >
+          Verification
+        </Link>
+      </div>
       <div className="grid grid-cols-3 gap-2 px-5">
         {stats.map(({ icon: Icon, number, label }) => (
           <div key={label} className="rounded-2xl border border-border bg-card px-3 py-3">
@@ -633,16 +664,50 @@ function LiveProfile({
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader
-        title={name ? `Hi, ${name}` : "Your profile"}
-        eyebrow={
-          profile ? "Your profile and preferences" : "A few details before we find people for you"
-        }
-      />
+      <PageHeader title="NamLink" />
       {loading ? (
         <p className="px-5 py-8 text-sm text-muted-foreground">Loading your profile…</p>
       ) : (
         <>
+          {profile && (
+            <div className="mx-5 mb-5 overflow-hidden rounded-[15px] border border-border bg-white shadow-float">
+              {profile.photo_paths?.[0] ? (
+                <ProfilePhoto
+                  name={profile.display_name}
+                  path={profile.photo_paths[0]}
+                  className="h-[190px] w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-[190px] items-center justify-center bg-accent text-5xl font-semibold text-primary">
+                  {profile.display_name.slice(0, 1)}
+                </div>
+              )}
+              <div className="p-3">
+                <p className="text-[17px] font-semibold">
+                  {profile.display_name} <span className="text-sm font-normal">{profile.age}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">{profile.town}</p>
+                <p className="mt-2 text-xs leading-5">{profile.bio}</p>
+                <p className="mt-2 text-xs font-medium text-primary">{profile.intent}</p>
+              </div>
+            </div>
+          )}
+          {profile && (
+            <div className="mx-5 mb-5 flex gap-2">
+              <Link
+                to="/safety"
+                className="flex-1 rounded-full bg-secondary px-4 py-2.5 text-center text-xs font-semibold"
+              >
+                Safety settings
+              </Link>
+              <Link
+                to="/verification"
+                className="flex-1 rounded-full bg-secondary px-4 py-2.5 text-center text-xs font-semibold"
+              >
+                Verification
+              </Link>
+            </div>
+          )}
           {!profile && (
             <p className="mx-5 mb-4 rounded-xl bg-secondary px-4 py-3 text-sm leading-5 text-muted-foreground">
               Complete your profile to appear in discovery. Only members who meet your preferences
@@ -915,7 +980,7 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
   const next = () => setStep((value) => Math.min(3, value + 1));
 
   return (
-    <main className="mx-auto max-w-md px-5 pb-28 pt-5">
+    <main className="onboarding-flow mx-auto min-h-svh max-w-md px-5 pb-10 pt-5">
       <div className="mb-5 flex items-center justify-between">
         <Link to="/" className="text-sm font-semibold text-muted-foreground">
           Back to Discover

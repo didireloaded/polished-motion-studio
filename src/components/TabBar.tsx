@@ -1,20 +1,32 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { Flame, MapPin, MessageSquareText, MessagesSquare, User } from "lucide-react";
+import { Compass, MapPin, NotebookText, MessageCircle, UserRound } from "lucide-react";
 
 const tabs = [
-  { to: "/", label: "Home", icon: Flame },
+  { to: "/", label: "Discover", icon: Compass },
   { to: "/radar", label: "Nearby", icon: MapPin },
-  { to: "/posts", label: "Posts", icon: MessageSquareText },
-  { to: "/chats", label: "Chats", icon: MessagesSquare },
-  { to: "/you", label: "You", icon: User },
+  { to: "/posts", label: "Posts", icon: NotebookText },
+  { to: "/chats", label: "Chats", icon: MessageCircle },
+  { to: "/you", label: "You", icon: UserRound },
 ] as const;
 
 export function TabBar() {
   const { pathname } = useLocation();
+  if (
+    [
+      "/welcome",
+      "/auth",
+      "/moderation",
+      "/verification",
+      "/safety",
+      "/crossed-paths",
+      "/date-plan",
+    ].includes(pathname)
+  )
+    return null;
   return (
-    <nav className="glass fixed inset-x-0 bottom-0 z-40 border-t border-border pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:rounded-full md:border">
-      <ul className="mx-auto flex max-w-md items-center justify-around px-2 py-2 md:gap-2 md:px-3">
+    <nav className="app-tabbar fixed inset-x-0 bottom-0 z-40 border-t border-border pb-[env(safe-area-inset-bottom)] md:inset-x-auto md:bottom-3 md:left-1/2 md:-translate-x-1/2 md:rounded-[20px] md:border md:shadow-float">
+      <ul className="mx-auto flex h-[60px] max-w-md items-center justify-around px-2">
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
           return (
@@ -22,16 +34,16 @@ export function TabBar() {
               <Link
                 to={to}
                 aria-current={active ? "page" : undefined}
-                className="relative flex min-w-[58px] flex-col items-center gap-0.5 rounded-full px-3 py-1.5 text-[11px] font-medium"
+                className="relative flex min-w-[60px] flex-col items-center gap-0.5 rounded-full px-2 py-1.5 text-[10px] font-medium"
               >
                 <motion.span
                   whileTap={{ scale: 0.9 }}
                   className={active ? "relative text-primary" : "relative text-muted-foreground"}
                 >
-                  <Icon className="h-5 w-5" strokeWidth={active ? 2.4 : 1.8} />
+                  <Icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.4 : 1.7} />
                 </motion.span>
                 <span
-                  className={active ? "relative text-foreground" : "relative text-muted-foreground"}
+                  className={active ? "relative text-primary" : "relative text-muted-foreground"}
                 >
                   {label}
                 </span>
@@ -57,11 +69,17 @@ export function PageHeader({
     <motion.header
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex min-h-[58px] items-center justify-between px-5 pb-2 pt-3"
+      className="flex min-h-[56px] items-center justify-between px-5 pb-2 pt-3"
     >
       <div>
-        <h1 className="text-[21px] font-semibold tracking-[-0.02em]">{title}</h1>
-        {eyebrow && <p className="mt-0.5 text-[13px] text-muted-foreground">{eyebrow}</p>}
+        <h1
+          className={
+            title === "NamLink" ? "brand-wordmark" : "text-[20px] font-semibold tracking-[-0.035em]"
+          }
+        >
+          {title}
+        </h1>
+        {eyebrow && <p className="mt-0.5 text-[12px] text-muted-foreground">{eyebrow}</p>}
       </div>
       {right}
     </motion.header>

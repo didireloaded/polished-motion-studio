@@ -16,7 +16,7 @@ import { useSession } from "@/hooks/use-session";
 import { getRecommendations, type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
-import { VoiceIntroPlayer } from "@/components/voice-intro";
+import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -40,7 +40,9 @@ function Home() {
     staleTime: 5 * 60_000,
   });
   const [town, setTown] = useState("All");
+  const [minAge, setMinAge] = useState(18);
   const [maxAge, setMaxAge] = useState(45);
+  const [intentFilter, setIntentFilter] = useState("Any intention");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
@@ -53,9 +55,11 @@ function Home() {
           !s.liked.includes(p.id) &&
           !s.passed.includes(p.id) &&
           (town === "All" || p.town === town) &&
+          p.age >= minAge &&
+          (intentFilter === "Any intention" || p.intent === intentFilter) &&
           p.age <= maxAge,
       ),
-    [s.liked, s.passed, town, maxAge],
+    [s.liked, s.passed, town, minAge, maxAge, intentFilter],
   );
   const liveDeck: Person[] = (recs.data?.items ?? []).map((item) => ({
     id: item.profile.id,
@@ -78,6 +82,8 @@ function Home() {
         (p) =>
           !hiddenRecommendations.includes(p.id) &&
           (town === "All" || p.town === town) &&
+          p.age >= minAge &&
+          (intentFilter === "Any intention" || p.intent === intentFilter) &&
           p.age <= maxAge,
       )
     : sampleDeck;
@@ -145,13 +151,9 @@ function Home() {
   };
 
   return (
-    <main className="discover-shell mx-auto flex h-[calc(100svh-76px-env(safe-area-inset-bottom))] min-h-[560px] max-w-[440px] flex-col px-3 pt-2">
-      <header className="flex h-12 shrink-0 items-center justify-between px-1">
-        <Link
-          to="/"
-          aria-label="NamLink home"
-          className="text-[21px] font-bold tracking-[-0.04em] text-foreground"
-        >
+    <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-2">
+      <header className="flex h-[58px] shrink-0 items-center justify-between px-2">
+        <Link to="/" aria-label="NamLink home" className="brand-wordmark">
           NamLink
         </Link>
         <div className="flex items-center gap-2">
@@ -180,7 +182,7 @@ function Home() {
         </p>
       )}
 
-      <section aria-label="Discover sample profiles" className="relative mt-1 min-h-0 flex-1">
+      <section aria-label="Discover profiles" className="relative min-h-0 flex-1">
         <AnimatePresence initial={false}>
           {deck
             .slice(0, 2)
@@ -234,40 +236,25 @@ function Home() {
             }}
           />
         )}
+        {current && !recs.isLoading && (
+          <div className="absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-8 pointer-events-none">
+            <RoundButton
+              label={"Pass on " + current.name}
+              onClick={() => decide(current, false)}
+              tone="quiet"
+            >
+              <X className="h-6 w-6" />
+            </RoundButton>
+            <RoundButton
+              label={"Like " + current.name}
+              onClick={() => decide(current, true)}
+              tone="like"
+            >
+              <Heart className="h-6 w-6" fill="currentColor" />
+            </RoundButton>
+          </div>
+        )}
       </section>
-
-      {current && !recs.isLoading && (
-        <div className="flex h-[76px] shrink-0 items-center justify-center gap-5">
-          <RoundButton
-            label={"Pass on " + current.name}
-            onClick={() => decide(current, false)}
-            tone="quiet"
-          >
-            <X className="h-5 w-5" />
-          </RoundButton>
-          <RoundButton
-            label={"Like " + current.name}
-            onClick={() => decide(current, true)}
-            tone="like"
-          >
-            <Heart className="h-6 w-6" fill="currentColor" />
-          </RoundButton>
-          <RoundButton
-            label={
-              s.saved.includes(current.id)
-                ? "Remove " + current.name + " from saved profiles"
-                : "Save " + current.name
-            }
-            onClick={() => update((st) => ({ ...st, saved: toggle(st.saved, current.id) }))}
-            tone="quiet"
-          >
-            <Bookmark
-              className="h-5 w-5"
-              fill={s.saved.includes(current.id) ? "currentColor" : "none"}
-            />
-          </RoundButton>
-        </div>
-      )}
       {recs.isFetching && user && deck.length === 0 && (
         <div
           aria-hidden="true"
@@ -284,7 +271,7 @@ function Home() {
           <DrawerHeader className="flex flex-row items-start justify-between px-0 pb-4 text-left">
             <div>
               <DrawerTitle className="text-xl">Filters</DrawerTitle>
-              <DrawerDescription>Choose who appears in Discover.</DrawerDescription>
+              <DrawerDescription>Choose who you would like to meet.</DrawerDescription>
             </div>
             <DrawerClose
               aria-label="Close filters"
@@ -300,7 +287,7 @@ function Home() {
             id="town-filter"
             value={town}
             onChange={(e) => setTown(e.target.value)}
-            className="input mt-2"
+            className="mt-2 h-12 w-full rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary"
           >
             <option value="All">All Namibia</option>
             {towns.map((place) => (
@@ -309,25 +296,63 @@ function Home() {
           </select>
           <div className="mt-6 flex items-center justify-between">
             <label htmlFor="age-filter" className="text-sm font-semibold">
-              Maximum age
+              Age range
             </label>
-            <span className="text-sm text-muted-foreground">18–{maxAge}</span>
+            <span className="text-sm text-muted-foreground">
+              {minAge}–{maxAge}
+            </span>
           </div>
+          <input
+            aria-label="Minimum age"
+            type="range"
+            min="18"
+            max={maxAge}
+            value={minAge}
+            onChange={(e) => setMinAge(Number(e.target.value))}
+            className="mt-3 w-full accent-primary"
+          />
           <input
             id="age-filter"
             aria-label="Maximum age"
             type="range"
             min="18"
-            max="45"
+            max="99"
             value={maxAge}
             onChange={(e) => setMaxAge(Number(e.target.value))}
-            className="mt-3 w-full accent-primary"
+            className="mt-1 w-full accent-primary"
           />
+          <label className="mt-5 block text-sm font-semibold" htmlFor="intent-filter">
+            Connection intent
+          </label>
+          <select
+            id="intent-filter"
+            value={intentFilter}
+            onChange={(e) => setIntentFilter(e.target.value)}
+            className="mt-2 h-12 w-full rounded-xl border border-border bg-white px-4 text-sm outline-none focus:border-primary"
+          >
+            <option>Any intention</option>
+            <option>A relationship</option>
+            <option>Something casual</option>
+            <option>Friends first</option>
+            <option>Still figuring it out</option>
+          </select>
+          <button
+            type="button"
+            onClick={() => {
+              setTown("All");
+              setMinAge(18);
+              setMaxAge(99);
+              setIntentFilter("Any intention");
+            }}
+            className="mt-5 text-sm font-medium text-primary"
+          >
+            Clear filters
+          </button>
           <button
             onClick={() => setFiltersOpen(false)}
-            className="mt-6 h-12 w-full rounded-2xl bg-primary text-sm font-semibold text-primary-foreground"
+            className="mt-5 h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
           >
-            Show profiles
+            Apply filters
           </button>
         </DrawerContent>
       </Drawer>
@@ -385,7 +410,7 @@ function ProfileCard({
         ", " +
         person.town
       }
-      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[22px] bg-card text-white shadow-float"
+      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[11px] bg-card text-white"
       style={{ zIndex: 10 - depth, x: dragX, rotate }}
       drag={top && !expanded ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
@@ -412,7 +437,7 @@ function ProfileCard({
       <motion.div
         layout
         className="relative w-full shrink-0 overflow-hidden"
-        animate={{ height: expanded ? "48%" : "100%" }}
+        animate={{ height: expanded ? "40%" : "100%" }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
       >
         <ProfilePhoto
@@ -445,53 +470,49 @@ function ProfileCard({
             Sample profile
           </span>
         )}
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-4 pt-16">
-          <div className="flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="truncate text-[27px] font-bold leading-tight tracking-[-0.035em]">
-                {person.name}
-                <span className="ml-2 text-[21px] font-medium text-white/85">{person.age}</span>
-              </h1>
-              <p className="mt-1 flex items-center gap-1.5 text-[13px] text-white/90">
-                <MapPin className="h-4 w-4 shrink-0" />
-                {person.town}
-                <span aria-hidden="true">·</span>
-                <span className="truncate">{person.job}</span>
-              </p>
-            </div>
-            <motion.button
-              type="button"
-              aria-label={expanded ? "Hide profile details" : "Show profile details"}
-              aria-expanded={expanded}
-              onClick={onDetails}
-              whileTap={{ scale: 0.9 }}
-              className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-            >
-              <motion.span
-                animate={{ rotate: expanded ? 180 : 0, y: expanded ? 0 : [0, -2, 0] }}
-                transition={{
-                  duration: expanded ? 0.2 : 1.8,
-                  repeat: expanded ? 0 : Infinity,
-                  ease: "easeInOut",
-                }}
+        {expanded && (
+          <button
+            type="button"
+            onClick={onDetails}
+            aria-label="Back to photo"
+            className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+        )}
+        {!expanded && (
+          <div className="absolute inset-x-0 bottom-[92px] px-5 pt-16">
+            <div className="flex items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.035em]">
+                  {person.name}
+                  <span className="ml-2 text-[21px] font-medium text-white/85">{person.age}</span>
+                </h1>
+                <p className="mt-1 text-[13px] text-white/95">{person.town}</p>
+                <p className="mt-0.5 truncate text-[12px] text-white/85">{person.job}</p>
+              </div>
+              <motion.button
+                type="button"
+                aria-label={expanded ? "Hide profile details" : "Show profile details"}
+                aria-expanded={expanded}
+                onClick={onDetails}
+                whileTap={{ scale: 0.9 }}
+                className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
-                <ChevronUp className="h-5 w-5" />
-              </motion.span>
-            </motion.button>
-          </div>
-          {!expanded && person.tags.length > 0 && (
-            <div className="mt-2 flex gap-1.5">
-              {person.tags.slice(0, 2).map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-white/25 bg-white/15 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm"
+                <motion.span
+                  animate={{ rotate: expanded ? 180 : 0, y: expanded ? 0 : [0, -2, 0] }}
+                  transition={{
+                    duration: expanded ? 0.2 : 1.8,
+                    repeat: expanded ? 0 : Infinity,
+                    ease: "easeInOut",
+                  }}
                 >
-                  {tag}
-                </span>
-              ))}
+                  <ChevronUp className="h-5 w-5" />
+                </motion.span>
+              </motion.button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </motion.div>
       <AnimatePresence initial={false}>
         {top && expanded && (
@@ -501,11 +522,29 @@ function ProfileCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2 }}
-            className="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-foreground"
+            className="min-h-0 flex-1 overflow-y-auto px-5 pb-24 pt-4 text-foreground"
           >
             <div className="space-y-3">
-              <p className="text-[13px] leading-5 text-muted-foreground">{person.bio}</p>
+              <div>
+                <h2 className="text-[18px] font-bold leading-tight">
+                  {person.name} <span className="font-normal">{person.age}</span>
+                </h2>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  {person.job} · {person.town}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-[12px] font-semibold">About me</h3>
+                <p className="mt-1 text-[12px] leading-[18px]">{person.bio}</p>
+              </div>
+              <div>
+                <h3 className="text-[12px] font-semibold">Looking for</h3>
+                <span className="mt-1 inline-flex rounded-full bg-accent px-3 py-1.5 text-[11px] font-medium text-primary">
+                  ♥ {person.intent}
+                </span>
+              </div>
               {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
+              {!userId && <SampleVoiceIntro />}
               {person.photoPaths && person.photoPaths.length > 1 && (
                 <div className="no-scrollbar flex gap-2 overflow-x-auto">
                   {person.photoPaths.slice(1).map((path) => (
@@ -519,14 +558,14 @@ function ProfileCard({
                 </div>
               )}
               {recommendationReason && (
-                <p className="rounded-xl bg-accent/50 p-3 text-xs leading-5">
-                  <span className="font-semibold">Why you two: </span>
-                  {recommendationReason}
+                <p className="text-[11px] leading-4 text-muted-foreground">
+                  You may connect over {recommendationReason}
                 </p>
               )}
-              <div className="rounded-xl bg-secondary p-3">
-                <p className="text-[11px] font-semibold text-muted-foreground">{person.prompt}</p>
-                <p className="mt-1 text-[14px] font-medium leading-5">{person.answer}</p>
+              <div>
+                <h3 className="text-[12px] font-semibold">My answer</h3>
+                <p className="mt-1 text-[11px] font-medium">{person.prompt}</p>
+                <p className="text-[12px] leading-5 text-muted-foreground">{person.answer}</p>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {person.tags.map((tag) => (
@@ -652,8 +691,8 @@ function RoundButton({
       whileTap={{ scale: 0.9 }}
       className={
         tone === "like"
-          ? "flex h-[60px] w-[60px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          : "flex h-[52px] w-[52px] items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          ? "pointer-events-auto flex h-[58px] w-[58px] items-center justify-center rounded-full bg-primary text-primary-foreground shadow-float focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          : "pointer-events-auto flex h-[54px] w-[54px] items-center justify-center rounded-full bg-white text-foreground shadow-float focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       }
     >
       {children}

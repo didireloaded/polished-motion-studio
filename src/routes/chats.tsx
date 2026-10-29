@@ -30,7 +30,8 @@ function Chats() {
   const { user, ready } = useSession();
   const { matchId } = Route.useSearch();
   const [openId, setOpenId] = useState<string | null>(null);
-  const list = people.filter((p) => s.matches.includes(p.id));
+  const matches = people.filter((p) => s.matches.includes(p.id));
+  const list = matches.length ? matches : [people[0]!, people[5]!, people[1]!, people[2]!];
   const person = list.find((p) => p.id === openId);
 
   if (!ready)
@@ -52,7 +53,7 @@ function Chats() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
           >
-            <PageHeader title="Chats" />
+            <PageHeader title="NamLink" />
             <DemoNotice />
             {list.length === 0 ? (
               <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
@@ -77,6 +78,11 @@ function Chats() {
               </div>
             ) : (
               <>
+                <div className="flex items-center justify-between px-5 pb-2">
+                  <h2 className="text-sm font-semibold">
+                    {matches.length ? "New matches" : "Sample matches"}
+                  </h2>
+                </div>
                 <div className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-4">
                   {list.map((p, i) => (
                     <motion.button
@@ -96,7 +102,10 @@ function Chats() {
                     </motion.button>
                   ))}
                 </div>
-                <ul className="space-y-1 px-3">
+                <h2 className="px-5 pb-1 text-sm font-semibold">
+                  {matches.length ? "Messages" : "Sample messages"}
+                </h2>
+                <ul className="divide-y divide-border px-3">
                   {list.map((p, i) => {
                     const last = s.chats[p.id]?.at(-1);
                     return (
@@ -125,7 +134,11 @@ function Chats() {
                               )}
                             </div>
                             <p className="truncate text-sm text-muted-foreground">
-                              {last ? last.text : "You both chose to connect. Say hello."}
+                              {last
+                                ? last.text
+                                : matches.length
+                                  ? "You both chose to connect. Say hello."
+                                  : "Tap to preview a conversation"}
                             </p>
                           </div>
                         </button>
@@ -228,7 +241,7 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
     <main className="mx-auto max-w-md pb-28">
       {!openMatch ? (
         <>
-          <PageHeader title="Chats" eyebrow="Conversations start with a mutual yes" />
+          <PageHeader title="NamLink" />
           {matchesQuery.isLoading ? (
             <p className="px-5 py-8 text-center text-sm text-muted-foreground">
               Loading conversations…
@@ -251,6 +264,10 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
             </div>
           ) : (
             <>
+              <div className="flex items-center justify-between px-5 pb-2">
+                <h2 className="text-sm font-semibold">New matches</h2>
+                <span className="text-xs text-primary">See all</span>
+              </div>
               <div className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-4">
                 {data.matches.map((match) => {
                   const id = match.user_a === userId ? match.user_b : match.user_a;
@@ -272,7 +289,8 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
                   );
                 })}
               </div>
-              <ul className="space-y-1 px-3">
+              <h2 className="px-5 pb-1 text-sm font-semibold">Messages</h2>
+              <ul className="divide-y divide-border px-3">
                 {data.matches.map((match) => {
                   const id = match.user_a === userId ? match.user_b : match.user_a;
                   const p = data.profiles.find((x) => x.id === id);
@@ -631,6 +649,13 @@ function LiveThread({
               {datePlan ? "Edit" : "Suggest"}
             </button>
           </div>
+          <Link
+            to="/date-plan"
+            search={{ matchId: match.id }}
+            className="mt-2 inline-block text-xs font-semibold text-primary"
+          >
+            View date plan
+          </Link>
           {datePlan && (
             <div className="mt-3 border-t border-border pt-3">
               <p className="font-medium">
@@ -799,7 +824,25 @@ function LiveThread({
 function Thread({ id, onBack }: { id: string; onBack: () => void }) {
   const s = useStore();
   const p = people.find((x) => x.id === id)!;
-  const msgs = s.chats[id] ?? [];
+  const msgs = s.chats[id]?.length
+    ? s.chats[id]
+    : !s.matches.includes(id)
+      ? [
+          { id: "preview-1", from: "them" as const, text: "Hey! How's your week going?", at: 0 },
+          {
+            id: "preview-2",
+            from: "me" as const,
+            text: "Good! Thinking of a beach day this weekend. Want to join?",
+            at: 0,
+          },
+          {
+            id: "preview-3",
+            from: "them" as const,
+            text: "That sounds lovely. Let's make a plan.",
+            at: 0,
+          },
+        ]
+      : [];
   const [text, setText] = useState("");
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -843,6 +886,15 @@ function Thread({ id, onBack }: { id: string; onBack: () => void }) {
         </div>
       </header>
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
+        {!s.matches.includes(id) && (
+          <Link
+            to="/date-plan"
+            search={{ matchId: undefined }}
+            className="block rounded-xl border border-border bg-white p-3 text-center text-xs font-semibold text-primary"
+          >
+            View a sample date plan
+          </Link>
+        )}
         <div className="mb-4 rounded-2xl bg-card p-4 text-center text-sm text-muted-foreground">
           {shared.length ? (
             <>

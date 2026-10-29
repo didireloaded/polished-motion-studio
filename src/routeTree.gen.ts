@@ -12,9 +12,14 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatsRouteImport } from './routes/chats'
+import { Route as CrossedPathsRouteImport } from './routes/crossed-paths'
+import { Route as DatePlanRouteImport } from './routes/date-plan'
 import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as PostsRouteImport } from './routes/posts'
 import { Route as RadarRouteImport } from './routes/radar'
+import { Route as SafetyRouteImport } from './routes/safety'
+import { Route as VerificationRouteImport } from './routes/verification'
+import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as YouRouteImport } from './routes/you'
 
 const IndexRoute = IndexRouteImport.update({
@@ -32,6 +37,16 @@ const ChatsRoute = ChatsRouteImport.update({
   path: '/chats',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CrossedPathsRoute = CrossedPathsRouteImport.update({
+  id: '/crossed-paths',
+  path: '/crossed-paths',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DatePlanRoute = DatePlanRouteImport.update({
+  id: '/date-plan',
+  path: '/date-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ModerationRoute = ModerationRouteImport.update({
   id: '/moderation',
   path: '/moderation',
@@ -47,6 +62,21 @@ const RadarRoute = RadarRouteImport.update({
   path: '/radar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SafetyRoute = SafetyRouteImport.update({
+  id: '/safety',
+  path: '/safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerificationRoute = VerificationRouteImport.update({
+  id: '/verification',
+  path: '/verification',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const YouRoute = YouRouteImport.update({
   id: '/you',
   path: '/you',
@@ -57,18 +87,28 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
+  '/crossed-paths': typeof CrossedPathsRoute
+  '/date-plan': typeof DatePlanRoute
   '/moderation': typeof ModerationRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
+  '/safety': typeof SafetyRoute
+  '/verification': typeof VerificationRoute
+  '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
+  '/crossed-paths': typeof CrossedPathsRoute
+  '/date-plan': typeof DatePlanRoute
   '/moderation': typeof ModerationRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
+  '/safety': typeof SafetyRoute
+  '/verification': typeof VerificationRoute
+  '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
 }
 export interface FileRoutesById {
@@ -76,25 +116,58 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/chats': typeof ChatsRoute
+  '/crossed-paths': typeof CrossedPathsRoute
+  '/date-plan': typeof DatePlanRoute
   '/moderation': typeof ModerationRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
+  '/safety': typeof SafetyRoute
+  '/verification': typeof VerificationRoute
+  '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/auth' | '/chats' | '/moderation' | '/posts' | '/radar' | '/you'
+    | '/'
+    | '/auth'
+    | '/chats'
+    | '/crossed-paths'
+    | '/date-plan'
+    | '/moderation'
+    | '/posts'
+    | '/radar'
+    | '/safety'
+    | '/verification'
+    | '/welcome'
+    | '/you'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/chats' | '/moderation' | '/posts' | '/radar' | '/you'
+  to:
+    | '/'
+    | '/auth'
+    | '/chats'
+    | '/crossed-paths'
+    | '/date-plan'
+    | '/moderation'
+    | '/posts'
+    | '/radar'
+    | '/safety'
+    | '/verification'
+    | '/welcome'
+    | '/you'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/chats'
+    | '/crossed-paths'
+    | '/date-plan'
     | '/moderation'
     | '/posts'
     | '/radar'
+    | '/safety'
+    | '/verification'
+    | '/welcome'
     | '/you'
   fileRoutesById: FileRoutesById
 }
@@ -102,9 +175,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   ChatsRoute: typeof ChatsRoute
+  CrossedPathsRoute: typeof CrossedPathsRoute
+  DatePlanRoute: typeof DatePlanRoute
   ModerationRoute: typeof ModerationRoute
   PostsRoute: typeof PostsRoute
   RadarRoute: typeof RadarRoute
+  SafetyRoute: typeof SafetyRoute
+  VerificationRoute: typeof VerificationRoute
+  WelcomeRoute: typeof WelcomeRoute
   YouRoute: typeof YouRoute
 }
 
@@ -131,6 +209,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChatsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/crossed-paths': {
+      id: '/crossed-paths'
+      path: '/crossed-paths'
+      fullPath: '/crossed-paths'
+      preLoaderRoute: typeof CrossedPathsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/date-plan': {
+      id: '/date-plan'
+      path: '/date-plan'
+      fullPath: '/date-plan'
+      preLoaderRoute: typeof DatePlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/moderation': {
       id: '/moderation'
       path: '/moderation'
@@ -152,6 +244,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RadarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/safety': {
+      id: '/safety'
+      path: '/safety'
+      fullPath: '/safety'
+      preLoaderRoute: typeof SafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verification': {
+      id: '/verification'
+      path: '/verification'
+      fullPath: '/verification'
+      preLoaderRoute: typeof VerificationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/you': {
       id: '/you'
       path: '/you'
@@ -166,9 +279,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   ChatsRoute: ChatsRoute,
+  CrossedPathsRoute: CrossedPathsRoute,
+  DatePlanRoute: DatePlanRoute,
   ModerationRoute: ModerationRoute,
   PostsRoute: PostsRoute,
   RadarRoute: RadarRoute,
+  SafetyRoute: SafetyRoute,
+  VerificationRoute: VerificationRoute,
+  WelcomeRoute: WelcomeRoute,
   YouRoute: YouRoute,
 }
 export const routeTree = rootRouteImport
