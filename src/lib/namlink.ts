@@ -32,7 +32,7 @@ export const people: Person[] = [
 export const photo = (p: Person, small = false) => `/editorial/${p.photo}${small ? "-small" : ""}.jpg`;
 
 export type Msg = { id: string; from: "me" | "them"; text: string; at: number };
-export type Post = { id: string; text: string; town: string; at: number; replies: number; mine?: boolean; sample?: boolean };
+export type Post = { id: string; authorName: string; text: string; town: string; at: number; replies: number; mine?: boolean; sample?: boolean };
 export type PrivateReply = { id: string; postId: string; from: "me" | "member"; personId?: string; text: string; at: number; sample?: boolean };
 export const events = [
   { id: "e1", title: "Coffee and a coastal walk", town: "Swakopmund", sample: true },
@@ -51,9 +51,9 @@ export type State = {
 const initial: State = {
   liked: [], passed: [], saved: [], matches: [], chats: {}, postReplies: {}, interestedEvents: [],
   posts: [
-    { id: "s1", text: "Anyone up for a sunrise at Dune 7? Coffee is on me.", town: "Walvis Bay", at: Date.now() - 36e5 * 3, replies: 0, sample: true },
-    { id: "s2", text: "Looking for a gallery buddy for First Friday.", town: "Windhoek", at: Date.now() - 36e5 * 9, replies: 0, sample: true },
-    { id: "s3", text: "What’s your favourite kapana spot in town?", town: "Oshakati", at: Date.now() - 36e5 * 26, replies: 0, sample: true },
+    { id: "s1", authorName: "Daniel", text: "Anyone up for a sunrise at Dune 7? Coffee is on me.", town: "Walvis Bay", at: Date.now() - 36e5 * 3, replies: 0, sample: true },
+    { id: "s2", authorName: "Amara", text: "Looking for a gallery buddy for First Friday.", town: "Windhoek", at: Date.now() - 36e5 * 9, replies: 0, sample: true },
+    { id: "s3", authorName: "Selma", text: "What’s your favourite kapana spot in town?", town: "Oshakati", at: Date.now() - 36e5 * 26, replies: 0, sample: true },
   ],
   profile: { name: "", age: 25, town: "Windhoek", bio: "", tags: [], intent: "A relationship", choices: {} },
 };

@@ -70,7 +70,7 @@ function NearbyPage() {
 
       <section className="mt-7">
         <div className="flex items-end justify-between px-5">
-          <div><h2 className="text-[17px] font-semibold">Plans around Namibia</h2><p className="mt-0.5 text-xs text-muted-foreground">Example events · preview only</p></div>
+          <div><h2 className="text-[17px] font-semibold">Events</h2><p className="mt-0.5 text-xs text-muted-foreground">Example events · preview only</p></div>
           <CalendarDays className="mb-1 h-4 w-4 text-muted-foreground" />
         </div>
         <ul className="mt-3 space-y-2 px-5">

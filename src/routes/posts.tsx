@@ -14,7 +14,7 @@ export const Route = createFileRoute("/posts")({
   head: () => ({
     meta: [
       { title: "Posts — NamLink" },
-      { name: "description", content: "Anonymous posts and private replies around Namibia." },
+      { name: "description", content: "Local posts with private replies around Namibia." },
       { property: "og:title", content: "Posts — NamLink" },
     ],
   }),
@@ -40,18 +40,23 @@ function Posts() {
   const submitPost = () => {
     const value = text.trim();
     if (value.length < 3) return;
-    update((st) => ({ ...st, posts: [{ id: crypto.randomUUID(), text: value.slice(0, 280), town, at: Date.now(), replies: 0, mine: true }, ...st.posts] }));
+    if (!s.profile.name.trim()) {
+      setNotice("Add your name in You before posting.");
+      window.setTimeout(() => setNotice(""), 2400);
+      return;
+    }
+    update((st) => ({ ...st, posts: [{ id: crypto.randomUUID(), authorName: st.profile.name.trim(), text: value.slice(0, 300), town, at: Date.now(), replies: 0, mine: true }, ...st.posts] }));
     setText("");
     setView("Your posts");
   };
 
   const submitReply = () => {
     const value = replyText.trim();
-    if (!replyTo || value.length < 2) return;
+    if (!replyTo || value.length < 2 || !s.profile.name.trim()) return;
     const postId = replyTo.id;
     update((st) => ({
       ...st,
-      postReplies: { ...st.postReplies, [postId]: [...(st.postReplies[postId] ?? []), { id: crypto.randomUUID(), postId, from: "me", text: value.slice(0, 280), at: Date.now() }] },
+      postReplies: { ...st.postReplies, [postId]: [...(st.postReplies[postId] ?? []), { id: crypto.randomUUID(), postId, from: "me", personId: "self", text: value.slice(0, 300), at: Date.now() }] },
       posts: st.posts.map((post) => post.id === postId ? { ...post, replies: (post.replies ?? 0) + 1 } : post),
     }));
     setReplyText("");
@@ -76,21 +81,21 @@ function Posts() {
     <main className="mx-auto max-w-md pb-28">
       <PageHeader title="Posts" />
       <div className="mx-5 rounded-2xl border border-border bg-card p-4">
-        <label htmlFor="post-compose" className="sr-only">Write an anonymous post</label>
-        <textarea id="post-compose" value={text} onChange={(e) => setText(e.target.value)} maxLength={280} rows={3}
+        <label htmlFor="post-compose" className="sr-only">Write a post</label>
+        <textarea id="post-compose" value={text} onChange={(e) => setText(e.target.value)} maxLength={300} rows={3}
           placeholder="Share a plan or ask the community…" className="w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground" />
         <div className="flex items-center justify-between gap-2 border-t border-border pt-3">
           <select aria-label="Post town" value={town} onChange={(e) => setTown(e.target.value)} className="max-w-[55%] rounded-xl bg-secondary px-3 py-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring">
             {towns.map((place) => <option key={place}>{place}</option>)}
           </select>
           <div className="flex items-center gap-3">
-            <span className="text-xs tabular-nums text-muted-foreground">{280 - text.length}</span>
+            <span className="text-xs tabular-nums text-muted-foreground">{300 - text.length}</span>
             <button type="button" disabled={text.trim().length < 3} onClick={submitPost} className="flex h-9 items-center gap-1.5 rounded-xl bg-primary px-3.5 text-sm font-semibold text-primary-foreground disabled:opacity-45">
               <Send className="h-4 w-4" />Post
             </button>
           </div>
         </div>
-        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground"><LockKeyhole className="h-3.5 w-3.5" />Your name is hidden. Replies are private to the author.</p>
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground"><LockKeyhole className="h-3.5 w-3.5" />Your name is shown. Replies are private to you and the author.</p>
         <p className="mt-1 text-[11px] text-muted-foreground">Preview only · activity stays on this device.</p>
       </div>
 
@@ -118,7 +123,7 @@ function Posts() {
             const privateReplies = (s.postReplies[post.id] ?? []).filter((reply) => reply.from === "member");
             return (
               <li key={post.id} className="rounded-2xl border border-border bg-card p-4">
-                <p className="text-[11px] text-muted-foreground">Your anonymous post · {timeAgo(post.at)}</p>
+                <p className="text-[11px] text-muted-foreground">Your post · {timeAgo(post.at)}</p>
                 <p className="mt-2 text-[15px] leading-6">{post.text}</p>
                 <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
                   <span className="text-xs text-muted-foreground">{privateReplies.length ? privateReplies.length + " private replies" : "Replies will appear here privately."}</span>
@@ -129,7 +134,7 @@ function Posts() {
                 </div>
               </li>
             );
-          }) : <EmptyState title="No posts yet" body="Posts you write will be anonymous and replies will stay private." />}
+          }) : <EmptyState title="No posts yet" body="Posts you write will show your name. Replies stay private." />}
         </ul>
       ) : (
         <ul className="mt-3 space-y-2 px-5">
@@ -138,7 +143,7 @@ function Posts() {
               <motion.li key={post.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.2, delay: Math.min(index, 4) * 0.025 }} className="rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-muted-foreground">Anonymous post</span>
+                  <span className="text-[13px] font-semibold">{post.authorName || "Member"}</span>
                   {post.sample && <span className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">Sample</span>}
                 </div>
                 <p className="mt-2 text-[15px] leading-6">{post.text}</p>
@@ -154,7 +159,7 @@ function Posts() {
               </motion.li>
             ))}
           </AnimatePresence>
-          {visiblePosts.length === 0 && <EmptyState title="Nothing here yet" body="New anonymous posts will appear in this feed." />}
+          {visiblePosts.length === 0 && <EmptyState title="Nothing here yet" body="New posts from people nearby will appear in this feed." />}
         </ul>
       )}
 
@@ -166,15 +171,16 @@ function Posts() {
           </DrawerHeader>
           {replyTo && <blockquote className="rounded-xl bg-secondary p-3 text-sm leading-5 text-muted-foreground">{replyTo.text}</blockquote>}
           <label htmlFor="private-reply" className="sr-only">Your private reply</label>
-          <textarea id="private-reply" autoFocus value={replyText} onChange={(e) => setReplyText(e.target.value)} maxLength={280} rows={4}
+          <textarea id="private-reply" autoFocus value={replyText} onChange={(e) => setReplyText(e.target.value)} maxLength={300} rows={4}
             placeholder="Write a thoughtful reply…" className="mt-3 w-full resize-none rounded-xl border border-border bg-background p-3 text-sm leading-5 outline-none focus:border-primary" />
-          <button type="button" disabled={replyText.trim().length < 2} onClick={submitReply} className="mt-3 h-12 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-45">Send private reply</button>
+          <div className="mt-2 flex items-center justify-between"><span className="text-xs text-muted-foreground">{300 - replyText.length} characters left</span><span className="text-xs text-muted-foreground">From {s.profile.name || "your profile"}</span></div>
+          <button type="button" disabled={replyText.trim().length < 2 || !s.profile.name.trim()} onClick={submitReply} className="mt-3 h-12 rounded-xl bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-45">Send private reply</button>
         </DrawerContent>
       </Drawer>
 
       <Drawer open={!!inboxPost} onOpenChange={(open) => { if (!open) setInboxPost(null); }}>
         <DrawerContent className="mx-auto max-h-[82svh] max-w-[440px] overflow-y-auto rounded-t-[26px] border-border bg-card px-5 pb-[calc(20px+env(safe-area-inset-bottom))]">
-          <DrawerHeader className="flex flex-row items-start justify-between px-0 text-left"><div><DrawerTitle className="text-xl">Private replies</DrawerTitle><DrawerDescription>Only you can see replies to your anonymous post.</DrawerDescription></div><DrawerClose aria-label="Close private replies" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border p-2 text-muted-foreground"><X className="h-4 w-4" /></DrawerClose></DrawerHeader>
+          <DrawerHeader className="flex flex-row items-start justify-between px-0 text-left"><div><DrawerTitle className="text-xl">Private replies</DrawerTitle><DrawerDescription>Only you can see replies to your post.</DrawerDescription></div><DrawerClose aria-label="Close private replies" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border p-2 text-muted-foreground"><X className="h-4 w-4" /></DrawerClose></DrawerHeader>
           {inboxPost && (s.postReplies[inboxPost.id] ?? []).filter((reply) => reply.from === "member").map((reply) => {
             const person = people.find((entry) => entry.id === reply.personId);
             return <div key={reply.id} className="mt-3 rounded-2xl border border-border p-4">

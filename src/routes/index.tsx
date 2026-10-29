@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import {
   Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle,
 } from "@/components/ui/drawer";
-import { people, photo, sampleChoices, towns, update, useStore, toggle, type Person } from "@/lib/namlink";
+import { people, photo, towns, update, useStore, toggle, type Person } from "@/lib/namlink";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -23,7 +23,7 @@ function Home() {
   const [town, setTown] = useState("All");
   const [maxAge, setMaxAge] = useState(45);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [detail, setDetail] = useState<Person | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const deck = useMemo(
     () => people.filter((p) =>
@@ -66,7 +66,7 @@ function Home() {
       <section aria-label="Discover sample profiles" className="relative mt-1 min-h-0 flex-1">
         <AnimatePresence initial={false}>
           {deck.slice(0, 2).reverse().map((person) => (
-            <ProfileCard key={person.id} person={person} depth={deck.indexOf(person)} onDetails={() => setDetail(person)} />
+            <ProfileCard key={person.id} person={person} depth={deck.indexOf(person)} expanded={expandedId === person.id} onDetails={() => setExpandedId(expandedId === person.id ? null : person.id)} />
           ))}
         </AnimatePresence>
         {!current && <Empty onReset={() => { setTown("All"); setMaxAge(45); update((st) => ({ ...st, passed: [] })); }} />}
@@ -102,12 +102,6 @@ function Home() {
         </DrawerContent>
       </Drawer>
 
-      <Drawer open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
-        <DrawerContent className="mx-auto max-h-[88svh] max-w-[440px] overflow-y-auto rounded-t-[26px] border-border bg-card px-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
-          {detail && <ProfileDetails person={detail} />}
-        </DrawerContent>
-      </Drawer>
-
       <AnimatePresence>
         {notice && (
           <motion.div role="status" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
@@ -120,63 +114,48 @@ function Home() {
   );
 }
 
-function ProfileCard({ person, depth, onDetails }: {
-  person: Person; depth: number; onDetails: () => void;
+function ProfileCard({ person, depth, expanded, onDetails }: {
+  person: Person; depth: number; expanded: boolean; onDetails: () => void;
 }) {
   const top = depth === 0;
   return (
     <motion.article aria-label={"Sample profile, " + person.name + ", " + person.age + ", " + person.town}
-      className="absolute inset-0 overflow-hidden rounded-[22px] bg-secondary text-white shadow-float"
+      className="absolute inset-0 flex flex-col overflow-hidden rounded-[22px] bg-card text-white shadow-float"
       style={{ zIndex: 10 - depth }}
       initial={{ scale: 0.96, y: 12, opacity: 0 }}
       animate={{ scale: 1 - depth * 0.025, y: depth * 10, opacity: depth ? 0.72 : 1 }}
       exit={{ y: -18, opacity: 0, scale: 0.97, transition: { duration: 0.22 } }}
       transition={{ type: "spring", stiffness: 260, damping: 28 }}>
-      <img src={photo(person)} alt={"Sample profile photo of " + person.name} draggable={false}
-        className="absolute inset-0 h-full w-full select-none object-cover" style={{ objectPosition: person.photoPosition ?? "center 34%" }} />
-      <div className="absolute inset-0 bg-scrim" aria-hidden="true" />
-      {top && (
-        <>
-          <span className="absolute left-4 top-4 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm">Sample profile</span>
-          <div className="absolute inset-x-0 bottom-0 px-5 pb-5 pt-20">
-            <div className="flex items-end justify-between gap-3">
-              <div className="min-w-0">
-                <h1 className="truncate text-[30px] font-bold leading-tight tracking-[-0.035em]">{person.name}<span className="ml-2 text-[23px] font-medium text-white/85">{person.age}</span></h1>
-                <p className="mt-1 flex items-center gap-1.5 text-[14px] text-white/90">
-                  <MapPin className="h-4 w-4 shrink-0" />{person.town}<span aria-hidden="true">·</span><span className="truncate">{person.job}</span>
-                </p>
-              </div>
-              <motion.button type="button" aria-label={"More about " + person.name} onClick={onDetails}
-                whileTap={{ scale: 0.9 }} className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-                <motion.span animate={{ y: [0, -2, 0] }} transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}><ChevronUp className="h-5 w-5" /></motion.span>
-              </motion.button>
+      <motion.div layout className="relative w-full shrink-0 overflow-hidden" animate={{ height: expanded ? "48%" : "100%" }} transition={{ type: "spring", stiffness: 260, damping: 30 }}>
+        <img src={photo(person)} alt={"Sample profile photo of " + person.name} draggable={false}
+          className="absolute inset-0 h-full w-full select-none object-cover" style={{ objectPosition: person.photoPosition ?? "center 34%" }} />
+        <div className="bg-scrim absolute inset-0" aria-hidden="true" />
+        {top && <span className="absolute left-4 top-4 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm">Sample profile</span>}
+        <div className="absolute inset-x-0 bottom-0 px-5 pb-4 pt-16">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="truncate text-[27px] font-bold leading-tight tracking-[-0.035em]">{person.name}<span className="ml-2 text-[21px] font-medium text-white/85">{person.age}</span></h1>
+              <p className="mt-1 flex items-center gap-1.5 text-[13px] text-white/90">
+                <MapPin className="h-4 w-4 shrink-0" />{person.town}<span aria-hidden="true">·</span><span className="truncate">{person.job}</span>
+              </p>
             </div>
+            <motion.button type="button" aria-label={expanded ? "Hide profile details" : "Show profile details"} aria-expanded={expanded} onClick={onDetails}
+              whileTap={{ scale: 0.9 }} className="mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+              <motion.span animate={{ rotate: expanded ? 180 : 0, y: expanded ? 0 : [0, -2, 0] }} transition={{ duration: expanded ? 0.2 : 1.8, repeat: expanded ? 0 : Infinity, ease: "easeInOut" }}><ChevronUp className="h-5 w-5" /></motion.span>
+            </motion.button>
           </div>
-        </>
-      )}
+        </div>
+      </motion.div>
+      <AnimatePresence initial={false}>
+        {top && expanded && <motion.div key="profile-details" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.2 }} className="min-h-0 flex-1 overflow-y-auto px-5 py-4 text-foreground">
+          <div className="space-y-3">
+            <p className="text-[13px] leading-5 text-muted-foreground">{person.bio}</p>
+            <div className="rounded-xl bg-secondary p-3"><p className="text-[11px] font-semibold text-muted-foreground">{person.prompt}</p><p className="mt-1 text-[14px] font-medium leading-5">{person.answer}</p></div>
+            <div className="flex flex-wrap gap-1.5">{person.tags.map((tag) => <span key={tag} className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium">{tag}</span>)}</div>
+          </div>
+        </motion.div>}
+      </AnimatePresence>
     </motion.article>
-  );
-}
-
-function ProfileDetails({ person }: { person: Person }) {
-  const answer = sampleChoices[person.id];
-  return (
-    <div className="pb-2">
-      <DrawerHeader className="flex flex-row items-start justify-between px-0 pb-4 text-left">
-        <div><p className="text-xs font-medium text-muted-foreground">Sample profile · {person.town}</p>
-          <DrawerTitle className="mt-1 text-[26px] font-bold tracking-tight">{person.name}, {person.age}</DrawerTitle>
-          <DrawerDescription className="mt-1">{person.job}</DrawerDescription></div>
-        <DrawerClose aria-label="Close profile details" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border p-2 text-muted-foreground"><X className="h-4 w-4" /></DrawerClose>
-      </DrawerHeader>
-      <div className="space-y-5">
-        <section><h3 className="text-sm font-semibold">A little about {person.name}</h3><p className="mt-2 text-[15px] leading-6 text-muted-foreground">{person.bio}</p></section>
-        <section className="rounded-2xl bg-secondary p-4"><p className="text-xs font-semibold text-muted-foreground">{person.prompt}</p><p className="mt-2 text-[16px] font-medium leading-6">{person.answer}</p></section>
-        <section><h3 className="text-sm font-semibold">Looking for</h3><p className="mt-1 text-sm text-muted-foreground">{person.intent}</p></section>
-        {answer && <section><h3 className="text-sm font-semibold">This or that</h3><div className="mt-2 rounded-2xl bg-secondary p-4"><p className="text-xs text-muted-foreground">{answer.prompt}</p><p className="mt-1 text-sm font-medium">{answer.answer}</p></div></section>}
-        <section><h3 className="text-sm font-semibold">Interests</h3><div className="mt-2 flex flex-wrap gap-2">{person.tags.map((tag) => <span key={tag} className="rounded-full bg-secondary px-3 py-1.5 text-xs font-medium">{tag}</span>)}</div></section>
-        <p className="border-t border-border pt-4 text-xs text-muted-foreground">Illustrative profile details for this preview.</p>
-      </div>
-    </div>
   );
 }
 
