@@ -16,6 +16,7 @@ import { useSession } from "@/hooks/use-session";
 import { getRecommendations } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
+import { VoiceIntroPlayer } from "@/components/voice-intro";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -66,6 +67,7 @@ function Home() {
     bio: item.profile.bio,
     intent: item.profile.intent,
     recommendationReason: item.reason,
+    voiceIntroPath: item.profile.voice_intro_path,
   }));
   const deck = user
     ? liveDeck.filter((p) => (town === "All" || p.town === town) && p.age <= maxAge)
@@ -98,12 +100,10 @@ function Home() {
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
-      setNotice(
-        liked
-          ? `Like sent to ${p.name}. If they like you too, you’ll match.`
-          : `You passed on ${p.name}.`,
-      );
-      window.setTimeout(() => setNotice(""), 2400);
+      if (!liked) {
+        setNotice(`Passed on ${p.name}.`);
+        window.setTimeout(() => setNotice(""), 1500);
+      }
       return;
     }
     update((st) => {
@@ -117,13 +117,10 @@ function Home() {
         chats: matches.includes(p.id) && !st.chats[p.id] ? { ...st.chats, [p.id]: [] } : st.chats,
       };
     });
-    const message = liked
-      ? p.mutualInterest
-        ? "A sample match with " + p.name + ". Open Chats to say hello."
-        : "Like sent to " + p.name + ". If they like you too, you’ll match."
-      : "You passed on " + p.name + ".";
-    setNotice(message);
-    window.setTimeout(() => setNotice(""), 2400);
+    if (!liked) {
+      setNotice("Passed.");
+      window.setTimeout(() => setNotice(""), 1500);
+    }
   };
 
   return (
@@ -191,12 +188,30 @@ function Home() {
         )}
         {!current && !recs.isLoading && (
           <Empty
-            onReset={() => {
+            needsProfile={!!user && recs.data?.notice === "Create your profile first."}
+            onReset={async () => {
+              if (user && recs.data?.notice === "Create your profile first.") {
+                await queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
+                return;
+              }
               setTown("All");
-              setMaxAge(45);
-              if (user)
+              setMaxAge(99);
+              if (user) {
+                const { error } = await supabase
+                  .from("profiles")
+                  .update({ pref_town: null, pref_min_age: 18, pref_max_age: 99 })
+                  .eq("id", user.id);
+                setNotice(
+                  error
+                    ? "We couldn't broaden your preferences. Please try again."
+                    : "Search widened to all towns and ages 18–99.",
+                );
                 void queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
-              else update((st) => ({ ...st, passed: [] }));
+              } else {
+                update((st) => ({ ...st, passed: [] }));
+                setNotice("Showing sample profiles from all towns.");
+              }
+              window.setTimeout(() => setNotice(""), 2200);
             }}
           />
         )}
@@ -405,6 +420,7 @@ function ProfileCard({
           >
             <div className="space-y-3">
               <p className="text-[13px] leading-5 text-muted-foreground">{person.bio}</p>
+              {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
               {recommendationReason && (
                 <p className="rounded-xl bg-accent/50 p-3 text-xs leading-5">
                   <span className="font-semibold">Why you two: </span>
@@ -441,20 +457,40 @@ function ProfileCard({
   );
 }
 
-function Empty({ onReset }: { onReset: () => void }) {
+function Empty({
+  onReset,
+  needsProfile = false,
+}: {
+  onReset: () => void | Promise<void>;
+  needsProfile?: boolean;
+}) {
   return (
     <div className="flex h-full flex-col items-center justify-center rounded-[22px] border border-border bg-card px-7 text-center">
       <Heart className="h-8 w-8 text-primary" />
-      <h2 className="mt-4 text-xl font-semibold">You’re all caught up</h2>
+      <h2 className="mt-4 text-xl font-semibold">
+        {needsProfile ? "A few details first" : "You’re all caught up"}
+      </h2>
       <p className="mt-2 max-w-[260px] text-sm leading-5 text-muted-foreground">
-        Try a wider age range or another town to see more sample profiles.
+        {needsProfile
+          ? "Finish your profile so we can find introductions that fit what you’re looking for."
+          : "Open up your age and town preferences to meet people a little further afield."}
       </p>
-      <button
-        onClick={onReset}
-        className="mt-5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
-      >
-        Reset filters
-      </button>
+      {needsProfile ? (
+        <Link
+          to="/you"
+          className="mt-5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+        >
+          Set up profile
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={() => void onReset()}
+          className="mt-5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+        >
+          Try more towns
+        </button>
+      )}
     </div>
   );
 }

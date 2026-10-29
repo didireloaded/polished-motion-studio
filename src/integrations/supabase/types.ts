@@ -178,6 +178,7 @@ export type Database = {
           tags: string[];
           town: string;
           updated_at: string;
+          voice_intro_path: string | null;
         };
         Insert: {
           active?: boolean;
@@ -194,6 +195,7 @@ export type Database = {
           tags?: string[];
           town: string;
           updated_at?: string;
+          voice_intro_path?: string | null;
         };
         Update: {
           active?: boolean;
@@ -210,6 +212,7 @@ export type Database = {
           tags?: string[];
           town?: string;
           updated_at?: string;
+          voice_intro_path?: string | null;
         };
         Relationships: [];
       };

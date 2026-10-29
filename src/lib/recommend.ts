@@ -14,6 +14,7 @@ export type MemberProfile = {
   pref_min_age: number | null;
   pref_max_age: number | null;
   pref_town: string | null;
+  voice_intro_path?: string | null;
 };
 
 export type Recommendation = { id: string; reason: string };

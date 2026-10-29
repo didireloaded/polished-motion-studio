@@ -10,7 +10,7 @@ import {
 } from "./recommend";
 
 const COLS =
-  "id, display_name, age, town, bio, tags, intent, seeking, active, pref_min_age, pref_max_age, pref_town";
+  "id, display_name, age, town, bio, tags, intent, seeking, active, pref_min_age, pref_max_age, pref_town, voice_intro_path";
 
 export type RecommendationResult = {
   source: "ai" | "fallback" | "none";
@@ -57,6 +57,7 @@ export const getRecommendations = createServerFn({ method: "POST" })
             tags: p.tags,
             intent: p.intent,
             seeking: p.seeking,
+            voice_intro_path: p.voice_intro_path,
           },
         };
       });

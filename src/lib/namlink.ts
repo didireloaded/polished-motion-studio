@@ -46,6 +46,7 @@ export type Person = {
   mutualInterest?: boolean;
   photoPosition?: string;
   recommendationReason?: string;
+  voiceIntroPath?: string | null;
 };
 
 export const people: Person[] = [

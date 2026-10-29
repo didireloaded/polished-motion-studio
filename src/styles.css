@@ -1,6 +1,7 @@
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -119,5 +120,12 @@
 @utility animate-drift { animation: drift 18s ease-in-out infinite; }
 @keyframes radar { from { transform: scale(0.2); opacity: 0.8; } to { transform: scale(1); opacity: 0; } }
 @utility animate-radar { animation: radar 3.2s cubic-bezier(.2,.6,.3,1) infinite; }
+.namibia-map { isolation: isolate; }
+.town-map-marker { border: 0; background: transparent; }
+.town-pin { display: flex; width: 36px; height: 36px; align-items: center; justify-content: center; border: 3px solid white; border-radius: 999px; background: var(--primary); color: white; box-shadow: 0 2px 9px oklch(0.2 0.02 30 / 35%); transition: transform .18s, background .18s; }
+.town-pin > span { display: flex; width: 19px; height: 19px; align-items: center; justify-content: center; border-radius: 999px; background: white; color: var(--foreground); font-size: 10px; font-weight: 700; }
+.town-pin-active, .town-map-marker:focus-visible .town-pin { transform: scale(1.15); background: var(--foreground); outline: 2px solid var(--primary); outline-offset: 2px; }
+.leaflet-control-zoom a { color: var(--foreground) !important; }
+.leaflet-control-attribution { font-size: 9px !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
 @utility input { width: 100%; border-radius: 0.875rem; background: var(--secondary); padding: 0.7rem 0.9rem; font-size: 15px; outline: none; border: 1px solid transparent; transition: border-color .2s; &:focus { border-color: var(--ring); } }

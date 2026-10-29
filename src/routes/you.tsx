@@ -15,8 +15,10 @@ import { interests, people, photo, towns, update, useStore, toggle } from "@/lib
 import { PageHeader } from "@/components/TabBar";
 import { Link } from "@tanstack/react-router";
 import { useSession, useMyProfile } from "@/hooks/use-session";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DemoNotice } from "@/components/community";
+import { VoiceIntroRecorder } from "@/components/voice-intro";
 
 const choices = [
   { id: "weekend", prompt: "A free Saturday", options: ["A road trip", "A slow morning"] },
@@ -462,9 +464,11 @@ function LiveProfile({
     pref_min_age: number | null;
     pref_max_age: number | null;
     pref_town: string | null;
+    voice_intro_path: string | null;
   } | null;
   loading: boolean;
 }) {
+  const queryClient = useQueryClient();
   const [name, setName] = useState(profile?.display_name ?? "");
   const [age, setAge] = useState(profile?.age ?? 18);
   const [town, setTown] = useState(profile?.town ?? "Windhoek");
@@ -519,6 +523,14 @@ function LiveProfile({
     setNotice("Profile saved. Your preferences will shape your recommendations.");
   };
 
+  if (!loading && !profile)
+    return (
+      <FirstRunOnboarding
+        userId={userId}
+        onComplete={() => void queryClient.invalidateQueries({ queryKey: ["my-profile", userId] })}
+      />
+    );
+
   return (
     <main className="mx-auto max-w-md pb-28">
       <PageHeader
@@ -537,6 +549,7 @@ function LiveProfile({
               will be recommended.
             </p>
           )}
+          {profile && <VoiceIntroRecorder userId={userId} initialPath={profile.voice_intro_path} />}
           <section className="mx-5 space-y-4 rounded-2xl border border-border bg-card p-4">
             <Field label="First name">
               <input
@@ -690,6 +703,265 @@ function LiveProfile({
       >
         Sign out
       </button>
+    </main>
+  );
+}
+
+function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete: () => void }) {
+  const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
+  const [age, setAge] = useState(25);
+  const [town, setTown] = useState("Windhoek");
+  const [intent, setIntent] = useState("A relationship");
+  const [seeking, setSeeking] = useState("");
+  const [bio, setBio] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [adult, setAdult] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  const createProfile = async () => {
+    if (!adult || name.trim().length < 2 || age < 18 || age > 99 || !seeking.trim()) return;
+    setBusy(true);
+    setNotice("");
+    const { error } = await supabase.from("profiles").upsert({
+      id: userId,
+      display_name: name.trim(),
+      age,
+      town,
+      intent,
+      seeking: seeking.trim().slice(0, 400),
+      bio: bio.trim().slice(0, 500),
+      tags: tags.slice(0, 10),
+    });
+    setBusy(false);
+    if (error) {
+      setNotice("We couldn't save your profile. Check your connection and try again.");
+      return;
+    }
+    onComplete();
+  };
+
+  const titles = [
+    "A more intentional way to meet",
+    "A little about you",
+    "What are you looking for?",
+    "Make it yours",
+  ];
+  const next = () => setStep((value) => Math.min(3, value + 1));
+
+  return (
+    <main className="mx-auto max-w-md px-5 pb-28 pt-5">
+      <div className="mb-5 flex items-center justify-between">
+        <Link to="/" className="text-sm font-semibold text-muted-foreground">
+          Back to Discover
+        </Link>
+        {step > 0 && <span className="text-xs font-medium text-muted-foreground">{step} of 3</span>}
+      </div>
+      <div className="mb-6 flex gap-1.5" aria-label={`Onboarding step ${step + 1} of 4`}>
+        {titles.map((_, index) => (
+          <span
+            key={index}
+            className={`h-1 flex-1 rounded-full ${index <= step ? "bg-primary" : "bg-secondary"}`}
+          />
+        ))}
+      </div>
+      <h1 className="text-[25px] font-bold tracking-[-0.03em]">{titles[step]}</h1>
+      {step === 0 && (
+        <>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            A few thoughtful introductions, guided by what matters to you. No endless deck and no
+            paywall on basic connections.
+          </p>
+          <div className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card px-4">
+            <div className="py-3">
+              <p className="text-sm font-semibold">Start with shared intentions</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Tell us what kind of connection feels right for you.
+              </p>
+            </div>
+            <div className="py-3">
+              <p className="text-sm font-semibold">Respond to something real</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                A prompt, a story or a voice intro gives you a better first hello.
+              </p>
+            </div>
+            <div className="py-3">
+              <p className="text-sm font-semibold">Chat opens when interest is mutual</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                A like stays private until you both choose to connect.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={next}
+            className="mt-6 h-12 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+          >
+            Set up my profile
+          </button>
+        </>
+      )}
+      {step === 1 && (
+        <div className="mt-5 space-y-4 rounded-2xl border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground">
+            Keep it simple. Your exact date of birth and home address are never shown.
+          </p>
+          <Field label="First name">
+            <input
+              autoComplete="given-name"
+              value={name}
+              maxLength={40}
+              onChange={(event) => setName(event.target.value)}
+              className="input"
+              placeholder="What should people call you?"
+            />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Age">
+              <input
+                type="number"
+                min={18}
+                max={99}
+                value={age}
+                onChange={(event) => setAge(Number(event.target.value))}
+                className="input"
+              />
+            </Field>
+            <Field label="Town">
+              <select
+                value={town}
+                onChange={(event) => setTown(event.target.value)}
+                className="input"
+              >
+                {towns.map((place) => (
+                  <option key={place}>{place}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <label className="flex items-center gap-3 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={adult}
+              onChange={(event) => setAdult(event.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            I confirm I’m at least 18
+          </label>
+          <button
+            type="button"
+            disabled={name.trim().length < 2 || age < 18 || age > 99 || !adult}
+            onClick={next}
+            className="h-11 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-45"
+          >
+            Continue
+          </button>
+        </div>
+      )}
+      {step === 2 && (
+        <div className="mt-5 space-y-4 rounded-2xl border border-border bg-card p-4">
+          <Field label="What feels right right now?">
+            <div className="space-y-2">
+              {["A relationship", "Something casual", "Friends first", "Still figuring it out"].map(
+                (option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    aria-pressed={intent === option}
+                    onClick={() => setIntent(option)}
+                    className={`flex w-full items-center justify-between rounded-xl border px-3.5 py-3 text-left text-sm ${intent === option ? "border-primary bg-primary/5 font-semibold" : "border-border"}`}
+                  >
+                    {option}
+                    {intent === option && <Check className="h-4 w-4 text-primary" />}
+                  </button>
+                ),
+              )}
+            </div>
+          </Field>
+          <Field label="What matters to you in a connection?">
+            <textarea
+              rows={4}
+              maxLength={400}
+              value={seeking}
+              onChange={(event) => setSeeking(event.target.value)}
+              className="input resize-none"
+              placeholder="Values, pace, lifestyle, or the kind of relationship you hope to build…"
+            />
+          </Field>
+          <button
+            type="button"
+            disabled={!seeking.trim()}
+            onClick={next}
+            className="h-11 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-45"
+          >
+            Continue
+          </button>
+        </div>
+      )}
+      {step === 3 && (
+        <div className="mt-5 space-y-4 rounded-2xl border border-border bg-card p-4">
+          <Field label="A little about you">
+            <textarea
+              rows={4}
+              maxLength={500}
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              className="input resize-none"
+              placeholder="What would you like someone to know?"
+            />
+          </Field>
+          <Field label="Pick a few interests">
+            <div className="flex flex-wrap gap-2">
+              {interests.map((tag) => {
+                const selected = tags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setTags(
+                        selected
+                          ? tags.filter((item) => item !== tag)
+                          : [...tags, tag].slice(0, 10),
+                      )
+                    }
+                    className={`rounded-full border px-3 py-2 text-xs font-medium ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground"}`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+          {notice && (
+            <p role="alert" className="text-sm text-destructive">
+              {notice}
+            </p>
+          )}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void createProfile()}
+            className="h-11 w-full rounded-full bg-primary text-sm font-semibold text-primary-foreground disabled:opacity-45"
+          >
+            {busy ? "Creating profile…" : "Create my profile"}
+          </button>
+          <p className="text-center text-[11px] leading-4 text-muted-foreground">
+            You can add photos and a voice intro, and change your preferences, anytime.
+          </p>
+        </div>
+      )}
+      {step > 1 && (
+        <button
+          type="button"
+          onClick={() => setStep((value) => value - 1)}
+          className="mt-4 w-full py-2 text-sm font-medium text-muted-foreground"
+        >
+          Back
+        </button>
+      )}
     </main>
   );
 }
