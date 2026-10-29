@@ -60,6 +60,8 @@ export type Database = {
           town: string;
           updated_at: string;
           venue_name: string;
+          version: number;
+          updated_by: string | null;
         };
         Insert: {
           activity: string;
@@ -73,6 +75,8 @@ export type Database = {
           town: string;
           updated_at?: string;
           venue_name?: string;
+          version?: number;
+          updated_by?: string | null;
         };
         Update: {
           activity?: string;
@@ -86,6 +90,8 @@ export type Database = {
           town?: string;
           updated_at?: string;
           venue_name?: string;
+          version?: number;
+          updated_by?: string | null;
         };
         Relationships: [
           {
@@ -94,6 +100,44 @@ export type Database = {
             isOneToOne: true;
             referencedRelation: "matches";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      date_plan_events: {
+        Row: {
+          actor_id: string | null;
+          created_at: string;
+          event_type: "created" | "updated";
+          id: number;
+          match_id: string;
+          payload: Json;
+          version: number;
+        };
+        Insert: {
+          actor_id?: string | null;
+          created_at?: string;
+          event_type: "created" | "updated";
+          id?: number;
+          match_id: string;
+          payload: Json;
+          version: number;
+        };
+        Update: {
+          actor_id?: string | null;
+          created_at?: string;
+          event_type?: "created" | "updated";
+          id?: number;
+          match_id?: string;
+          payload?: Json;
+          version?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "date_plan_events_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "date_plans";
+            referencedColumns: ["match_id"];
           },
         ];
       };
@@ -319,6 +363,20 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      update_date_plan: {
+        Args: {
+          p_activity: string;
+          p_confirmed_a: boolean;
+          p_confirmed_b: boolean;
+          p_expected_version: number;
+          p_match_id: string;
+          p_note: string;
+          p_scheduled_at: string | null;
+          p_town: string;
+          p_venue_name: string;
+        };
+        Returns: Database["public"]["Tables"]["date_plans"]["Row"];
+      };
       can_chat: { Args: { _match_id: string; _user: string }; Returns: boolean };
       has_role: {
         Args: {

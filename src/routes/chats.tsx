@@ -340,6 +340,7 @@ function LiveThread({
   const [notice, setNotice] = useState("");
   const [planFormOpen, setPlanFormOpen] = useState(false);
   const [planNotice, setPlanNotice] = useState("");
+  const [basePlanVersion, setBasePlanVersion] = useState<number | null>(null);
   const [activity, setActivity] = useState("");
   const [venueName, setVenueName] = useState("");
   const [town, setTown] = useState(person.town);
@@ -351,7 +352,7 @@ function LiveThread({
       const { data, error } = await supabase
         .from("date_plans")
         .select(
-          "match_id,proposed_by,activity,venue_name,town,scheduled_at,note,confirmed_a,confirmed_b,created_at,updated_at",
+          "match_id,proposed_by,activity,venue_name,town,scheduled_at,note,confirmed_a,confirmed_b,created_at,updated_at,version,updated_by",
         )
         .eq("match_id", match.id)
         .maybeSingle();
@@ -450,13 +451,35 @@ function LiveThread({
   const amUserA = userId === match.user_a;
   const myConfirmed = datePlan ? (amUserA ? datePlan.confirmed_a : datePlan.confirmed_b) : false;
   const theirConfirmed = datePlan ? (amUserA ? datePlan.confirmed_b : datePlan.confirmed_a) : false;
+  const fillPlanForm = (plan: NonNullable<typeof datePlanQuery.data>) => {
+    setActivity(plan.activity);
+    setVenueName(plan.venue_name);
+    setTown(plan.town);
+    setScheduledAt(plan.scheduled_at ? toDateTimeLocal(plan.scheduled_at) : "");
+    setPlanNote(plan.note);
+    setBasePlanVersion(plan.version);
+  };
+  const reloadPlanAfterConflict = async () => {
+    await client.invalidateQueries({ queryKey: ["date-plan", match.id] });
+    const latest = client.getQueryData<NonNullable<typeof datePlanQuery.data>>([
+      "date-plan",
+      match.id,
+    ]);
+    if (latest) fillPlanForm(latest);
+    setPlanNotice(
+      "Your match changed the plan. The latest version is loaded; review it before saving.",
+    );
+  };
   const editPlan = () => {
     if (datePlan) {
-      setActivity(datePlan.activity);
-      setVenueName(datePlan.venue_name);
-      setTown(datePlan.town);
-      setScheduledAt(datePlan.scheduled_at ? toDateTimeLocal(datePlan.scheduled_at) : "");
-      setPlanNote(datePlan.note);
+      fillPlanForm(datePlan);
+    } else {
+      setBasePlanVersion(null);
+      setActivity("");
+      setVenueName("");
+      setTown(person.town);
+      setScheduledAt("");
+      setPlanNote("");
     }
     setPlanNotice("");
     setPlanFormOpen(true);
@@ -471,12 +494,40 @@ function LiveThread({
       scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
       note: planNote.trim(),
     };
-    const result = datePlan
-      ? await supabase.from("date_plans").update(details).eq("match_id", match.id)
-      : await supabase
-          .from("date_plans")
-          .insert({ ...details, match_id: match.id, proposed_by: userId });
-    if (result.error) {
+    if (datePlan && basePlanVersion !== null) {
+      const { error } = await supabase.rpc("update_date_plan", {
+        p_match_id: match.id,
+        p_expected_version: basePlanVersion,
+        p_activity: details.activity,
+        p_venue_name: details.venue_name,
+        p_town: details.town,
+        p_scheduled_at: details.scheduled_at,
+        p_note: details.note,
+        p_confirmed_a: datePlan.confirmed_a,
+        p_confirmed_b: datePlan.confirmed_b,
+      });
+      if (error?.message.includes("PLAN_VERSION_CONFLICT")) {
+        await reloadPlanAfterConflict();
+        return;
+      }
+      if (error) {
+        setPlanNotice("We couldn't save this plan. Refresh and try again.");
+        return;
+      }
+    } else if (!datePlan) {
+      const { error } = await supabase
+        .from("date_plans")
+        .insert({ ...details, match_id: match.id, proposed_by: userId });
+      if (error) {
+        setPlanNotice(
+          error.code === "23505"
+            ? "A date plan was created on the other device. Refresh and review it."
+            : "We couldn't save this plan. Refresh and try again.",
+        );
+        void client.invalidateQueries({ queryKey: ["date-plan", match.id] });
+        return;
+      }
+    } else {
       setPlanNotice("We couldn't save this plan. Refresh and try again.");
       return;
     }
@@ -486,11 +537,22 @@ function LiveThread({
   const confirmPlan = async () => {
     if (!datePlan) return;
     setPlanNotice("");
-    const { error } = await supabase
-      .from("date_plans")
-      .update(amUserA ? { confirmed_a: !myConfirmed } : { confirmed_b: !myConfirmed })
-      .eq("match_id", match.id);
+    const { error } = await supabase.rpc("update_date_plan", {
+      p_match_id: match.id,
+      p_expected_version: datePlan.version,
+      p_activity: datePlan.activity,
+      p_venue_name: datePlan.venue_name,
+      p_town: datePlan.town,
+      p_scheduled_at: datePlan.scheduled_at,
+      p_note: datePlan.note,
+      p_confirmed_a: amUserA ? !myConfirmed : datePlan.confirmed_a,
+      p_confirmed_b: amUserA ? datePlan.confirmed_b : !myConfirmed,
+    });
     if (error) {
+      if (error.message.includes("PLAN_VERSION_CONFLICT")) {
+        await reloadPlanAfterConflict();
+        return;
+      }
       setPlanNotice("We couldn't update your response. Please try again.");
       return;
     }

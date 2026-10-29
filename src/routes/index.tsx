@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/drawer";
 import { people, photo, towns, update, useStore, toggle, type Person } from "@/lib/namlink";
 import { useSession } from "@/hooks/use-session";
-import { getRecommendations } from "@/lib/recommend.functions";
+import { getRecommendations, type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
 import { VoiceIntroPlayer } from "@/components/voice-intro";
@@ -37,6 +37,7 @@ function Home() {
     queryKey: ["recommendations", user?.id],
     enabled: !!user,
     queryFn: () => getRecommendations(),
+    staleTime: 5 * 60_000,
   });
   const [town, setTown] = useState("All");
   const [maxAge, setMaxAge] = useState(45);
@@ -110,7 +111,14 @@ function Home() {
         window.setTimeout(() => setNotice(""), 2600);
         return false;
       }
-      void queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
+      queryClient.setQueryData<RecommendationResult>(["recommendations", user.id], (current) =>
+        current
+          ? { ...current, items: current.items.filter((item) => item.profile.id !== p.id) }
+          : current,
+      );
+      if (deck.every((candidate) => candidate.id === p.id)) {
+        void queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
+      }
       if (!liked) {
         setNotice(`Passed on ${p.name}.`);
         window.setTimeout(() => setNotice(""), 1500);
@@ -195,8 +203,8 @@ function Home() {
               />
             ))}
         </AnimatePresence>
-        {recs.isLoading && user && <ProfileCardSkeleton />}
-        {!current && !recs.isLoading && (
+        {recs.isFetching && user && deck.length === 0 && <ProfileCardSkeleton />}
+        {!current && !recs.isFetching && (
           <Empty
             needsProfile={!!user && recs.data?.notice === "Create your profile first."}
             onReset={async () => {
@@ -259,7 +267,7 @@ function Home() {
           </RoundButton>
         </div>
       )}
-      {recs.isLoading && user && (
+      {recs.isFetching && user && deck.length === 0 && (
         <div
           aria-hidden="true"
           className="flex h-[76px] shrink-0 items-center justify-center gap-5"
