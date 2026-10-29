@@ -104,7 +104,7 @@ function CrossedPaths() {
               <img
                 src={photo(selected)}
                 alt={`${selected.name}'s sample profile`}
-                className="h-52 w-full object-cover"
+                className="h-52 w-full bg-foreground object-contain"
               />
               <div className="px-5">
                 <DrawerHeader className="px-0 text-left">

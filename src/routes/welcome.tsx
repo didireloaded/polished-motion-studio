@@ -31,9 +31,6 @@ function Welcome() {
         <Link to="/auth" className="mt-4 inline-block text-[13px] font-medium text-white/90">
           Already have an account? Sign in
         </Link>
-        <Link to="/" className="mt-5 block text-[11px] text-white/70">
-          Explore the sample app
-        </Link>
       </div>
     </main>
   );

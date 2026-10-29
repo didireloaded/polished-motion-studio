@@ -34,16 +34,16 @@ function Home() {
   const s = useStore();
   const { user, ready } = useSession();
   const queryClient = useQueryClient();
-  const recs = useQuery({
-    queryKey: ["recommendations", user?.id],
-    enabled: !!user,
-    queryFn: () => getRecommendations(),
-    staleTime: 5 * 60_000,
-  });
   const [town, setTown] = useState("All");
   const [minAge, setMinAge] = useState(18);
   const [maxAge, setMaxAge] = useState(45);
   const [intentFilter, setIntentFilter] = useState("Any intention");
+  const recs = useQuery({
+    queryKey: ["recommendations", user?.id, town, minAge, maxAge, intentFilter],
+    enabled: !!user,
+    queryFn: () => getRecommendations({ data: { town, minAge, maxAge, intent: intentFilter } }),
+    staleTime: 5 * 60_000,
+  });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
@@ -119,7 +119,7 @@ function Home() {
         window.setTimeout(() => setNotice(""), 2600);
         return false;
       }
-      queryClient.setQueryData<RecommendationResult>(["recommendations", user.id], (current) =>
+      queryClient.setQueryData<RecommendationResult>(["recommendations", user.id, town, minAge, maxAge, intentFilter], (current) =>
         current
           ? { ...current, items: current.items.filter((item) => item.profile.id !== p.id) }
           : current,
@@ -216,7 +216,9 @@ function Home() {
                 return;
               }
               setTown("All");
+              setMinAge(18);
               setMaxAge(99);
+              setIntentFilter("Any intention");
               if (user) {
                 const { error } = await supabase
                   .from("profiles")
@@ -436,7 +438,7 @@ function ProfileCard({
     >
       <motion.div
         layout
-        className="relative w-full shrink-0 overflow-hidden"
+        className="relative w-full shrink-0 overflow-hidden bg-foreground"
         animate={{ height: expanded ? "40%" : "100%" }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
       >
@@ -444,7 +446,7 @@ function ProfileCard({
           name={person.name}
           src={person.photo ? photo(person) : undefined}
           path={person.photoPaths?.[0]}
-          className="absolute inset-0 h-full w-full select-none object-cover"
+          className={`absolute inset-0 h-full w-full select-none ${person.photoPaths?.[0] ? "object-contain" : "object-cover"}`}
         />
         <div className="bg-scrim absolute inset-0" aria-hidden="true" />
         {top && !expanded && (

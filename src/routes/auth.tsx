@@ -34,7 +34,7 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: `${window.location.origin}/you` },
         });
         if (error) setMsg(error.message);
         else if (!data.session) setMsg("Check your email to confirm your account.");
@@ -57,7 +57,7 @@ function AuthPage() {
     setMsg("");
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+        redirect_uri: `${window.location.origin}/you`,
       });
       if (result?.error) setMsg(result.error.message ?? "Google sign-in couldn't be started.");
     } catch {

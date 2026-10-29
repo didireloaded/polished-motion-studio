@@ -1055,6 +1055,8 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
   const [town, setTown] = useState("Windhoek");
   const [intent, setIntent] = useState("A relationship");
   const [seeking, setSeeking] = useState("");
+  const [bio, setBio] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [minAge, setMinAge] = useState(24);
   const [maxAge, setMaxAge] = useState(36);
   const [prefTown, setPrefTown] = useState("Windhoek");
@@ -1080,8 +1082,8 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
       town,
       intent,
       seeking: seeking.trim().slice(0, 400) || intent,
-      bio: "",
-      tags: [],
+      bio: bio.trim().slice(0, 500),
+      tags: tags.slice(0, 10),
       pref_min_age: minAge,
       pref_max_age: maxAge,
       pref_town: prefTown,
@@ -1311,6 +1313,30 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
               placeholder="Tell us in your own words…"
             />
           </Field>
+          <Field label="A little about you">
+            <textarea
+              className="input resize-none"
+              rows={3}
+              maxLength={500}
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              placeholder="Your days, your people, what makes you you…"
+            />
+          </Field>
+          <div>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Interests · choose up to 10</p>
+            <div className="flex flex-wrap gap-2">
+              {interests.map((interest) => (
+                <button
+                  key={interest}
+                  type="button"
+                  aria-pressed={tags.includes(interest)}
+                  onClick={() => setTags((current) => current.includes(interest) ? current.filter((tag) => tag !== interest) : [...current, interest].slice(0, 10))}
+                  className={`rounded-full border px-3 py-1.5 text-xs ${tags.includes(interest) ? "border-primary bg-accent text-primary" : "border-border"}`}
+                >{interest}</button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
       {step === 2 && (

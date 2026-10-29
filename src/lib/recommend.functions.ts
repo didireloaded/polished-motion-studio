@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   fallbackRank,
@@ -22,7 +23,8 @@ export type RecommendationResult = {
 
 export const getRecommendations = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<RecommendationResult> => {
+  .inputValidator(z.object({ town: z.string().max(60), minAge: z.number().int().min(18).max(99), maxAge: z.number().int().min(18).max(99), intent: z.string().max(60) }))
+  .handler(async ({ context, data: filters }): Promise<RecommendationResult> => {
     const { supabase, userId } = context;
     const { data: me } = await supabase
       .from("profiles")
@@ -40,7 +42,11 @@ export const getRecommendations = createServerFn({ method: "POST" })
     const eligible = filterEligible(me, candidates ?? [], {
       decidedIds: (decisions ?? []).map((d) => d.target_id),
       blockedIds: (blocks ?? []).map((b) => b.blocked_id),
-    }).slice(0, 40);
+    }).filter((candidate) =>
+      (filters.town === "All" || candidate.town === filters.town) &&
+      candidate.age >= filters.minAge && candidate.age <= filters.maxAge &&
+      (filters.intent === "Any intention" || candidate.intent === filters.intent)
+    ).slice(0, 40);
     if (!eligible.length) return { source: "none", items: [] };
 
     const hydrate = (recs: Recommendation[]) =>

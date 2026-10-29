@@ -504,9 +504,7 @@ function NearbyPage() {
                       <div className="px-3 pt-3">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
-                          <span className="shrink-0 text-[11px] text-muted-foreground">
-                            {event.sample ? "Sample event" : `${attendees.length} interested`}
-                          </span>
+                          {event.sample && <span className="shrink-0 text-[11px] text-muted-foreground">Sample event</span>}
                         </div>
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Clock3 className="h-3.5 w-3.5" />
