@@ -119,10 +119,12 @@ function Home() {
         window.setTimeout(() => setNotice(""), 2600);
         return false;
       }
-      queryClient.setQueryData<RecommendationResult>(["recommendations", user.id, town, minAge, maxAge, intentFilter], (current) =>
-        current
-          ? { ...current, items: current.items.filter((item) => item.profile.id !== p.id) }
-          : current,
+      queryClient.setQueryData<RecommendationResult>(
+        ["recommendations", user.id, town, minAge, maxAge, intentFilter],
+        (current) =>
+          current
+            ? { ...current, items: current.items.filter((item) => item.profile.id !== p.id) }
+            : current,
       );
       if (deck.every((candidate) => candidate.id === p.id)) {
         void queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });

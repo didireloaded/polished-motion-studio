@@ -21,6 +21,7 @@ import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { VoiceIntroPlayer } from "@/components/voice-intro";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { BrandLogo } from "@/components/BrandLogo";
+import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
@@ -81,6 +82,7 @@ function NearbyPage() {
   const store = useStore();
   const { user, ready } = useSession();
   const [town, setTown] = useState("Windhoek");
+  const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [panel, setPanel] = useState<"nearby" | "events">("nearby");
   const [selectedProfile, setSelectedProfile] = useState<NearbyProfile | null>(null);
   const [notice, setNotice] = useState("");
@@ -278,13 +280,40 @@ function NearbyPage() {
       </header>
       {panel === "nearby" && (
         <>
+          {notice && (
+            <p role="status" className="px-5 pb-2 text-xs text-muted-foreground">
+              {notice}
+            </p>
+          )}
           <div className="relative">
             <TownMap
               town={town}
               profiles={profiles}
               demo={!user}
+              myLocation={myLocation}
               onSelectProfile={setSelectedProfile}
             />
+            <button
+              type="button"
+              onClick={() => {
+                if (!navigator.geolocation) {
+                  setNotice("Location is unavailable on this device.");
+                  return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                  ({ coords }) => {
+                    setMyLocation([coords.latitude, coords.longitude]);
+                    setNotice("Map centered on your location. Your position is not shared.");
+                  },
+                  () => setNotice("Location permission was not granted."),
+                  { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
+                );
+              }}
+              className="absolute bottom-8 right-4 z-[400] flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-float"
+              aria-label="Center map on my location"
+            >
+              <MapPin className="h-5 w-5" />
+            </button>
             {!user && (
               <span className="absolute right-4 top-4 z-[400] rounded-full bg-white/95 px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground shadow-sm">
                 Sample map
@@ -504,7 +533,11 @@ function NearbyPage() {
                       <div className="px-3 pt-3">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
-                          {event.sample && <span className="shrink-0 text-[11px] text-muted-foreground">Sample event</span>}
+                          {event.sample && (
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              Sample event
+                            </span>
+                          )}
                         </div>
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Clock3 className="h-3.5 w-3.5" />
@@ -671,11 +704,13 @@ function TownMap({
   town,
   profiles,
   demo,
+  myLocation,
   onSelectProfile,
 }: {
   town: string;
   profiles: NearbyProfile[];
   demo: boolean;
+  myLocation: [number, number] | null;
   onSelectProfile: (profile: NearbyProfile) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
@@ -697,9 +732,11 @@ function TownMap({
         ],
         maxBoundsViscosity: 0.85,
       }).setView(townCenters["Windhoek"]!, 12);
-      L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+      L.tileLayer(mapboxTileUrl, {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors, Humanitarian OpenStreetMap Team",
+        attribution: mapboxPublicToken
+          ? '&copy; <a href="https://www.mapbox.com/about/maps/">Mapbox</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
       }).addTo(instance);
       layer.current = L.layerGroup().addTo(instance);
       map.current = instance;
@@ -787,6 +824,10 @@ function TownMap({
       disposed = true;
     };
   }, [town, profiles, demo, onSelectProfile, mapReady]);
+  useEffect(() => {
+    if (!map.current || !myLocation) return;
+    map.current.setView(myLocation, 12);
+  }, [myLocation]);
   return (
     <div
       ref={container}

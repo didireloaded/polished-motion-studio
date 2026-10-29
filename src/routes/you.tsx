@@ -1324,16 +1324,26 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
             />
           </Field>
           <div>
-            <p className="mb-2 text-xs font-medium text-muted-foreground">Interests · choose up to 10</p>
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
+              Interests · choose up to 10
+            </p>
             <div className="flex flex-wrap gap-2">
               {interests.map((interest) => (
                 <button
                   key={interest}
                   type="button"
                   aria-pressed={tags.includes(interest)}
-                  onClick={() => setTags((current) => current.includes(interest) ? current.filter((tag) => tag !== interest) : [...current, interest].slice(0, 10))}
+                  onClick={() =>
+                    setTags((current) =>
+                      current.includes(interest)
+                        ? current.filter((tag) => tag !== interest)
+                        : [...current, interest].slice(0, 10),
+                    )
+                  }
                   className={`rounded-full border px-3 py-1.5 text-xs ${tags.includes(interest) ? "border-primary bg-accent text-primary" : "border-border"}`}
-                >{interest}</button>
+                >
+                  {interest}
+                </button>
               ))}
             </div>
           </div>
