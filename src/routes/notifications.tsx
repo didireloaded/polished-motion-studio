@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Bell, Heart, MessageCircle, Reply } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
@@ -23,6 +23,7 @@ const detail = {
 function Notifications() {
   const { user, ready } = useSession();
   const client = useQueryClient();
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
   const list = useQuery({
     queryKey: ["notifications", user?.id],
     enabled: !!user,
@@ -36,7 +37,7 @@ function Notifications() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 30_000,
+    refetchInterval: realtimeConnected ? false : 30_000,
   });
 
   useEffect(() => {
@@ -53,7 +54,7 @@ function Notifications() {
         },
         () => void client.invalidateQueries({ queryKey: ["notifications", user.id] }),
       )
-      .subscribe();
+      .subscribe((status) => setRealtimeConnected(status === "SUBSCRIBED"));
     return () => {
       void supabase.removeChannel(channel);
     };

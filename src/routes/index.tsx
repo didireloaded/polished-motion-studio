@@ -115,7 +115,9 @@ function Home() {
         setNotice(
           error.code === "23505"
             ? "You’ve already responded to this profile."
-            : "We couldn't save your response. Please try again.",
+            : error.code === "P0001"
+              ? "Please take a short break before liking more profiles."
+              : "We couldn't save your response. Please try again.",
         );
         window.setTimeout(() => setNotice(""), 2600);
         return false;

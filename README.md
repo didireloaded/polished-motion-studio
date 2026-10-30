@@ -22,6 +22,7 @@ npm run dev
 - Nearby uses Mapbox Light tiles when `VITE_MAPBOX_ACCESS_TOKEN` is configured, otherwise OpenStreetMap tiles. Pins remain town-level placements. The location button asks permission on tap and centers the map locally; it does not publish coordinates or track background movement.
 - Signed-in members can see live event listings and register interest. Signed-out visitors see sample events. Event-to-date invitations are not implemented yet.
 - A private notification inbox records matches, messages, and private post replies. It uses Realtime plus a polling fallback. The PWA service worker and private subscription table are ready for Web Push, but background delivery is not active until a sender and VAPID deployment secrets are configured.
+- The database enforces a generous anti-spam limit on likes and serializes concurrent like and message inserts before checking their limits. Matching and chat rows reference real member profiles.
 - Browser crash reporting uses Sentry when `VITE_SENTRY_DSN` is configured. Product events use PostHog when `VITE_POSTHOG_KEY` and `VITE_POSTHOG_HOST` are configured and the member opts in under Safety and privacy. Automatic capture and session recording are disabled.
 
 ## Deployment configuration

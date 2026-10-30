@@ -194,6 +194,7 @@ type ChatProfile = {
 function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?: string }) {
   const client = useQueryClient();
   const [openMatchId, setOpenMatchId] = useState<string | null>(initialMatchId ?? null);
+  const [listRealtimeConnected, setListRealtimeConnected] = useState(false);
   const matchesQuery = useQuery({
     queryKey: ["matches", userId],
     queryFn: async () => {
@@ -230,8 +231,26 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
         messages: messages.data as MessageRow[],
       };
     },
-    refetchInterval: 12000,
+    refetchInterval: listRealtimeConnected ? false : 30000,
   });
+  useEffect(() => {
+    const channel = supabase
+      .channel(`chat-list-${userId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        () => void client.invalidateQueries({ queryKey: ["matches", userId] }),
+      )
+      .subscribe((status) => setListRealtimeConnected(status === "SUBSCRIBED"));
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [client, userId]);
   const data = matchesQuery.data;
   const openMatch = data?.matches.find((match) => match.id === openMatchId);
   const otherId = openMatch
@@ -384,6 +403,7 @@ function LiveThread({
   const [town, setTown] = useState(person.town);
   const [scheduledAt, setScheduledAt] = useState("");
   const [planNote, setPlanNote] = useState("");
+  const [threadRealtimeConnected, setThreadRealtimeConnected] = useState(false);
   const datePlanQuery = useQuery({
     queryKey: ["date-plan", match.id],
     queryFn: async () => {
@@ -412,7 +432,7 @@ function LiveThread({
       setHasOlder(rows.length === 50);
       return rows;
     },
-    refetchInterval: 12000,
+    refetchInterval: threadRealtimeConnected ? false : 12000,
   });
   useEffect(() => {
     const channel = supabase
@@ -430,7 +450,7 @@ function LiveThread({
         { event: "*", schema: "public", table: "date_plans", filter: `match_id=eq.${match.id}` },
         () => void client.invalidateQueries({ queryKey: ["date-plan", match.id] }),
       )
-      .subscribe();
+      .subscribe((status) => setThreadRealtimeConnected(status === "SUBSCRIBED"));
     return () => {
       void supabase.removeChannel(channel);
     };
@@ -453,6 +473,7 @@ function LiveThread({
     }
     setText("");
     await client.invalidateQueries({ queryKey: ["messages", match.id] });
+    void client.invalidateQueries({ queryKey: ["matches", userId] });
   };
 
   const loadOlder = async () => {

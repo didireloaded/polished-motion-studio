@@ -187,7 +187,11 @@ function NearbyPage() {
         .from("decisions")
         .insert({ actor_id: user.id, target_id: profile.id, liked: true });
       if (error && error.code !== "23505")
-        setNotice("We couldn't send that like. Please try again.");
+        setNotice(
+          error.code === "P0001"
+            ? "Please take a short break before liking more profiles."
+            : "We couldn't send that like. Please try again.",
+        );
       else {
         setNotice("");
         void client.invalidateQueries({ queryKey: ["nearby", user.id] });
