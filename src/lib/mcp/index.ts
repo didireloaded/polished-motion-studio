@@ -2,6 +2,7 @@ import { auth, defineMcp } from "@lovable.dev/mcp-js";
 import getMyProfile from "./tools/get-my-profile";
 import listMatches from "./tools/list-matches";
 import listPosts from "./tools/list-posts";
+import { trackTool } from "./analytics";
 
 // Vite inlines the stable ref; the published SUPABASE_URL may be a proxy.
 const projectRef = import.meta.env["VITE_SUPABASE_PROJECT_ID"] ?? "project-ref-unset";
@@ -16,5 +17,5 @@ export default defineMcp({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
   }),
-  tools: [getMyProfile, listMatches, listPosts],
+  tools: [trackTool(getMyProfile), trackTool(listMatches), trackTool(listPosts)],
 });
