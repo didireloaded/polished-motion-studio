@@ -109,7 +109,7 @@ function Notifications() {
       ) : (
         <ul className="divide-y divide-border px-5">
           {list.data.map((item) => {
-            const itemDetail = detail[item.kind];
+            const itemDetail = detail[item.kind as keyof typeof detail] ?? detail.message;
             const Icon = itemDetail.icon;
             return (
               <li key={item.id} className="flex items-center gap-3 py-4">

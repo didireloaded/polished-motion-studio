@@ -62,7 +62,7 @@ function DatePlan() {
       p_activity: plan.activity,
       p_venue_name: plan.venue_name,
       p_town: plan.town,
-      p_scheduled_at: plan.scheduled_at,
+      p_scheduled_at: plan.scheduled_at ?? "",
       p_note: plan.note,
       p_confirmed_a: amUserA ? true : plan.confirmed_a,
       p_confirmed_b: amUserA ? plan.confirmed_b : true,

@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as CrossedPathsRouteImport } from './routes/crossed-paths'
 import { Route as DatePlanRouteImport } from './routes/date-plan'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PostsRouteImport } from './routes/posts'
@@ -22,6 +23,8 @@ import { Route as SafetyRouteImport } from './routes/safety'
 import { Route as VerificationRouteImport } from './routes/verification'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as YouRouteImport } from './routes/you'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,6 +49,11 @@ const CrossedPathsRoute = CrossedPathsRouteImport.update({
 const DatePlanRoute = DatePlanRouteImport.update({
   id: '/date-plan',
   path: '/date-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ModerationRoute = ModerationRouteImport.update({
@@ -88,6 +96,17 @@ const YouRoute = YouRouteImport.update({
   path: '/you',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -95,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
@@ -103,6 +123,8 @@ export interface FileRoutesByFullPath {
   '/verification': typeof VerificationRoute
   '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -110,6 +132,7 @@ export interface FileRoutesByTo {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
@@ -118,6 +141,8 @@ export interface FileRoutesByTo {
   '/verification': typeof VerificationRoute
   '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -126,6 +151,7 @@ export interface FileRoutesById {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
@@ -134,6 +160,8 @@ export interface FileRoutesById {
   '/verification': typeof VerificationRoute
   '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -143,6 +171,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/mcp'
     | '/moderation'
     | '/notifications'
     | '/posts'
@@ -151,6 +180,8 @@ export interface FileRouteTypes {
     | '/verification'
     | '/welcome'
     | '/you'
+    | '/.well-known/oauth-protected-resource'
+    | '/.lovable/oauth/consent'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -158,6 +189,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/mcp'
     | '/moderation'
     | '/notifications'
     | '/posts'
@@ -166,6 +198,8 @@ export interface FileRouteTypes {
     | '/verification'
     | '/welcome'
     | '/you'
+    | '/.well-known/oauth-protected-resource'
+    | '/.lovable/oauth/consent'
   id:
     | '__root__'
     | '/'
@@ -173,6 +207,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/mcp'
     | '/moderation'
     | '/notifications'
     | '/posts'
@@ -181,6 +216,8 @@ export interface FileRouteTypes {
     | '/verification'
     | '/welcome'
     | '/you'
+    | '/.well-known/oauth-protected-resource'
+    | '/.lovable/oauth/consent'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -189,6 +226,7 @@ export interface RootRouteChildren {
   ChatsRoute: typeof ChatsRoute
   CrossedPathsRoute: typeof CrossedPathsRoute
   DatePlanRoute: typeof DatePlanRoute
+  McpRoute: typeof McpRoute
   ModerationRoute: typeof ModerationRoute
   NotificationsRoute: typeof NotificationsRoute
   PostsRoute: typeof PostsRoute
@@ -197,6 +235,8 @@ export interface RootRouteChildren {
   VerificationRoute: typeof VerificationRoute
   WelcomeRoute: typeof WelcomeRoute
   YouRoute: typeof YouRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -234,6 +274,13 @@ declare module '@tanstack/react-router' {
       path: '/date-plan'
       fullPath: '/date-plan'
       preLoaderRoute: typeof DatePlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/moderation': {
@@ -292,6 +339,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof YouRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -301,6 +362,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatsRoute: ChatsRoute,
   CrossedPathsRoute: CrossedPathsRoute,
   DatePlanRoute: DatePlanRoute,
+  McpRoute: McpRoute,
   ModerationRoute: ModerationRoute,
   NotificationsRoute: NotificationsRoute,
   PostsRoute: PostsRoute,
@@ -309,6 +371,9 @@ const rootRouteChildren: RootRouteChildren = {
   VerificationRoute: VerificationRoute,
   WelcomeRoute: WelcomeRoute,
   YouRoute: YouRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
