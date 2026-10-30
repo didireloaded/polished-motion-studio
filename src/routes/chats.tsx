@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { captureProductEvent } from "@/lib/telemetry";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
+import { suggestDatePlan } from "@/lib/date-suggestion.functions";
 
 export const Route = createFileRoute("/chats")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -403,6 +404,10 @@ function LiveThread({
   const [town, setTown] = useState(person.town);
   const [scheduledAt, setScheduledAt] = useState("");
   const [planNote, setPlanNote] = useState("");
+  const [dateInterests, setDateInterests] = useState("");
+  const [datePreferences, setDatePreferences] = useState("");
+  const [suggestingDate, setSuggestingDate] = useState(false);
+  const [suggestionReason, setSuggestionReason] = useState("");
   const [threadRealtimeConnected, setThreadRealtimeConnected] = useState(false);
   const datePlanQuery = useQuery({
     queryKey: ["date-plan", match.id],
@@ -542,6 +547,30 @@ function LiveThread({
     }
     setPlanNotice("");
     setPlanFormOpen(true);
+  };
+  const suggestDate = async () => {
+    if (suggestingDate || !town.trim() || !dateInterests.trim() || !datePreferences.trim()) return;
+    setSuggestingDate(true);
+    setPlanNotice("");
+    setSuggestionReason("");
+    try {
+      const suggestion = await suggestDatePlan({
+        data: {
+          matchId: match.id,
+          town: town.trim(),
+          sharedInterests: dateInterests.trim(),
+          preferences: datePreferences.trim(),
+        },
+      });
+      setActivity(suggestion.activity);
+      setPlanNote(suggestion.note);
+      setVenueName("");
+      setSuggestionReason(suggestion.reason);
+    } catch {
+      setPlanNotice("We couldn't suggest a date right now. You can still make a plan together.");
+    } finally {
+      setSuggestingDate(false);
+    }
   };
   const savePlan = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -729,6 +758,67 @@ function LiveThread({
               onSubmit={(event) => void savePlan(event)}
               className="mt-4 space-y-3 border-t border-border pt-4"
             >
+              <div className="space-y-2 rounded-xl bg-secondary/60 p-3">
+                <p className="text-sm font-semibold">Find a date idea</p>
+                <p className="text-xs text-muted-foreground">
+                  Share only what you both feel comfortable sharing. Your idea stays a draft until
+                  you save it.
+                </p>
+                <label className="block text-xs font-medium" htmlFor="date-town">
+                  Town
+                </label>
+                <input
+                  id="date-town"
+                  required
+                  minLength={2}
+                  maxLength={80}
+                  value={town}
+                  onChange={(event) => setTown(event.target.value)}
+                  placeholder="Town"
+                  className="w-full rounded-xl bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+                <label className="block text-xs font-medium" htmlFor="date-interests">
+                  Shared interests
+                </label>
+                <input
+                  id="date-interests"
+                  maxLength={200}
+                  value={dateInterests}
+                  onChange={(event) => setDateInterests(event.target.value)}
+                  placeholder="Music, markets, long walks…"
+                  className="w-full rounded-xl bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+                <label className="block text-xs font-medium" htmlFor="date-preferences">
+                  Date preferences
+                </label>
+                <textarea
+                  id="date-preferences"
+                  maxLength={300}
+                  value={datePreferences}
+                  onChange={(event) => setDatePreferences(event.target.value)}
+                  placeholder="Quiet, outdoors, low budget, afternoon…"
+                  rows={2}
+                  className="w-full resize-none rounded-xl bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+                <button
+                  type="button"
+                  onClick={() => void suggestDate()}
+                  disabled={
+                    suggestingDate ||
+                    town.trim().length < 2 ||
+                    dateInterests.trim().length < 2 ||
+                    datePreferences.trim().length < 2
+                  }
+                  className="rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50"
+                >
+                  {suggestingDate ? "Finding an idea…" : "Suggest an idea"}
+                </button>
+                {suggestionReason && (
+                  <p role="status" className="text-xs text-muted-foreground">
+                    {suggestionReason} Review the details below before saving.
+                  </p>
+                )}
+              </div>
               <input
                 required
                 minLength={2}
@@ -745,16 +835,7 @@ function LiveThread({
                 placeholder="Venue (optional)"
                 className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  required
-                  minLength={2}
-                  maxLength={80}
-                  value={town}
-                  onChange={(event) => setTown(event.target.value)}
-                  placeholder="Town"
-                  className="min-w-0 rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-                />
+              <div className="grid grid-cols-1 gap-2">
                 <input
                   type="datetime-local"
                   value={scheduledAt}
