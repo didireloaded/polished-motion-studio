@@ -16,7 +16,9 @@ export default defineTool({
     if (error) throw new ToolError("Couldn't load your profile.");
     if (!data) return { content: [{ type: "text", text: "You haven't created a profile yet." }] };
     return {
-      content: [{ type: "text", text: `${data.display_name}, ${data.age}, ${data.town}. ${data.bio}` }],
+      content: [
+        { type: "text", text: `${data.display_name}, ${data.age}, ${data.town}. ${data.bio}` },
+      ],
       structuredContent: { profile: { ...data, tags: [...data.tags] } },
     };
   },

@@ -10,7 +10,8 @@ export default defineMcp({
   name: "motion-polish-playground",
   title: "Motion Polish Playground",
   version: "0.1.0",
-  instructions: "Tools for the Mutal dating app. Read your own profile, your matches and community posts, acting as the signed-in member.",
+  instructions:
+    "Tools for the Mutal dating app. Read your own profile, your matches and community posts, acting as the signed-in member.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
