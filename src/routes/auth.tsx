@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Link } from "@tanstack/react-router";
 import { BrandLogo } from "@/components/BrandLogo";
+import { currentNextPath } from "@/lib/oauth-return-path";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -34,15 +35,23 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/you` },
+          options: { emailRedirectTo: new URL(currentNextPath() ?? "/you", window.location.origin).href },
         });
         if (error) setMsg(error.message);
         else if (!data.session) setMsg("Check your email to confirm your account.");
-        else await navigate({ to: "/you" });
+        else {
+          const next = currentNextPath();
+          if (next) window.location.assign(next);
+          else await navigate({ to: "/you" });
+        }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) setMsg(error.message);
-        else await navigate({ to: "/you" });
+        else {
+          const next = currentNextPath();
+          if (next) window.location.assign(next);
+          else await navigate({ to: "/you" });
+        }
       }
     } catch {
       setMsg("We couldn't reach the sign-in service. Please try again.");
@@ -57,7 +66,7 @@ function AuthPage() {
     setMsg("");
     try {
       const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: `${window.location.origin}/you`,
+        redirect_uri: new URL(currentNextPath() ?? "/you", window.location.origin).href,
       });
       if (result?.error) setMsg(result.error.message ?? "Google sign-in couldn't be started.");
     } catch {
