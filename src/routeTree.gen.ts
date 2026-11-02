@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as CrossedPathsRouteImport } from './routes/crossed-paths'
 import { Route as DatePlanRouteImport } from './routes/date-plan'
+import { Route as MatchValuesRouteImport } from './routes/match-values'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as NotificationsRouteImport } from './routes/notifications'
@@ -49,6 +50,11 @@ const CrossedPathsRoute = CrossedPathsRouteImport.update({
 const DatePlanRoute = DatePlanRouteImport.update({
   id: '/date-plan',
   path: '/date-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MatchValuesRoute = MatchValuesRouteImport.update({
+  id: '/match-values',
+  path: '/match-values',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -114,6 +120,7 @@ export interface FileRoutesByFullPath {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/match-values': typeof MatchValuesRoute
   '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/match-values': typeof MatchValuesRoute
   '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/match-values': typeof MatchValuesRoute
   '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
@@ -171,6 +180,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/match-values'
     | '/mcp'
     | '/moderation'
     | '/notifications'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/match-values'
     | '/mcp'
     | '/moderation'
     | '/notifications'
@@ -207,6 +218,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/match-values'
     | '/mcp'
     | '/moderation'
     | '/notifications'
@@ -226,6 +238,7 @@ export interface RootRouteChildren {
   ChatsRoute: typeof ChatsRoute
   CrossedPathsRoute: typeof CrossedPathsRoute
   DatePlanRoute: typeof DatePlanRoute
+  MatchValuesRoute: typeof MatchValuesRoute
   McpRoute: typeof McpRoute
   ModerationRoute: typeof ModerationRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -274,6 +287,13 @@ declare module '@tanstack/react-router' {
       path: '/date-plan'
       fullPath: '/date-plan'
       preLoaderRoute: typeof DatePlanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/match-values': {
+      id: '/match-values'
+      path: '/match-values'
+      fullPath: '/match-values'
+      preLoaderRoute: typeof MatchValuesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -362,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   ChatsRoute: ChatsRoute,
   CrossedPathsRoute: CrossedPathsRoute,
   DatePlanRoute: DatePlanRoute,
+  MatchValuesRoute: MatchValuesRoute,
   McpRoute: McpRoute,
   ModerationRoute: ModerationRoute,
   NotificationsRoute: NotificationsRoute,
