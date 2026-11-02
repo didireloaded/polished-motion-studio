@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS match_values text NOT NULL DEFAULT '' CHECK (char_length(match_values) <= 600);
