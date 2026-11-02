@@ -75,7 +75,7 @@ function MatchValues() {
 
   return (
     <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-6">
-      <Link to="/chats" className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      <Link to="/chats" search={{ matchId: undefined }} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
         <ArrowLeft className="h-4 w-4" /> Chats
       </Link>
       <motion.h1
