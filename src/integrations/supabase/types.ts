@@ -445,6 +445,7 @@ export type Database = {
           display_name: string
           id: string
           intent: string
+          match_values: string
           photo_paths: string[]
           pref_max_age: number | null
           pref_min_age: number | null
@@ -463,6 +464,7 @@ export type Database = {
           display_name: string
           id: string
           intent?: string
+          match_values?: string
           photo_paths?: string[]
           pref_max_age?: number | null
           pref_min_age?: number | null
@@ -481,6 +483,7 @@ export type Database = {
           display_name?: string
           id?: string
           intent?: string
+          match_values?: string
           photo_paths?: string[]
           pref_max_age?: number | null
           pref_min_age?: number | null
