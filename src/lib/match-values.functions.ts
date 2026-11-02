@@ -100,7 +100,6 @@ export const rankMatchesByValues = createServerFn({ method: "POST" })
         {
           model: "openai/gpt-6-astra",
           reasoning: { effort: "low" },
-          store: false,
           instructions:
             "You help a dating app member see which of their existing matches best fit what they value. " +
             "Rank every candidate by fit with the member's stated values (score 0-100). For each, write one warm, " +
