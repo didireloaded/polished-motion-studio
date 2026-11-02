@@ -2,7 +2,15 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { ArrowLeft, CalendarDays, Check, MapPin, Send, MessagesSquare } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Check,
+  MapPin,
+  Send,
+  MessagesSquare,
+  Sparkles,
+} from "lucide-react";
 import { people, photo, update, useStore, timeAgo } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
@@ -292,6 +300,18 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
             </div>
           ) : (
             <>
+              <Link
+                to="/match-values"
+                className="mx-5 mb-4 flex items-center gap-3 rounded-2xl bg-primary/10 px-4 py-3 text-sm transition-transform active:scale-[0.98]"
+              >
+                <Sparkles className="h-5 w-5 text-primary" />
+                <span className="flex-1">
+                  <span className="block font-semibold">Who fits you best?</span>
+                  <span className="text-muted-foreground">
+                    Tell us what you value and we'll rank your matches.
+                  </span>
+                </span>
+              </Link>
               <div className="flex items-center justify-between px-5 pb-2">
                 <h2 className="text-sm font-semibold">New matches</h2>
                 <span className="text-xs text-muted-foreground">
