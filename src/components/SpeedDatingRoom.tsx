@@ -5,9 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { people, photo, update, type Person } from "@/lib/namlink";
+import { people, photo, type Person } from "@/lib/namlink";
 import { speedDatingPrompts } from "@/lib/social-games";
-import { captureProductEvent } from "@/lib/telemetry";
 
 type MixerChatMsg = {
   id: string;
@@ -44,7 +43,8 @@ export function SpeedDatingRoom({
   const [phase, setPhase] = useState<"chatting" | "decision" | "matched">("chatting");
   const [messages, setMessages] = useState<MixerChatMsg[]>([]);
   const [draft, setDraft] = useState("");
-  const [onlineCount, setOnlineCount] = useState(6);
+  const [onlineCount, setOnlineCount] = useState(0);
+  const [previewNotice, setPreviewNotice] = useState("");
 
   const partner: Person = candidates[partnerIndex % candidates.length] ?? people[0]!;
   const currentPrompt = speedDatingPrompts[promptIndex % speedDatingPrompts.length]!;
@@ -90,7 +90,7 @@ export function SpeedDatingRoom({
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const livePeers = Object.keys(state).length;
-        setOnlineCount(Math.max(4, livePeers + 4));
+        setOnlineCount(livePeers);
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
@@ -140,7 +140,7 @@ export function SpeedDatingRoom({
     }, 950);
   };
 
-  const handleDecision = async (keepTalking: boolean) => {
+  const handleDecision = (keepTalking: boolean) => {
     if (!keepTalking) {
       triggerHaptic("pass");
       setPartnerIndex((current) => current + 1);
@@ -148,35 +148,7 @@ export function SpeedDatingRoom({
       return;
     }
 
-    triggerHaptic("match");
-    void captureProductEvent("match_created", { source: "speed_dating" });
-    // Unlock in demo store & record decision if signed in
-    update((st) => ({
-      ...st,
-      liked: st.liked.includes(partner.id) ? st.liked : [...st.liked, partner.id],
-      matches: st.matches.includes(partner.id) ? st.matches : [...st.matches, partner.id],
-      chats: {
-        ...st.chats,
-        [partner.id]: [
-          ...(st.chats[partner.id] ?? []),
-          {
-            from: "them",
-            text: `Loved our 3-minute mixer round about ${partner.town}! Let’s keep talking.`,
-            at: Date.now(),
-            id: crypto.randomUUID(),
-          },
-        ],
-      },
-    }));
-
-    if (userId) {
-      await supabase
-        .from("decisions")
-        .insert({ actor_id: userId, target_id: partner.id, liked: true })
-        .then(() => undefined);
-    }
-
-    setPhase("matched");
+    setPreviewNotice("Sample round only — live pairing is not available yet.");
   };
 
   return (
@@ -233,11 +205,11 @@ export function SpeedDatingRoom({
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                     <Users className="h-2.5 w-2.5" />
-                    {onlineCount} live
+                    {onlineCount} present · Preview
                   </span>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Paired with {partner.name}, {partner.age} · {partner.town}
+                  Sample profile: {partner.name}, {partner.age} · {partner.town}
                 </p>
               </div>
             </div>
@@ -380,6 +352,11 @@ export function SpeedDatingRoom({
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-2.5">
+                {previewNotice && (
+                  <p className="col-span-2 text-center text-xs text-muted-foreground" role="status">
+                    {previewNotice}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => void handleDecision(false)}

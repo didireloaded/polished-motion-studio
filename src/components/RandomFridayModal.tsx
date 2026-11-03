@@ -4,7 +4,6 @@ import {
   ChevronRight,
   Clock3,
   Dices,
-  Flame,
   Heart,
   MessageCircle,
   Mic,
@@ -20,8 +19,7 @@ import type { FormEvent } from "react";
 import { SafetyActions } from "@/components/community";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { joinLiveQueueServerFn } from "@/lib/social-backend.functions";
-import { people, photo, update, type Person } from "@/lib/namlink";
+import { people, photo, type Person } from "@/lib/namlink";
 import {
   applyTimeBoost,
   getRandomFridayState,
@@ -90,7 +88,7 @@ export function RandomFridayBanner({
               windowState.isLiveWindow ? "bg-emerald-600 text-white" : "bg-primary/12 text-primary"
             }`}
           >
-            {windowState.isLiveWindow ? "Live 10–11 AM" : "30s Preview"}
+            Preview
           </span>
         </span>
         <span className="block truncate text-[11px] text-muted-foreground">
@@ -124,8 +122,7 @@ export function RandomFridayModal({
   const [transitionCountdown, setTransitionCountdown] = useState(3);
   const [messages, setMessages] = useState<PitchMsg[]>([]);
   const [draft, setDraft] = useState("");
-  const [onlineCount, setOnlineCount] = useState(8);
-  const [liveMatchesCount, setLiveMatchesCount] = useState(142);
+  const [onlineCount, setOnlineCount] = useState(0);
   const [streak, setStreak] = useState(1);
 
   // Adrenaline mechanics state
@@ -213,22 +210,9 @@ export function RandomFridayModal({
     return () => window.clearInterval(timer);
   }, [open, phase]);
 
-  // Realtime Presence channel `random_friday:live` + Lovable Cloud queue heartbeat
+  // Presence is used only to show other people viewing this sample round.
   useEffect(() => {
     if (!open) return;
-    if (userId) {
-      void joinLiveQueueServerFn({
-        data: { town, mode: "random_friday", streakCount: streak },
-      })
-        .then((res) => {
-          if (res?.ok && res.activeQueueCount > 0) {
-            setOnlineCount((prev) => Math.max(prev, res.activeQueueCount + 5));
-          }
-        })
-        .catch(() => {
-          // fallback to realtime presence count
-        });
-    }
     const channel = supabase.channel("random_friday:live", {
       config: { presence: { key: userId ?? "guest" } },
     });
@@ -237,7 +221,7 @@ export function RandomFridayModal({
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const livePeers = Object.keys(state).length;
-        setOnlineCount(Math.max(6, livePeers + 6));
+        setOnlineCount(livePeers);
       })
       .subscribe((status) => {
         if (status === "SUBSCRIBED") {
@@ -332,42 +316,13 @@ export function RandomFridayModal({
     }, 1100);
   };
 
-  const handleStay = async () => {
+  const handleStay = () => {
     if (holdTimerRef.current) {
       window.clearInterval(holdTimerRef.current);
       holdTimerRef.current = null;
     }
-    triggerHaptic("match");
-    void captureProductEvent("match_created", { source: "random_friday" });
-    setStreak((s) => s + 1);
-    setLiveMatchesCount((c) => c + 1);
-
-    update((st) => ({
-      ...st,
-      liked: st.liked.includes(partner.id) ? st.liked : [...st.liked, partner.id],
-      matches: st.matches.includes(partner.id) ? st.matches : [...st.matches, partner.id],
-      chats: {
-        ...st.chats,
-        [partner.id]: [
-          ...(st.chats[partner.id] ?? []),
-          {
-            from: "them",
-            text: `We both held Stay on Random Friday! Loved your 30-second pitch.`,
-            at: Date.now(),
-            id: crypto.randomUUID(),
-          },
-        ],
-      },
-    }));
-
-    if (userId) {
-      await supabase
-        .from("decisions")
-        .insert({ actor_id: userId, target_id: partner.id, liked: true })
-        .then(() => undefined);
-    }
-
-    setPhase("matched");
+    setHoldProgress(0);
+    showBoostBanner("Sample round only — live pairing is not available yet.");
   };
 
   const startHoldToStay = () => {
@@ -426,8 +381,7 @@ export function RandomFridayModal({
           {/* Live Atmosphere Ticker (#5: Streak & Leaderboard) */}
           <div className="flex items-center justify-between bg-foreground px-4 py-1.5 text-[10px] font-medium text-white">
             <span className="inline-flex items-center gap-1 truncate">
-              <Flame className="h-3 w-3 shrink-0 text-primary" />
-              {liveMatchesCount} matches made this Friday in Windhoek & Coast
+              Sample round · no match will be created
             </span>
             <span className="shrink-0 rounded-full bg-white/15 px-2 py-0.5 font-semibold text-emerald-300">
               ⚡ Streak: {streak}
@@ -480,7 +434,7 @@ export function RandomFridayModal({
                   <span className="text-xs font-semibold text-foreground">Random Friday</span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
                     <Users className="h-2.5 w-2.5" />
-                    {onlineCount} live
+                    {onlineCount} present · Preview
                   </span>
                 </div>
                 <p className="text-[10px] text-muted-foreground">
@@ -551,7 +505,7 @@ export function RandomFridayModal({
                 Finding someone nearby…
               </h3>
               <p className="mt-1 text-xs text-muted-foreground">
-                Pairing you for a 30-second live pitch round in {town === "All" ? "Namibia" : town}.
+                Loading a 30-second sample round in {town === "All" ? "Namibia" : town}.
               </p>
             </div>
           )}
