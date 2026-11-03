@@ -3,7 +3,11 @@ import { people } from "@/lib/namlink";
 import {
   buildTwoTruthsReply,
   computeVibeAlignment,
+  dailyHotTakePrompts,
+  flagSwipePolls,
   getElevatorPitchForPerson,
+  getEmojiStoryForPerson,
+  getFirstDateDilemmaForTown,
   getPersonThisOrThatAnswers,
   getTwoTruthsForPerson,
   thisOrThatQuestions,
@@ -38,5 +42,19 @@ describe("social-games", () => {
     expect(thisOrThatQuestions).toHaveLength(5);
     expect(identical.percentage).toBe(100);
     expect(identical.matchedCount).toBe(5);
+  });
+
+  it("provides First Date Dilemma, Emoji Story Decode, and Red/Green Flag polls", () => {
+    const person = people[0]!;
+    const dilemma = getFirstDateDilemmaForTown(person.town, person.id);
+    expect(dilemma.optionA.label.length).toBeGreaterThan(5);
+    expect(dilemma.optionB.label.length).toBeGreaterThan(5);
+
+    const emojiStory = getEmojiStoryForPerson(person);
+    expect(emojiStory.options).toHaveLength(3);
+    expect(emojiStory.emojis.length).toBeGreaterThan(2);
+
+    expect(flagSwipePolls.length).toBeGreaterThanOrEqual(3);
+    expect(dailyHotTakePrompts.length).toBeGreaterThanOrEqual(1);
   });
 });

@@ -38,6 +38,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SafetyActions } from "@/components/community";
 import { ProfilePhoto } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
+import { HotTakeAndFlagPollHub } from "@/components/SocialGames";
 
 type View = "Feed" | "Your posts" | "Your replies";
 
@@ -237,6 +238,15 @@ function Posts() {
           </button>
         ))}
       </div>
+
+      {view === "Feed" && (
+        <HotTakeAndFlagPollHub
+          onAgreeWithTake={(quipText) => {
+            setText(quipText);
+            setComposeOpen(true);
+          }}
+        />
+      )}
 
       {view === "Your replies" ? (
         <ul className="mt-3 space-y-2 px-5">

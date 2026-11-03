@@ -4,8 +4,12 @@ import { useEffect, useState } from "react";
 import { triggerHaptic } from "@/lib/icebreakers";
 import {
   buildTwoTruthsReply,
+  dailyHotTakePrompts,
+  flagSwipePolls,
   thisOrThatQuestions,
   type ElevatorPitch,
+  type EmojiStoryPuzzle,
+  type FirstDateDilemma,
   type TwoTruthsGame,
 } from "@/lib/social-games";
 
@@ -346,5 +350,294 @@ export function ThisOrThatRapidRadar({
         </div>
       )}
     </section>
+  );
+}
+
+export function FirstDateDilemmaCard({
+  partnerName,
+  dilemma,
+  onUseReply,
+}: {
+  partnerName: string;
+  dilemma: FirstDateDilemma;
+  onUseReply: (replyText: string) => void;
+}) {
+  const [myPick, setMyPick] = useState<"A" | "B" | null>(null);
+
+  const bothMatched = myPick !== null && myPick === dilemma.partnerPick;
+  const chosenOption =
+    myPick === "A" ? dilemma.optionA : myPick === "B" ? dilemma.optionB : undefined;
+  const partnerOption = dilemma.partnerPick === "A" ? dilemma.optionA : dilemma.optionB;
+
+  return (
+    <section
+      aria-label={`First Date Dilemma with ${partnerName}`}
+      className="rounded-2xl border border-primary/20 bg-card p-3.5 shadow-sm"
+    >
+      <div className="flex items-center justify-between">
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
+          <Sparkles className="h-3 w-3" />
+          First Date Dilemma
+        </span>
+        <span className="text-[10px] text-muted-foreground">
+          {myPick ? "Answers revealed!" : `Pick to see ${partnerName}’s choice`}
+        </span>
+      </div>
+      <p className="mt-1 text-xs font-semibold text-foreground">{dilemma.prompt}</p>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
+        {(["A", "B"] as const).map((side) => {
+          const opt = side === "A" ? dilemma.optionA : dilemma.optionB;
+          const isMine = myPick === side;
+          const isTheirs = myPick !== null && dilemma.partnerPick === side;
+          return (
+            <button
+              key={side}
+              type="button"
+              onClick={() => {
+                triggerHaptic("match");
+                setMyPick(side);
+              }}
+              className={`flex flex-col justify-between rounded-xl border p-2.5 text-left transition ${
+                isMine
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border bg-white text-foreground hover:border-primary/40"
+              }`}
+            >
+              <div>
+                <p className="text-xs font-semibold leading-4">{opt.label}</p>
+                <p className="mt-1 text-[10px] leading-3.5 text-muted-foreground">
+                  {opt.venueHint}
+                </p>
+              </div>
+              {myPick && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {isMine && (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-semibold text-primary-foreground">
+                      You
+                    </span>
+                  )}
+                  {isTheirs && (
+                    <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-semibold text-white">
+                      {partnerName}
+                    </span>
+                  )}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {myPick && chosenOption && (
+        <div className="mt-3 rounded-xl bg-secondary/50 p-2.5">
+          <p className="text-xs font-medium text-foreground">
+            {bothMatched
+              ? `It’s a match! You both picked "${chosenOption.label}".`
+              : `You picked "${chosenOption.label}" and ${partnerName} picked "${partnerOption.label}".`}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              const draft = bothMatched
+                ? `We both picked "${chosenOption.label}" on the First Date Dilemma — should we make it happen this week?`
+                : `Okay, since I picked "${chosenOption.label}" and you picked "${partnerOption.label}", which one are we doing first?`;
+              onUseReply(draft);
+            }}
+            className="mt-2 inline-flex h-8 w-full items-center justify-center rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground"
+          >
+            Send this date idea to chat
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function EmojiStoryDecodeCard({
+  partnerName,
+  puzzle,
+  onUseReply,
+}: {
+  partnerName: string;
+  puzzle: EmojiStoryPuzzle;
+  onUseReply: (replyText: string) => void;
+}) {
+  const [pickedIndex, setPickedIndex] = useState<number | null>(null);
+  const solved = pickedIndex === puzzle.correctIndex;
+
+  return (
+    <section
+      aria-label={`Emoji story decode with ${partnerName}`}
+      className="mt-2.5 rounded-2xl border border-border bg-secondary/45 p-3.5"
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+          Emoji Story Decode
+        </span>
+        <span className="text-[10px] text-muted-foreground">Decode {partnerName}’s weekend</span>
+      </div>
+      <p className="mt-2 text-center text-2xl tracking-widest" aria-label="Emoji clues">
+        {puzzle.emojis}
+      </p>
+      <div className="mt-2.5 space-y-1.5">
+        {puzzle.options.map((opt, idx) => {
+          const isPicked = pickedIndex === idx;
+          const isRight = idx === puzzle.correctIndex;
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => {
+                triggerHaptic(isRight ? "match" : "like");
+                setPickedIndex(idx);
+              }}
+              className={`w-full rounded-xl border px-3 py-2 text-left text-xs transition ${
+                isPicked
+                  ? isRight
+                    ? "border-emerald-500 bg-emerald-50 font-semibold text-emerald-950"
+                    : "border-amber-500 bg-amber-50 text-amber-950"
+                  : "border-border bg-white text-foreground hover:border-primary/40"
+              }`}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+      {pickedIndex !== null && (
+        <div className="mt-2.5 rounded-xl bg-white p-2.5">
+          <p className="text-xs font-medium text-foreground">
+            {solved ? `Nailed it! ${puzzle.explanation}` : `Not quite — try option #1!`}
+          </p>
+          {solved && (
+            <button
+              type="button"
+              onClick={() =>
+                onUseReply(
+                  `I decoded your ${puzzle.emojis} story (${puzzle.options[puzzle.correctIndex]})! When’s the next trip?`,
+                )
+              }
+              className="mt-2 inline-flex h-8 w-full items-center justify-center rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground"
+            >
+              Reply about their emoji story
+            </button>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+export function HotTakeAndFlagPollHub({
+  onAgreeWithTake,
+}: {
+  onAgreeWithTake: (quipText: string) => void;
+}) {
+  const [pollIndex, setPollIndex] = useState(0);
+  const [votes, setVotes] = useState<Record<string, "green" | "red">>({});
+  const poll = flagSwipePolls[pollIndex % flagSwipePolls.length]!;
+  const myVote = votes[poll.id];
+  const hotTake = dailyHotTakePrompts[0]!;
+
+  return (
+    <div className="mx-5 mt-3 space-y-3">
+      {/* Red Flag / Green Flag Swipe Poll */}
+      <section
+        aria-label="Red Flag or Green Flag Swipe Poll"
+        className="rounded-2xl border border-border bg-card p-3.5 shadow-sm"
+      >
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+            <Flame className="h-3 w-3" />
+            Green Flag / Red Flag Poll
+          </span>
+          <button
+            type="button"
+            onClick={() => setPollIndex((i) => i + 1)}
+            className="text-[11px] font-semibold text-primary"
+          >
+            Next poll ({(pollIndex % flagSwipePolls.length) + 1}/{flagSwipePolls.length})
+          </button>
+        </div>
+        <p className="mt-2 text-xs font-semibold leading-5 text-foreground">“{poll.statement}”</p>
+        <div className="mt-2.5 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("like");
+              setVotes((v) => ({ ...v, [poll.id]: "green" }));
+            }}
+            className={`h-9 rounded-full border text-xs font-semibold transition ${
+              myVote === "green"
+                ? "border-emerald-600 bg-emerald-600 text-white"
+                : "border-emerald-600/40 bg-emerald-50 text-emerald-900"
+            }`}
+          >
+            Green Flag
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("pass");
+              setVotes((v) => ({ ...v, [poll.id]: "red" }));
+            }}
+            className={`h-9 rounded-full border text-xs font-semibold transition ${
+              myVote === "red"
+                ? "border-rose-600 bg-rose-600 text-white"
+                : "border-rose-600/40 bg-rose-50 text-rose-900"
+            }`}
+          >
+            Red Flag
+          </button>
+        </div>
+        {myVote && (
+          <p className="mt-2 text-center text-[11px] font-medium text-muted-foreground">
+            {myVote === "green" ? poll.greenFlagPct : 100 - poll.greenFlagPct}% of members in{" "}
+            {poll.town} agree with your call.
+          </p>
+        )}
+      </section>
+
+      {/* Hot Take of the Day */}
+      <section
+        aria-label="Hot Take of the Day"
+        className="rounded-2xl border border-primary/20 bg-accent/45 p-3.5"
+      >
+        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
+          <Sparkles className="h-3 w-3" />
+          Hot Take of the Day
+        </span>
+        <p className="mt-1 text-xs font-semibold text-foreground">{hotTake.prompt}</p>
+        <div className="mt-2 space-y-2">
+          {hotTake.sampleTakes.map((take) => (
+            <div
+              key={take.author}
+              className="flex items-start justify-between gap-2 rounded-xl bg-white p-2.5"
+            >
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold text-foreground">
+                  {take.author} ·{" "}
+                  <span className="font-normal text-muted-foreground">{take.town}</span>
+                </p>
+                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">“{take.quip}”</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("like");
+                  onAgreeWithTake(
+                    `I agree with ${take.author.split(",")[0]}'s hot take: "${take.quip}"`,
+                  );
+                }}
+                className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                I agree!
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }

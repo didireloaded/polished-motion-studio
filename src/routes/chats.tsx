@@ -23,8 +23,16 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { suggestDatePlan } from "@/lib/date-suggestion.functions";
 import { generateIcebreakers, localDateSpots, triggerHaptic } from "@/lib/icebreakers";
-import { TwoTruthsCard } from "@/components/SocialGames";
-import { getTwoTruthsForPerson } from "@/lib/social-games";
+import {
+  EmojiStoryDecodeCard,
+  FirstDateDilemmaCard,
+  TwoTruthsCard,
+} from "@/components/SocialGames";
+import {
+  getEmojiStoryForPerson,
+  getFirstDateDilemmaForTown,
+  getTwoTruthsForPerson,
+} from "@/lib/social-games";
 import { ConversationOpenerStudio } from "@/components/ConversationOpenerStudio";
 
 export const Route = createFileRoute("/chats")({
@@ -816,6 +824,32 @@ function LiveThread({
             {loadingOlder ? "Loading earlier messages…" : "Load earlier messages"}
           </button>
         )}
+        {showPrompts && (
+          <div className="mb-4 space-y-2.5">
+            <FirstDateDilemmaCard
+              partnerName={person.display_name}
+              dilemma={getFirstDateDilemmaForTown(person.town, person.id)}
+              onUseReply={(replyDraft) => {
+                setText(replyDraft);
+                setShowPrompts(false);
+                inputRef.current?.focus();
+              }}
+            />
+            <EmojiStoryDecodeCard
+              partnerName={person.display_name}
+              puzzle={getEmojiStoryForPerson({
+                id: person.id,
+                name: person.display_name,
+                town: person.town,
+              })}
+              onUseReply={(replyDraft) => {
+                setText(replyDraft);
+                setShowPrompts(false);
+                inputRef.current?.focus();
+              }}
+            />
+          </div>
+        )}
         <div className="mb-4 rounded-2xl bg-card p-4 text-center text-sm text-muted-foreground">
           {shared.length ? (
             <>
@@ -1299,10 +1333,28 @@ function Thread({
       </AnimatePresence>
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
         {showTwoTruths && (
-          <div className="mb-3">
+          <div className="mb-3 space-y-2.5">
+            <FirstDateDilemmaCard
+              partnerName={p.name}
+              dilemma={getFirstDateDilemmaForTown(p.town, p.id)}
+              onUseReply={(replyDraft) => {
+                setText(replyDraft);
+                setShowTwoTruths(false);
+                inputRef.current?.focus();
+              }}
+            />
             <TwoTruthsCard
               game={twoTruthsGame}
               onSendReply={(replyDraft) => {
+                setText(replyDraft);
+                setShowTwoTruths(false);
+                inputRef.current?.focus();
+              }}
+            />
+            <EmojiStoryDecodeCard
+              partnerName={p.name}
+              puzzle={getEmojiStoryForPerson(p)}
+              onUseReply={(replyDraft) => {
                 setText(replyDraft);
                 setShowTwoTruths(false);
                 inputRef.current?.focus();

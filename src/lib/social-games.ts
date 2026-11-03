@@ -327,3 +327,168 @@ export function getNextMixerWindow(now: Date = new Date()): {
     minutesUntilStart: 15,
   };
 }
+
+export type FirstDateDilemma = {
+  id: string;
+  town: string;
+  prompt: string;
+  optionA: { label: string; venueHint: string };
+  optionB: { label: string; venueHint: string };
+  partnerPick: "A" | "B";
+};
+
+export function getFirstDateDilemmaForTown(
+  town: string = "Windhoek",
+  partnerId: string = "amara",
+): FirstDateDilemma {
+  const pick: "A" | "B" = partnerId.charCodeAt(0) % 2 === 0 ? "A" : "B";
+  if (town === "Swakopmund" || town === "Walvis Bay") {
+    return {
+      id: "coast-dilemma",
+      town,
+      prompt: "First Date Dilemma · Would you rather…",
+      optionA: {
+        label: "Sunset walk along the Swakopmund Jetty",
+        venueHint: "Followed by warm espresso or glühwein",
+      },
+      optionB: {
+        label: "Morning dune climb at Dune 7 + iced coffee",
+        venueHint: "Sandboard down or just enjoy the view",
+      },
+      partnerPick: pick,
+    };
+  }
+
+  return {
+    id: "whk-dilemma",
+    town: town || "Windhoek",
+    prompt: "First Date Dilemma · Would you rather…",
+    optionA: {
+      label: "Street food & kapana crawl in Katutura",
+      venueHint: "Casual, lively & zero dress-code pressure",
+    },
+    optionB: {
+      label: "Golden-hour picnic walk at Avis Dam",
+      venueHint: "Quiet trail + sunset view over the hills",
+    },
+    partnerPick: pick,
+  };
+}
+
+export type EmojiStoryPuzzle = {
+  emojis: string;
+  options: [string, string, string];
+  correctIndex: number;
+  explanation: string;
+};
+
+export function getEmojiStoryForPerson(
+  person: Pick<Person, "id" | "name" | "town">,
+): EmojiStoryPuzzle {
+  if (person.town === "Swakopmund" || person.town === "Walvis Bay") {
+    return {
+      emojis: "🌫️☕🌊🦭🌅",
+      options: [
+        "Morning mist coffee, Pelican Point seals & coastal sunset",
+        "Climbing Mount Kilimanjaro in winter",
+        "Late-night clubbing in Berlin",
+      ],
+      correctIndex: 0,
+      explanation: `My ideal ${person.town} Saturday from sunrise to sunset!`,
+    };
+  }
+
+  return {
+    emojis: "🚗🏜️🔥🥩🌌",
+    options: [
+      "Road trip to Spitzkoppe, camelthorn braai & stargazing",
+      "Stuck in traffic on Independence Avenue",
+      "Running a marathon in the desert at noon",
+    ],
+    correctIndex: 0,
+    explanation: "Give me padkos, a campfire, and a clear Namibian night sky!",
+  };
+}
+
+export type FlagPollItem = {
+  id: string;
+  statement: string;
+  context: string;
+  greenFlagPct: number;
+  town: string;
+};
+
+export const flagSwipePolls: FlagPollItem[] = [
+  {
+    id: "camping-no-signal",
+    statement: "Going camping at Spitzkoppe for a weekend with zero cell reception",
+    context: "Weekend habits",
+    greenFlagPct: 82,
+    town: "Windhoek",
+  },
+  {
+    id: "pineapple-pizza",
+    statement: "Ordering pineapple on pizza on a Friday night date",
+    context: "Food opinions",
+    greenFlagPct: 58,
+    town: "Swakopmund",
+  },
+  {
+    id: "six-hour-text",
+    statement: "Taking 6 hours to text back during a busy workday, but sending a voice note after",
+    context: "Texting style",
+    greenFlagPct: 74,
+    town: "Windhoek",
+  },
+];
+
+export const dailyHotTakePrompts = [
+  {
+    id: "overrated-trend",
+    prompt: "What’s an overrated weekend habit in Namibia — and what should replace it?",
+    sampleTakes: [
+      {
+        author: "Amara, 26",
+        town: "Windhoek",
+        quip: "Loud lounges where you can’t hear each other talk. Give me a sunset walk at Avis Dam + coffee instead.",
+      },
+      {
+        author: "Daniel, 29",
+        town: "Swakopmund",
+        quip: "Rushing the B1 drive without stopping for padkos and biltong in Okahandja.",
+      },
+    ],
+  },
+];
+
+export type TriviaQuestion = {
+  id: string;
+  question: string;
+  options: [string, string, string];
+  correctIndex: number;
+  teammatePickIndex: number;
+};
+
+export const namibiaTriviaQuestions: TriviaQuestion[] = [
+  {
+    id: "q1",
+    question: "Which Namibian desert is widely considered the oldest desert in the world?",
+    options: ["The Namib Desert", "The Kalahari Desert", "The Richtersveld"],
+    correctIndex: 0,
+    teammatePickIndex: 0,
+  },
+  {
+    id: "q2",
+    question: "Where do the towering dunes meet the Atlantic Ocean along the central coast?",
+    options: ["Sandwich Harbour", "Waterberg Plateau", "Epupa Falls"],
+    correctIndex: 0,
+    teammatePickIndex: 0,
+  },
+  {
+    id: "q3",
+    question: "What’s the traditional seasoning spice mix served alongside fresh Kapana?",
+    options: ["Chilli & salt spice mix + tomato-onion salsa", "Sweet maple glaze", "Wasabi paste"],
+    correctIndex: 0,
+    teammatePickIndex: 0,
+  },
+];
