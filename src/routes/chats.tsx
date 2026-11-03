@@ -12,6 +12,7 @@ import {
   MessagesSquare,
   Send,
   Sparkles,
+  Wand2,
 } from "lucide-react";
 import { people, photo, update, useStore, timeAgo } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
@@ -24,6 +25,7 @@ import { suggestDatePlan } from "@/lib/date-suggestion.functions";
 import { generateIcebreakers, localDateSpots, triggerHaptic } from "@/lib/icebreakers";
 import { TwoTruthsCard } from "@/components/SocialGames";
 import { getTwoTruthsForPerson } from "@/lib/social-games";
+import { ConversationOpenerStudio } from "@/components/ConversationOpenerStudio";
 
 export const Route = createFileRoute("/chats")({
   validateSearch: (
@@ -456,6 +458,7 @@ function LiveThread({
   const [text, setText] = useState(initialDraft ?? "");
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const [showPrompts, setShowPrompts] = useState(false);
+  const [showOpenerStudio, setShowOpenerStudio] = useState(false);
   const [older, setOlder] = useState<MessageRow[]>([]);
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -768,12 +771,41 @@ function LiveThread({
         </div>
         <button
           type="button"
+          onClick={() => setShowOpenerStudio((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary"
+        >
+          <Wand2 className="h-3 w-3" /> AI Opener
+        </button>
+        <button
+          type="button"
           onClick={() => setShowPrompts((v) => !v)}
           className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-primary"
         >
           <Sparkles className="h-3 w-3" /> Icebreakers
         </button>
       </header>
+      <AnimatePresence>
+        {showOpenerStudio && (
+          <ConversationOpenerStudio
+            matchId={match.id}
+            matchName={person.display_name}
+            profile={{
+              town: person.town ?? "Windhoek",
+              intent: person.intent ?? "A relationship",
+              tags: person.tags ?? [],
+              bio: person.bio ?? "",
+              seeking: "",
+            }}
+            live={true}
+            onUseOpener={(openerText) => {
+              setText(openerText);
+              setShowOpenerStudio(false);
+              inputRef.current?.focus();
+            }}
+            onClose={() => setShowOpenerStudio(false)}
+          />
+        )}
+      </AnimatePresence>
       <div className="flex-1 space-y-1.5 overflow-y-auto px-4 py-5">
         {hasOlder && (
           <button
@@ -1174,6 +1206,7 @@ function Thread({
       : [];
   const [text, setText] = useState(initialDraft ?? "");
   const [showTwoTruths, setShowTwoTruths] = useState(false);
+  const [showOpenerStudio, setShowOpenerStudio] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const twoTruthsGame = getTwoTruthsForPerson(p);
@@ -1228,12 +1261,42 @@ function Thread({
         </div>
         <button
           type="button"
+          onClick={() => setShowOpenerStudio((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-primary"
+        >
+          <Wand2 className="h-3.5 w-3.5" />
+          AI Opener
+        </button>
+        <button
+          type="button"
           onClick={() => setShowTwoTruths((v) => !v)}
           className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-primary"
         >
           <Sparkles className="h-3.5 w-3.5" />2 Truths
         </button>
       </header>
+      <AnimatePresence>
+        {showOpenerStudio && (
+          <ConversationOpenerStudio
+            matchId={p.id}
+            matchName={p.name}
+            profile={{
+              town: p.town,
+              intent: p.intent,
+              tags: p.tags,
+              bio: p.bio,
+              seeking: p.answer,
+            }}
+            live={false}
+            onUseOpener={(openerText) => {
+              setText(openerText);
+              setShowOpenerStudio(false);
+              inputRef.current?.focus();
+            }}
+            onClose={() => setShowOpenerStudio(false)}
+          />
+        )}
+      </AnimatePresence>
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
         {showTwoTruths && (
           <div className="mb-3">
