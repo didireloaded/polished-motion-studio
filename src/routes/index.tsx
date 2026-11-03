@@ -422,7 +422,7 @@ function Home() {
                 You and {celebrate.name} like each other. Say hello while it's fresh.
               </p>
               <Link
-                to="/chats"
+                to="/chats" search={{} as never}
                 className="mt-6 block rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
                 onClick={() => setCelebrate(null)}
               >
