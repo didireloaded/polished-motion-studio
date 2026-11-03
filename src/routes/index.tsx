@@ -793,7 +793,7 @@ function ProfileCard({
                       ...st.chats,
                       [person.id]: [
                         ...(st.chats[person.id] ?? []),
-                        { from: "me", text: reactionText, at: "Just now" },
+                        { from: "me", text: reactionText, at: Date.now(), id: crypto.randomUUID() },
                       ],
                     },
                   }));
@@ -809,7 +809,7 @@ function ProfileCard({
                       ...st.chats,
                       [person.id]: [
                         ...(st.chats[person.id] ?? []),
-                        { from: "me", text: replyDraft, at: "Just now" },
+                        { from: "me", text: replyDraft, at: Date.now(), id: crypto.randomUUID() },
                       ],
                     },
                   }));

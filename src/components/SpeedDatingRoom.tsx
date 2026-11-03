@@ -30,7 +30,7 @@ export function SpeedDatingRoom({
 }: {
   open: boolean;
   town: string;
-  userId?: string | null;
+  userId?: string | null | undefined;
   onClose: () => void;
 }) {
   const candidates = useMemo(() => {
@@ -162,7 +162,8 @@ export function SpeedDatingRoom({
           {
             from: "them",
             text: `Loved our 3-minute mixer round about ${partner.town}! Let’s keep talking.`,
-            at: "Just now",
+            at: Date.now(),
+            id: crypto.randomUUID(),
           },
         ],
       },
@@ -281,7 +282,7 @@ export function SpeedDatingRoom({
               />
               <div>
                 <p className="text-xs font-semibold text-foreground">
-                  {partner.name} · {partner.role}
+                  {partner.name} · {partner.job}
                 </p>
                 <p className="text-[10px] text-muted-foreground">
                   {partner.tags.slice(0, 3).join(" · ")}

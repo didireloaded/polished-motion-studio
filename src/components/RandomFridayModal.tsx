@@ -110,7 +110,7 @@ export function RandomFridayModal({
 }: {
   open: boolean;
   town: string;
-  userId?: string | null;
+  userId?: string | null | undefined;
   onClose: () => void;
 }) {
   const candidates = useMemo(() => {
@@ -353,7 +353,8 @@ export function RandomFridayModal({
           {
             from: "them",
             text: `We both held Stay on Random Friday! Loved your 30-second pitch.`,
-            at: "Just now",
+            at: Date.now(),
+            id: crypto.randomUUID(),
           },
         ],
       },
@@ -580,7 +581,7 @@ export function RandomFridayModal({
                       </span>
                     </div>
                     <p className="text-[10px] text-muted-foreground">
-                      {partner.role} · {partner.tags.slice(0, 2).join(" · ")}
+                      {partner.job} · {partner.tags.slice(0, 2).join(" · ")}
                     </p>
                   </div>
                 </div>

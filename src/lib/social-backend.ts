@@ -14,6 +14,7 @@ export const liveRoundDecisionSchema = z.object({
   mode: z.enum(["random_friday", "speed_dating"]).default("random_friday"),
   decision: z.enum(["stay", "skip"]),
   messageSent: z.string().trim().max(300).optional(),
+  // Retained for older clients; the server never trusts this to extend a session.
   bonusSeconds: z.number().int().min(0).max(120).default(0),
 });
 

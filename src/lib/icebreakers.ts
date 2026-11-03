@@ -113,10 +113,13 @@ export function generateIcebreakers(ctx: IcebreakerContext): string[] {
 }
 
 /** Triggers a subtle Web Vibration API pulse on supported mobile browsers. */
-export function triggerHaptic(pattern: number | number[] = 15) {
+const hapticPatterns = { like: 15, pass: 10, send: 12, match: [20, 40, 20] } as const;
+
+export function triggerHaptic(pattern: number | number[] | keyof typeof hapticPatterns = 15) {
   try {
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      navigator.vibrate(pattern);
+      const resolved = typeof pattern === "string" ? hapticPatterns[pattern] : pattern;
+      navigator.vibrate(Array.isArray(resolved) ? [...resolved] : (resolved as number));
     }
   } catch {
     // Ignore unsupported environments.

@@ -25,7 +25,7 @@ export const joinLiveQueueServerFn = createServerFn({ method: "POST" })
     const normalizedTown = data.town === "All" ? "Windhoek" : data.town;
 
     try {
-      await db.from("random_friday_queue").upsert(
+      const { error: queueError } = await db.from("random_friday_queue").upsert(
         {
           user_id: userId,
           town: normalizedTown,
@@ -36,9 +36,10 @@ export const joinLiveQueueServerFn = createServerFn({ method: "POST" })
         },
         { onConflict: "user_id" },
       );
+      if (queueError) throw queueError;
 
       const cutoff = new Date(Date.now() - 30_000).toISOString();
-      const { data: activeRows } = await db
+      const { data: activeRows, error: activeRowsError } = await db
         .from("random_friday_queue")
         .select("user_id,town,streak_count,last_heartbeat_at")
         .eq("mode", data.mode)
@@ -46,6 +47,7 @@ export const joinLiveQueueServerFn = createServerFn({ method: "POST" })
         .gte("last_heartbeat_at", cutoff)
         .neq("user_id", userId)
         .limit(20);
+      if (activeRowsError) throw activeRowsError;
 
       return {
         ok: true,
@@ -66,31 +68,17 @@ export const submitLiveRoundDecisionServerFn = createServerFn({ method: "POST" }
     const { user_a, user_b, amUserA } = normalizeOrderedPair(userId, data.partnerId);
 
     try {
-      // Also record in core decisions table when the user chooses 'stay'
-      if (data.decision === "stay") {
-        await context.supabase.from("decisions").upsert(
-          {
-            actor_id: userId,
-            target_id: data.partnerId,
-            liked: true,
-          },
-          { onConflict: "actor_id,target_id" },
-        );
-      }
-
       const updateFields = amUserA
         ? {
             user_a_decision: data.decision,
             ...(data.messageSent ? { user_a_message: data.messageSent } : {}),
-            bonus_seconds: data.bonusSeconds,
           }
         : {
             user_b_decision: data.decision,
             ...(data.messageSent ? { user_b_message: data.messageSent } : {}),
-            bonus_seconds: data.bonusSeconds,
           };
 
-      const { data: existingSession } = await db
+      const { data: existingSession, error: existingSessionError } = await db
         .from("random_friday_sessions")
         .select("id,user_a_decision,user_b_decision,matched_at,chemistry_unlocked")
         .eq("user_a", user_a)
@@ -99,14 +87,16 @@ export const submitLiveRoundDecisionServerFn = createServerFn({ method: "POST" }
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (existingSessionError) throw existingSessionError;
 
       if (existingSession?.id) {
-        const { data: updated } = await db
+        const { data: updated, error: updateError } = await db
           .from("random_friday_sessions")
           .update(updateFields)
           .eq("id", existingSession.id)
           .select("id,matched_at,chemistry_unlocked,user_a_decision,user_b_decision")
           .maybeSingle();
+        if (updateError || !updated) throw updateError ?? new Error("Session update failed");
 
         return {
           ok: true,
@@ -116,7 +106,7 @@ export const submitLiveRoundDecisionServerFn = createServerFn({ method: "POST" }
         };
       }
 
-      const { data: inserted } = await db
+      const { data: inserted, error: insertError } = await db
         .from("random_friday_sessions")
         .insert({
           user_a,
@@ -127,6 +117,7 @@ export const submitLiveRoundDecisionServerFn = createServerFn({ method: "POST" }
         })
         .select("id,matched_at,chemistry_unlocked")
         .maybeSingle();
+      if (insertError || !inserted) throw insertError ?? new Error("Session insert failed");
 
       return {
         ok: true,
@@ -187,7 +178,7 @@ export const submitChatGameChoiceServerFn = createServerFn({ method: "POST" })
       const amUserA = match.user_a === userId;
       const choiceColumn = amUserA ? "user_a_choice" : "user_b_choice";
 
-      const { data: round } = await db
+      const { data: round, error: roundError } = await db
         .from("chat_game_rounds")
         .upsert(
           {
@@ -201,6 +192,7 @@ export const submitChatGameChoiceServerFn = createServerFn({ method: "POST" })
         )
         .select("user_a_choice,user_b_choice")
         .maybeSingle();
+      if (roundError || !round) throw roundError ?? new Error("Game choice failed");
 
       return {
         ok: true,
@@ -219,7 +211,7 @@ export const castFeedPollVoteServerFn = createServerFn({ method: "POST" })
   .handler(async ({ context, data }) => {
     const db = untypedDb(context.supabase);
     try {
-      await db.from("feed_poll_votes").upsert(
+      const { error: voteError } = await db.from("feed_poll_votes").upsert(
         {
           poll_id: data.pollId,
           user_id: context.userId,
@@ -228,11 +220,13 @@ export const castFeedPollVoteServerFn = createServerFn({ method: "POST" })
         },
         { onConflict: "poll_id,user_id" },
       );
+      if (voteError) throw voteError;
 
-      const { data: rows } = await db
+      const { data: rows, error: rowsError } = await db
         .from("feed_poll_votes")
         .select("choice")
         .eq("poll_id", data.pollId);
+      if (rowsError) throw rowsError;
 
       const tally = tallyPollVotes((rows ?? []) as Array<{ choice: string }>, [data.choice]);
       return { ok: true, total: tally.total, counts: tally.counts };
