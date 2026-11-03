@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { people, photo, update, type Person } from "@/lib/namlink";
 import { speedDatingPrompts } from "@/lib/social-games";
+import { captureProductEvent } from "@/lib/telemetry";
 
 type MixerChatMsg = {
   id: string;
@@ -148,6 +149,7 @@ export function SpeedDatingRoom({
     }
 
     triggerHaptic("match");
+    void captureProductEvent("match_created", { source: "speed_dating" });
     // Unlock in demo store & record decision if signed in
     update((st) => ({
       ...st,

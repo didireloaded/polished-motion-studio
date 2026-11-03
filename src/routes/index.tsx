@@ -212,6 +212,7 @@ function Home() {
     });
     if (isMutual) {
       triggerHaptic([30, 50, 40]);
+      void captureProductEvent("match_created", { mode: "demo" });
       setCelebrationMatch({
         partnerId: p.id,
         partnerName: p.name,

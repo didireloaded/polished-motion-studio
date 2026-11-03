@@ -41,14 +41,27 @@ export type ProductEventName =
   | "profile_completed"
   | "like_sent"
   | "match_created"
+  | "match_say_hello"
+  | "match_keep_swiping"
   | "first_message_sent"
   | "event_interest"
   | "date_confirmed";
 
-export async function captureProductEvent(event: ProductEventName) {
+export type ProductEventProperties = Record<string, string | number | boolean>;
+
+export async function captureProductEvent(
+  event: ProductEventName,
+  properties?: ProductEventProperties,
+) {
   try {
     const client = await analytics();
-    if (client && analyticsConsent()) client.capture(event);
+    if (client && analyticsConsent()) {
+      if (properties && Object.keys(properties).length > 0) {
+        client.capture(event, properties);
+      } else {
+        client.capture(event);
+      }
+    }
   } catch {
     // Analytics must never interrupt member actions.
   }

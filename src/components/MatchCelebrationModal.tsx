@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Heart, MessageCircle, Sparkles } from "lucide-react";
 import { ProfilePhoto } from "@/components/community";
 import { generateIcebreakers, triggerHaptic } from "@/lib/icebreakers";
+import { captureProductEvent } from "@/lib/telemetry";
 
 export type CelebrationMatch = {
   matchId?: string;
@@ -127,6 +128,7 @@ export function MatchCelebrationModal({
                       }}
                       onClick={() => {
                         triggerHaptic(15);
+                        void captureProductEvent("match_say_hello", { via: "icebreaker" });
                         onClose();
                       }}
                       className="block rounded-2xl border border-border bg-secondary/60 px-3.5 py-2 text-xs leading-4 text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
@@ -147,19 +149,23 @@ export function MatchCelebrationModal({
                 }}
                 onClick={() => {
                   triggerHaptic(20);
+                  void captureProductEvent("match_say_hello", { via: "button" });
                   onClose();
                 }}
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-semibold text-primary-foreground shadow-float transition-transform active:scale-[0.98]"
               >
                 <MessageCircle className="h-4 w-4" />
-                Say Hello
+                Say hello
               </Link>
               <button
                 type="button"
-                onClick={onClose}
+                onClick={() => {
+                  void captureProductEvent("match_keep_swiping");
+                  onClose();
+                }}
                 className="h-10 w-full rounded-full text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
               >
-                Keep Exploring
+                Keep swiping
               </button>
             </div>
           </motion.div>
