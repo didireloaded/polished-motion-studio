@@ -95,7 +95,7 @@ function Posts() {
         {
           id: crypto.randomUUID(),
           authorName: st.profile.name.trim(),
-          text: value.slice(0, 300),
+          text: value.slice(0, 650),
           town,
           at: Date.now(),
           replies: 0,
@@ -174,7 +174,7 @@ function Posts() {
             id="post-compose"
             value={text}
             onChange={(e) => setText(e.target.value)}
-            maxLength={300}
+            maxLength={650}
             rows={3}
             placeholder="Share a plan or ask the community…"
             className="w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
@@ -192,7 +192,7 @@ function Posts() {
             </select>
             <div className="flex items-center gap-3">
               <span className="text-xs tabular-nums text-muted-foreground">
-                {300 - text.length}
+                {650 - text.length}
               </span>
               <button
                 type="button"
@@ -837,7 +837,7 @@ function LivePosts({ userId }: { userId: string }) {
             id="live-post-compose"
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            maxLength={300}
+            maxLength={650}
             rows={3}
             placeholder="Share a plan or ask the community…"
             className="w-full resize-none bg-transparent text-[15px] leading-6 outline-none placeholder:text-muted-foreground"
@@ -855,7 +855,7 @@ function LivePosts({ userId }: { userId: string }) {
             </select>
             <div className="flex items-center gap-3">
               <span className="text-xs tabular-nums text-muted-foreground">
-                {300 - body.length}
+                {650 - body.length}
               </span>
               <button
                 type="button"
@@ -890,6 +890,16 @@ function LivePosts({ userId }: { userId: string }) {
           </button>
         ))}
       </div>
+      {view === "Feed" && (
+        <HotTakeAndFlagPollHub
+          userId={userId}
+          town={town}
+          onAgreeWithTake={(quipText) => {
+            setBody(quipText);
+            setComposeOpen(true);
+          }}
+        />
+      )}
       {notice && (
         <p role="status" className="mx-5 mt-3 text-sm text-muted-foreground">
           {notice}

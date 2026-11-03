@@ -73,6 +73,10 @@ export function TabBar() {
       "/verification",
       "/safety",
       "/crossed-paths",
+      "/events",
+      "/random-friday",
+      "/speed-dating",
+      "/this-or-that",
       "/date-plan",
       "/notifications",
     ].includes(pathname)

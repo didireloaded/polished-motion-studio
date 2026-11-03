@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   CalendarDays,
@@ -12,7 +13,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { events, people, photo, towns, update, useStore } from "@/lib/namlink";
 import { useSession } from "@/hooks/use-session";
@@ -27,23 +28,6 @@ import { captureProductEvent } from "@/lib/telemetry";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { ThisOrThatRapidRadar } from "@/components/SocialGames";
-import { RandomFridayBanner } from "@/components/RandomFridayModal";
-import {
-  computeVibeAlignment,
-  getNextMixerWindow,
-  getPersonThisOrThatAnswers,
-} from "@/lib/social-games";
-
-const SpeedDatingRoom = lazy(() =>
-  import("@/components/SpeedDatingRoom").then((m) => ({
-    default: m.SpeedDatingRoom,
-  })),
-);
-const RandomFridayModal = lazy(() =>
-  import("@/components/RandomFridayModal").then((m) => ({
-    default: m.RandomFridayModal,
-  })),
-);
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
@@ -100,12 +84,13 @@ const sampleProfiles: NearbyProfile[] = people.map((p) => ({
   photo_paths: [],
 }));
 
-function NearbyPage() {
+export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) {
   const store = useStore();
   const { user, ready } = useSession();
   const [town, setTown] = useState("Windhoek");
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
-  const [panel, setPanel] = useState<"nearby" | "events">("nearby");
+  const panel = page;
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<NearbyProfile | null>(null);
   const [notice, setNotice] = useState("");
   const [eventTitle, setEventTitle] = useState("");
@@ -114,10 +99,6 @@ function NearbyPage() {
   const [eventDate, setEventDate] = useState("");
   const [eventDetails, setEventDetails] = useState("");
   const [eventBusy, setEventBusy] = useState(false);
-  const [mixerOpen, setMixerOpen] = useState(false);
-  const [randomFridayOpen, setRandomFridayOpen] = useState(false);
-  const [showThisOrThat, setShowThisOrThat] = useState(false);
-  const mixerWindow = getNextMixerWindow();
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["nearby", user?.id],
@@ -199,15 +180,10 @@ function NearbyPage() {
         : sampleProfiles.filter((profile) => !store.liked.includes(profile.id)),
     [user, query.data, store.liked],
   );
-  const visibleProfiles = useMemo(() => {
-    const filtered = profiles.filter((p) => town === "All" || p.town === town);
-    if (!user && filtered.length < 6) {
-      const ids = new Set(filtered.map((p) => p.id));
-      const extras = profiles.filter((p) => !ids.has(p.id)).slice(0, 6 - filtered.length);
-      return [...filtered, ...extras];
-    }
-    return filtered;
-  }, [profiles, town, user]);
+  const visibleProfiles = useMemo(
+    () => profiles.filter((profile) => town === "All" || profile.town === town),
+    [profiles, town],
+  );
 
   if (!ready)
     return (
@@ -306,28 +282,27 @@ function NearbyPage() {
   const eventInterests = eventInterestQuery.data ?? [];
 
   return (
-    <main className="mx-auto max-w-md pb-24">
+    <main className={`mx-auto max-w-md bg-white ${panel === "nearby" ? "pb-0" : "pb-24"}`}>
       <header className="flex h-[58px] items-center justify-between px-5">
         {panel === "nearby" ? (
           <BrandLogo />
         ) : (
-          <button
-            type="button"
-            onClick={() => setPanel("nearby")}
-            className="flex items-center gap-2"
-          >
+          <Link to="/radar" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            <BrandLogo />
-          </button>
+            <span className="text-[15px] font-semibold">Nearby</span>
+          </Link>
         )}
-        <button
-          type="button"
-          onClick={() => setPanel(panel === "events" ? "nearby" : "events")}
+        <Link
+          to={panel === "events" ? "/radar" : "/events"}
           aria-label={panel === "events" ? "Show map" : "Show events"}
           className="flex h-9 w-9 items-center justify-center text-primary"
         >
-          <CalendarDays className="h-5 w-5" />
-        </button>
+          {panel === "events" ? (
+            <MapPin className="h-5 w-5" />
+          ) : (
+            <CalendarDays className="h-5 w-5" />
+          )}
+        </Link>
       </header>
       {panel === "nearby" && (
         <>
@@ -336,7 +311,7 @@ function NearbyPage() {
               {notice}
             </p>
           )}
-          <div className="relative">
+          <div className="relative h-[calc(100svh-118px)] min-h-[500px] overflow-hidden">
             <TownMap
               town={town}
               profiles={visibleProfiles.length > 0 ? visibleProfiles : profiles}
@@ -360,210 +335,208 @@ function NearbyPage() {
                   { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
                 );
               }}
-              className="absolute right-4 top-3.5 z-[400] flex h-10 w-10 items-center justify-center rounded-full bg-white text-foreground shadow-float"
+              className="absolute right-4 top-3.5 z-[400] flex h-10 w-10 items-center justify-center rounded-full bg-white text-foreground shadow-float transition-transform hover:scale-105 active:scale-95"
               aria-label="Center map on my location"
             >
               <Navigation className="h-4 w-4 fill-current" />
             </button>
-          </div>
-          <div className="relative z-10 -mt-4 rounded-t-[22px] bg-white px-5 pb-5 pt-3 shadow-float">
-            <div className="mx-auto mb-3.5 h-1 w-9 rounded-full bg-border" />
-            <div className="flex items-center justify-between">
-              <h1 className="text-[16px] font-semibold">People nearby</h1>
-              <label className="relative inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
-                <select
-                  aria-label="Map town and distance"
-                  value={town}
-                  onChange={(e) => setTown(e.target.value)}
-                  className="appearance-none bg-transparent pr-4 text-right text-[12px] font-medium text-muted-foreground outline-none"
-                >
-                  <option value="Windhoek">Within 25 km · Windhoek</option>
-                  {towns
-                    .filter((place) => place !== "Windhoek")
-                    .map((place) => (
-                      <option key={place} value={place}>
-                        Within 25 km · {place}
-                      </option>
-                    ))}
-                  <option value="All">All Namibia</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-muted-foreground" />
-              </label>
-            </div>
-            <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
-              {visibleProfiles.slice(0, 12).map((profile, idx) => {
-                const alignment = computeVibeAlignment(
-                  store.profile.choices,
-                  getPersonThisOrThatAnswers({
-                    id: profile.id,
-                    town: profile.town,
-                    tags: profile.tags,
-                  }),
-                );
-                const distanceKm = idx + 2;
-                return (
-                  <button
-                    key={profile.id}
-                    type="button"
-                    onClick={() => setSelectedProfile(profile)}
-                    className="w-[80px] shrink-0 text-left"
-                  >
-                    <div className="relative">
-                      {!user ? (
-                        <img
-                          src={photo(people.find((p) => p.id === profile.id) ?? people[0]!, true)}
-                          alt=""
-                          loading="lazy"
-                          decoding="async"
-                          className="h-[84px] w-[80px] rounded-[14px] object-cover"
-                        />
-                      ) : (
-                        <ProfilePhoto
-                          name={profile.display_name}
-                          path={profile.photo_paths?.[0]}
-                          className="h-[84px] w-[80px] rounded-[14px] object-cover"
-                        />
-                      )}
-                      <span className="absolute bottom-1 left-1 rounded-full bg-foreground/80 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
-                        {alignment.percentage}% vibe
-                      </span>
-                    </div>
-                    <p className="mt-1.5 truncate text-[12px] font-semibold">
-                      {profile.display_name} {profile.age}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground">{distanceKm} km</p>
-                  </button>
-                );
-              })}
-              {!visibleProfiles.length && (
-                <p className="py-5 text-xs text-muted-foreground">
-                  No members here yet. Try another town.
-                </p>
-              )}
-            </div>
-
-            <div className="mt-4 border-t border-border pt-3.5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[15px] font-semibold">Crossed paths</h2>
-                <Link
-                  to="/crossed-paths"
-                  className="text-[12px] font-semibold text-primary hover:underline"
-                >
-                  See all
-                </Link>
-              </div>
-              <Link
-                to="/crossed-paths"
-                className="mt-2.5 flex items-center gap-3 rounded-2xl bg-secondary/45 p-2.5 transition-colors hover:bg-secondary"
-              >
-                <img
-                  src="/editorial/amara-small.jpg"
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  className="h-12 w-12 shrink-0 rounded-full object-cover"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[11px] text-muted-foreground">
-                    You crossed paths with
-                  </span>
-                  <span className="block text-[14px] font-semibold text-foreground">Nadia 26</span>
-                  <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <MapPin className="h-3 w-3 text-primary" /> near Grove Mall · 2 hrs ago
-                  </span>
-                </span>
-                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </Link>
-            </div>
-
-            {showThisOrThat && (
-              <div className="-mx-5 mt-3">
-                <ThisOrThatRapidRadar
-                  answers={store.profile.choices}
-                  onAnswer={(questionId, pick) => {
-                    update((st) => ({
-                      ...st,
-                      profile: {
-                        ...st.profile,
-                        choices: { ...st.profile.choices, [questionId]: pick },
-                      },
-                    }));
-                  }}
-                  onClose={() => setShowThisOrThat(false)}
-                />
-              </div>
-            )}
-
-            {isFeatureEnabled("randomFriday") && (
-              <RandomFridayBanner onOpen={() => setRandomFridayOpen(true)} />
-            )}
-
-            {isFeatureEnabled("speedDatingMixer") && (
+            <motion.section
+              initial={false}
+              animate={{ height: sheetOpen ? "min(76svh, 700px)" : 82 }}
+              transition={{ type: "spring", stiffness: 300, damping: 34 }}
+              className="absolute inset-x-0 bottom-0 z-[500] overflow-hidden rounded-t-[22px] border-t border-border bg-white shadow-float"
+              aria-label="Nearby options"
+            >
               <button
                 type="button"
-                onClick={() => {
-                  triggerHaptic("match");
-                  setMixerOpen(true);
-                }}
-                className="flex w-full items-center gap-3 border-t border-border py-3 text-left"
+                onClick={() => setSheetOpen((open) => !open)}
+                aria-expanded={sheetOpen}
+                aria-controls="nearby-sheet-content"
+                className="flex h-[82px] w-full flex-col items-center justify-start px-5 pt-3 text-left transition-colors hover:bg-secondary/35 active:bg-secondary/60"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/12 text-primary">
-                  <Clock3 className="h-[18px] w-[18px]" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5 text-[13px] font-semibold">
-                    Speed Dating Live Lounge
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-semibold text-primary-foreground">
-                      3m rounds
+                <span className="mb-3 h-1 w-9 rounded-full bg-border" />
+                <span className="flex w-full items-center justify-between">
+                  <span>
+                    <span className="block text-[15px] font-semibold">Explore nearby</span>
+                    <span className="block text-[11px] text-muted-foreground">
+                      People, crossed paths, games and events
                     </span>
                   </span>
-                  <span className="block truncate text-[11px] text-muted-foreground">
-                    {mixerWindow.label}
-                  </span>
+                  <ChevronDown
+                    className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${sheetOpen ? "rotate-0" : "rotate-180"}`}
+                  />
                 </span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
-            )}
+              <div
+                id="nearby-sheet-content"
+                className="h-[calc(100%-82px)] overflow-y-auto px-5 pb-6"
+                inert={!sheetOpen}
+              >
+                <div className="flex items-center justify-between">
+                  <h1 className="text-[16px] font-semibold">People nearby</h1>
+                  <label className="relative inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
+                    <select
+                      aria-label="Map town"
+                      value={town}
+                      onChange={(e) => setTown(e.target.value)}
+                      className="appearance-none bg-transparent pr-4 text-right text-[12px] font-medium text-muted-foreground outline-none"
+                    >
+                      <option value="Windhoek">Windhoek</option>
+                      {towns
+                        .filter((place) => place !== "Windhoek")
+                        .map((place) => (
+                          <option key={place} value={place}>
+                            {place}
+                          </option>
+                        ))}
+                      <option value="All">All Namibia</option>
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-muted-foreground" />
+                  </label>
+                </div>
+                <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
+                  {visibleProfiles.slice(0, 12).map((profile) => {
+                    return (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => setSelectedProfile(profile)}
+                        className="w-[80px] shrink-0 text-left"
+                      >
+                        <div className="relative">
+                          {!user ? (
+                            <img
+                              src={photo(
+                                people.find((p) => p.id === profile.id) ?? people[0]!,
+                                true,
+                              )}
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              className="h-[84px] w-[80px] rounded-[14px] object-cover"
+                            />
+                          ) : (
+                            <ProfilePhoto
+                              name={profile.display_name}
+                              path={profile.photo_paths?.[0]}
+                              className="h-[84px] w-[80px] rounded-[14px] object-cover"
+                            />
+                          )}
+                        </div>
+                        <p className="mt-1.5 truncate text-[12px] font-semibold">
+                          {profile.display_name} {profile.age}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">{profile.town}</p>
+                      </button>
+                    );
+                  })}
+                  {!visibleProfiles.length && (
+                    <p className="py-5 text-xs text-muted-foreground">
+                      No members here yet. Try another town.
+                    </p>
+                  )}
+                </div>
 
-            <button
-              type="button"
-              onClick={() => setShowThisOrThat((v) => !v)}
-              className="flex w-full items-center gap-3 border-t border-border py-3 text-left"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-primary">
-                <Star className="h-[18px] w-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-semibold">This or That · Rapid Radar</span>
-                <span className="block text-[11px] text-muted-foreground">
-                  Compare 5 Namibian picks & see Vibe Alignment %
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPanel("events")}
-              className="flex w-full items-center gap-3 border-t border-border py-3 text-left"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-primary">
-                <CalendarDays className="h-[18px] w-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-semibold">Local events</span>
-                <span className="block text-[11px] text-muted-foreground">
-                  Meet through a shared plan
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
+                <div className="mt-4 border-t border-border pt-3.5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-[15px] font-semibold">Crossed paths</h2>
+                    <Link
+                      to="/crossed-paths"
+                      className="text-[12px] font-semibold text-primary hover:underline"
+                    >
+                      See all
+                    </Link>
+                  </div>
+                  <Link
+                    to="/crossed-paths"
+                    className="mt-2.5 flex items-center gap-3 rounded-2xl bg-secondary/45 p-3 transition-colors hover:bg-secondary"
+                  >
+                    {!user && (
+                      <img
+                        src="/editorial/amara-small.jpg"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="h-12 w-12 shrink-0 rounded-full object-cover"
+                      />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-semibold text-foreground">
+                        {user ? "No crossings recorded" : "Nadia, 26 · Sample"}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                        {user
+                          ? "Crossed paths needs opt-in location to become available."
+                          : "Example of how a crossing could appear"}
+                      </span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  </Link>
+                </div>
+
+                <div className="mt-3 border-t border-border">
+                  {(
+                    [
+                      {
+                        to: "/random-friday",
+                        title: "Random Friday",
+                        detail: "A 30-second introduction",
+                        icon: Heart,
+                        enabled: isFeatureEnabled("randomFriday"),
+                      },
+                      {
+                        to: "/speed-dating",
+                        title: "Speed dating",
+                        detail: "A guided three-minute conversation",
+                        icon: Clock3,
+                        enabled: isFeatureEnabled("speedDatingMixer"),
+                      },
+                      {
+                        to: "/this-or-that",
+                        title: "This or That",
+                        detail: "Five quick picks that say something about you",
+                        icon: Star,
+                        enabled: true,
+                      },
+                      {
+                        to: "/events",
+                        title: "Events",
+                        detail: "Find a plan worth leaving home for",
+                        icon: CalendarDays,
+                        enabled: true,
+                      },
+                    ] as const
+                  )
+                    .filter((item) => item.enabled)
+                    .map(({ to, title, detail, icon: Icon }) => (
+                      <Link
+                        key={to}
+                        to={to}
+                        onClick={() => triggerHaptic(8)}
+                        className="group flex min-h-16 items-center gap-3 border-b border-border py-3 transition-colors hover:bg-secondary/35 active:bg-secondary/60"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary text-primary transition-transform group-hover:scale-105 group-active:scale-95">
+                          <Icon className="h-[17px] w-[17px]" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] font-semibold">{title}</span>
+                          <span className="block truncate text-[11px] text-muted-foreground">
+                            {detail}
+                          </span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                    ))}
+                </div>
+              </div>
+            </motion.section>
           </div>
         </>
       )}
       {panel === "events" && (
         <>
           <div className="px-5 pb-2">
-            <h1 className="text-[20px] font-semibold">Local events</h1>
+            <h1 className="text-[20px] font-semibold">Events</h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
               Meet people through shared interests
             </p>
@@ -677,11 +650,11 @@ function NearbyPage() {
                       <div className="px-3 pt-3">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
-                          <span className="shrink-0 text-[11px] text-muted-foreground">
-                            {event.sample
-                              ? `${events.find((item) => item.id === event.id)?.interestedCount ?? 12} interested`
-                              : `${attendees.length} interested`}
-                          </span>
+                          {event.sample && (
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              Sample event
+                            </span>
+                          )}
                         </div>
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Clock3 className="h-3.5 w-3.5" />
@@ -707,21 +680,9 @@ function NearbyPage() {
                       )}
                       <div className="flex items-center gap-2 px-3 pt-3">
                         {event.sample ? (
-                          <>
-                            <div className="flex -space-x-2" aria-hidden="true">
-                              {people.slice(0, 4).map((person) => (
-                                <img
-                                  key={person.id}
-                                  src={photo(person, true)}
-                                  alt=""
-                                  className="h-7 w-7 rounded-full border-2 border-white object-cover"
-                                />
-                              ))}
-                            </div>
-                            <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-primary">
-                              +{events.find((item) => item.id === event.id)?.extraCount ?? 8}
-                            </span>
-                          </>
+                          <span className="text-[11px] text-muted-foreground">
+                            Preview a shared plan
+                          </span>
                         ) : attendees.length > 0 ? (
                           <>
                             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-primary">
@@ -840,26 +801,6 @@ function NearbyPage() {
           )}
         </DrawerContent>
       </Drawer>
-      {mixerOpen && (
-        <Suspense fallback={null}>
-          <SpeedDatingRoom
-            open={mixerOpen}
-            town={town}
-            userId={user?.id}
-            onClose={() => setMixerOpen(false)}
-          />
-        </Suspense>
-      )}
-      {randomFridayOpen && (
-        <Suspense fallback={null}>
-          <RandomFridayModal
-            open={randomFridayOpen}
-            town={town}
-            userId={user?.id}
-            onClose={() => setRandomFridayOpen(false)}
-          />
-        </Suspense>
-      )}
     </main>
   );
 }
@@ -993,7 +934,7 @@ function TownMap({
       ref={container}
       role="region"
       aria-label="Map of Namibia showing profiles by town"
-      className="namibia-map h-[310px] w-full bg-secondary"
+      className="namibia-map h-full w-full bg-secondary"
     />
   );
 }

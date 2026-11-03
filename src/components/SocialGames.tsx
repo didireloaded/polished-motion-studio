@@ -1,6 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Flame, Mic, Pause, Play, Sparkles, Zap } from "lucide-react";
 import { useEffect, useState } from "react";
+import {
+  castFeedPollVoteServerFn,
+  getMyFeedPollVotesServerFn,
+} from "@/lib/social-backend.functions";
 import { triggerHaptic } from "@/lib/icebreakers";
 import {
   buildTwoTruthsReply,
@@ -529,114 +533,141 @@ export function EmojiStoryDecodeCard({
   );
 }
 
+const PREVIEW_POLLS_KEY = "mutal-preview-completed-polls";
+
 export function HotTakeAndFlagPollHub({
   onAgreeWithTake,
+  userId,
+  town = "Windhoek",
 }: {
   onAgreeWithTake: (quipText: string) => void;
+  userId?: string;
+  town?: string;
 }) {
-  const [pollIndex, setPollIndex] = useState(0);
-  const [votes, setVotes] = useState<Record<string, "green" | "red">>({});
-  const poll = flagSwipePolls[pollIndex % flagSwipePolls.length]!;
-  const myVote = votes[poll.id];
+  const [completed, setCompleted] = useState<string[]>([]);
+  const [loading, setLoading] = useState(Boolean(userId));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    if (!userId) {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(PREVIEW_POLLS_KEY) ?? "[]");
+        if (Array.isArray(saved))
+          setCompleted(saved.filter((id): id is string => typeof id === "string"));
+      } catch {
+        // Browser storage is optional for sample polls.
+      }
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    void getMyFeedPollVotesServerFn()
+      .then((ids) => {
+        if (active) setCompleted(ids);
+      })
+      .catch(() => {
+        if (active) setError("Polls could not load. Try again later.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [userId]);
+
+  const pending = flagSwipePolls.filter((poll) => !completed.includes(poll.id));
+  const poll = pending[0];
   const hotTake = dailyHotTakePrompts[0]!;
+  const example = hotTake.sampleTakes[0]!;
+
+  const vote = async (choice: "green" | "red") => {
+    if (!poll || saving) return;
+    setSaving(true);
+    setError("");
+    if (userId) {
+      try {
+        const result = await castFeedPollVoteServerFn({ data: { pollId: poll.id, choice, town } });
+        if (!result.ok) throw new Error("Vote was not saved");
+      } catch {
+        setError("Your vote did not save. Please try again.");
+        setSaving(false);
+        return;
+      }
+    }
+    triggerHaptic(choice === "green" ? "like" : "pass");
+    const next = [...completed, poll.id];
+    setCompleted(next);
+    if (!userId) {
+      try {
+        sessionStorage.setItem(PREVIEW_POLLS_KEY, JSON.stringify(next));
+      } catch {
+        /* optional */
+      }
+    }
+    setSaving(false);
+  };
 
   return (
-    <div className="mx-5 mt-3 space-y-3">
-      {/* Red Flag / Green Flag Swipe Poll */}
-      <section
-        aria-label="Red Flag or Green Flag Swipe Poll"
-        className="rounded-2xl border border-border bg-card p-3.5 shadow-sm"
-      >
-        <div className="flex items-center justify-between">
-          <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-            <Flame className="h-3 w-3" />
-            Green Flag / Red Flag Poll
-          </span>
-          <button
-            type="button"
-            onClick={() => setPollIndex((i) => i + 1)}
-            className="text-[11px] font-semibold text-primary"
-          >
-            Next poll ({(pollIndex % flagSwipePolls.length) + 1}/{flagSwipePolls.length})
-          </button>
-        </div>
-        <p className="mt-2 text-xs font-semibold leading-5 text-foreground">“{poll.statement}”</p>
-        <div className="mt-2.5 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic("like");
-              setVotes((v) => ({ ...v, [poll.id]: "green" }));
-            }}
-            className={`h-9 rounded-full border text-xs font-semibold transition ${
-              myVote === "green"
-                ? "border-emerald-600 bg-emerald-600 text-white"
-                : "border-emerald-600/40 bg-emerald-50 text-emerald-900"
-            }`}
-          >
-            Green Flag
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic("pass");
-              setVotes((v) => ({ ...v, [poll.id]: "red" }));
-            }}
-            className={`h-9 rounded-full border text-xs font-semibold transition ${
-              myVote === "red"
-                ? "border-rose-600 bg-rose-600 text-white"
-                : "border-rose-600/40 bg-rose-50 text-rose-900"
-            }`}
-          >
-            Red Flag
-          </button>
-        </div>
-        {myVote && (
-          <p className="mt-2 text-center text-[11px] font-medium text-muted-foreground">
-            {myVote === "green" ? poll.greenFlagPct : 100 - poll.greenFlagPct}% of members in{" "}
-            {poll.town} agree with your call.
+    <div className="mx-5 mt-4 space-y-3">
+      {!loading && poll && (
+        <section
+          aria-label="Green or red flag poll"
+          className="rounded-2xl border border-border bg-white p-4"
+        >
+          <p className="text-[11px] font-medium text-muted-foreground">
+            Quick poll · {flagSwipePolls.length - pending.length + 1} of {flagSwipePolls.length}
           </p>
-        )}
-      </section>
-
-      {/* Hot Take of the Day */}
-      <section
-        aria-label="Hot Take of the Day"
-        className="rounded-2xl border border-primary/20 bg-accent/45 p-3.5"
-      >
-        <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-primary">
-          <Sparkles className="h-3 w-3" />
-          Hot Take of the Day
-        </span>
-        <p className="mt-1 text-xs font-semibold text-foreground">{hotTake.prompt}</p>
-        <div className="mt-2 space-y-2">
-          {hotTake.sampleTakes.map((take) => (
-            <div
-              key={take.author}
-              className="flex items-start justify-between gap-2 rounded-xl bg-white p-2.5"
+          <h2 className="mt-2 text-[15px] font-semibold leading-6 text-foreground">
+            {poll.statement}
+          </h2>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void vote("green")}
+              className="h-11 rounded-full border border-border bg-white text-sm font-medium text-foreground transition-colors hover:border-emerald-600 hover:text-emerald-700 active:scale-[0.98] disabled:opacity-50"
             >
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-foreground">
-                  {take.author} ·{" "}
-                  <span className="font-normal text-muted-foreground">{take.town}</span>
-                </p>
-                <p className="mt-0.5 text-xs leading-4 text-muted-foreground">“{take.quip}”</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic("like");
-                  onAgreeWithTake(
-                    `I agree with ${take.author.split(",")[0]}'s hot take: "${take.quip}"`,
-                  );
-                }}
-                className="shrink-0 rounded-full bg-secondary px-2.5 py-1 text-[10px] font-semibold text-primary hover:bg-primary hover:text-primary-foreground"
-              >
-                I agree!
-              </button>
-            </div>
-          ))}
-        </div>
+              Green flag
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => void vote("red")}
+              className="h-11 rounded-full border border-border bg-white text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary active:scale-[0.98] disabled:opacity-50"
+            >
+              Red flag
+            </button>
+          </div>
+          {!userId && (
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              Sample poll · votes stay on this device.
+            </p>
+          )}
+        </section>
+      )}
+      {error && (
+        <p role="status" className="text-xs text-primary">
+          {error}
+        </p>
+      )}
+      <section aria-label="Hot take" className="rounded-2xl border border-border bg-white p-4">
+        <p className="text-[11px] font-medium text-muted-foreground">Conversation starter</p>
+        <h2 className="mt-2 text-[15px] font-semibold leading-6 text-foreground">
+          {hotTake.prompt}
+        </h2>
+        <p className="mt-3 border-l-2 border-primary/30 pl-3 text-sm leading-5 text-muted-foreground">
+          “{example.quip}” <span className="text-[11px]">· Example</span>
+        </p>
+        <button
+          type="button"
+          onClick={() => onAgreeWithTake(`I agree: ${example.quip}`)}
+          className="mt-4 h-10 rounded-full bg-primary px-4 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
+        >
+          Agree and write a post
+        </button>
       </section>
     </div>
   );
