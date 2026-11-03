@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyTimeBoost,
   getRandomFridayState,
+  INSTANT_CHEMISTRY_BONUS_SECONDS,
   RANDOM_FRIDAY_DURATION_SECONDS,
+  randomFridayBinaryTapCards,
+  randomFridayDicePrompts,
   randomFridayElevatorLines,
+  REACTION_BOOST_SECONDS,
+  shouldUnblurMysteryPhoto,
 } from "./random-friday";
 
 describe("random-friday", () => {
@@ -36,5 +42,18 @@ describe("random-friday", () => {
     expect(state.daysUntil).toBe(2);
     expect(state.hoursUntil).toBe(12);
     expect(state.headline).toContain("Next Random Friday in 2 days, 12 hours");
+  });
+
+  it("handles Mystery Blur reveal, +15s Chemistry Bonus, +3s reaction boost, and Dice prompts", () => {
+    expect(shouldUnblurMysteryPhoto(25, 0)).toBe(false);
+    expect(shouldUnblurMysteryPhoto(25, 1)).toBe(true);
+    expect(shouldUnblurMysteryPhoto(15, 0)).toBe(true);
+
+    expect(applyTimeBoost(24, INSTANT_CHEMISTRY_BONUS_SECONDS)).toBe(39);
+    expect(applyTimeBoost(28, REACTION_BOOST_SECONDS)).toBe(31);
+    expect(applyTimeBoost(55, INSTANT_CHEMISTRY_BONUS_SECONDS, 60)).toBe(60);
+
+    expect(randomFridayDicePrompts.length).toBeGreaterThanOrEqual(3);
+    expect(randomFridayBinaryTapCards.length).toBeGreaterThanOrEqual(3);
   });
 });

@@ -12,12 +12,55 @@ export type RandomFridayWindowState = {
 };
 
 export const RANDOM_FRIDAY_DURATION_SECONDS = 30;
+export const INSTANT_CHEMISTRY_BONUS_SECONDS = 15;
+export const REACTION_BOOST_SECONDS = 3;
+export const MAX_REACTION_BOOSTS = 3;
 
 export const randomFridayElevatorLines = [
   "Tell me your favorite weekend spot in 5 seconds!",
   "Two truths, one lie—go!",
   "Voice memo pitch: best coffee + road trip playlist in Namibia!",
 ] as const;
+
+export const randomFridayDicePrompts = [
+  "Sell me on your city in 5 words.",
+  "Rank: Kapana, Biltong, or Pizza?",
+  "What are your plans tonight if we match?",
+  "Best road-trip song when driving to Swakopmund?",
+] as const;
+
+export const randomFridayBinaryTapCards = [
+  {
+    id: "hours",
+    prompt: "Agree or Fight: Your best energy is…",
+    left: "Early mornings",
+    right: "3 AM nights",
+  },
+  {
+    id: "weather",
+    prompt: "Agree or Fight: Better Namibian vibe…",
+    left: "Swakopmund mist",
+    right: "Windhoek sun",
+  },
+  {
+    id: "meetup",
+    prompt: "Agree or Fight: First meetup style…",
+    left: "Spontaneous coffee",
+    right: "Planned dinner",
+  },
+] as const;
+
+export function shouldUnblurMysteryPhoto(secondsLeft: number, myMessagesSent: number): boolean {
+  return myMessagesSent >= 1 || secondsLeft <= 15;
+}
+
+export function applyTimeBoost(
+  currentSeconds: number,
+  boostSeconds: number,
+  maxCap: number = 60,
+): number {
+  return Math.max(0, Math.min(maxCap, currentSeconds + boostSeconds));
+}
 
 export const randomFridayPartnerPrompts: Record<string, string> = {
   amara: "Convince me why our first coffee shouldn’t wait until next week.",
