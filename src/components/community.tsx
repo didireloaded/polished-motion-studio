@@ -38,6 +38,7 @@ export function ProfilePhoto({
   className?: string;
   priority?: boolean;
 }) {
+  const [loaded, setLoaded] = useState(false);
   const signedPhoto = useQuery({
     queryKey: ["signed-profile-photo", path],
     enabled: !!path && !src,
@@ -69,7 +70,8 @@ export function ProfilePhoto({
         alt={`${name}'s profile`}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
-        className={className}
+        onLoad={() => setLoaded(true)}
+        className={`transition-[filter,opacity] duration-300 ${loaded ? "blur-none opacity-100" : "blur-[2px] opacity-90"} ${className}`}
       />
     );
   }

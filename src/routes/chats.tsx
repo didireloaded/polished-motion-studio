@@ -265,6 +265,21 @@ function LiveChats({
   const [listRealtimeConnected, setListRealtimeConnected] = useState(false);
   const matchesQuery = useQuery({
     queryKey: ["matches", userId],
+    initialData: () => {
+      if (typeof window === "undefined") return undefined;
+      try {
+        const raw = window.localStorage.getItem(`mutal:matches:v1:${userId}`);
+        return raw
+          ? (JSON.parse(raw) as {
+              matches: MatchRow[];
+              profiles: ChatProfile[];
+              messages: MessageRow[];
+            })
+          : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
@@ -274,8 +289,21 @@ function LiveChats({
       if (error) throw error;
       const matches = data as MatchRow[];
       const counterpartIds = matches.map((m) => (m.user_a === userId ? m.user_b : m.user_a));
-      if (!counterpartIds.length)
-        return { matches, profiles: [] as ChatProfile[], messages: [] as MessageRow[] };
+      if (!counterpartIds.length) {
+        const emptyPayload = {
+          matches,
+          profiles: [] as ChatProfile[],
+          messages: [] as MessageRow[],
+        };
+        if (typeof window !== "undefined") {
+          try {
+            window.localStorage.setItem(`mutal:matches:v1:${userId}`, JSON.stringify(emptyPayload));
+          } catch {
+            // ignore storage quota errors
+          }
+        }
+        return emptyPayload;
+      }
       const [profiles, messages] = await Promise.all([
         supabase
           .from("profiles")
@@ -293,11 +321,19 @@ function LiveChats({
       ]);
       if (profiles.error) throw profiles.error;
       if (messages.error) throw messages.error;
-      return {
+      const payload = {
         matches,
         profiles: profiles.data as ChatProfile[],
         messages: messages.data as MessageRow[],
       };
+      if (typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(`mutal:matches:v1:${userId}`, JSON.stringify(payload));
+        } catch {
+          // ignore storage quota errors
+        }
+      }
+      return payload;
     },
     refetchInterval: listRealtimeConnected ? false : 30000,
   });

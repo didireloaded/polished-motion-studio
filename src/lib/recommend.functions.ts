@@ -60,8 +60,10 @@ export const getRecommendations = createServerFn({ method: "POST" })
       .slice(0, 40);
     if (!eligible.length) return { source: "none", items: [] };
 
+    const INITIAL_DECK_LIMIT = 15;
+
     const hydrate = (recs: Recommendation[]) =>
-      recs.map((r) => {
+      recs.slice(0, INITIAL_DECK_LIMIT).map((r) => {
         const p = eligible.find((c) => c.id === r.id)!;
         return {
           ...r,
