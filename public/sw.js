@@ -1,5 +1,36 @@
+const STATIC_CACHE_NAME = "mutal-static-v1";
+const STATIC_ASSET_PREFIXES = ["/brand/", "/icons/", "/design/", "/editorial/"];
+
 self.addEventListener("install", (event) => event.waitUntil(self.skipWaiting()));
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+
+self.addEventListener("fetch", (event) => {
+  const { request } = event;
+  if (request.method !== "GET") return;
+  try {
+    const url = new URL(request.url);
+    if (url.origin !== self.location.origin) return;
+    const isStaticAsset = STATIC_ASSET_PREFIXES.some((prefix) => url.pathname.startsWith(prefix));
+    if (!isStaticAsset) return;
+
+    event.respondWith(
+      caches.open(STATIC_CACHE_NAME).then(async (cache) => {
+        const cached = await cache.match(request);
+        const networkPromise = fetch(request)
+          .then((response) => {
+            if (response && response.ok) {
+              void cache.put(request, response.clone());
+            }
+            return response;
+          })
+          .catch(() => cached);
+        return cached || networkPromise;
+      }),
+    );
+  } catch {
+    // ignore malformed URLs
+  }
+});
 
 self.addEventListener("push", (event) => {
   const kind = (() => {

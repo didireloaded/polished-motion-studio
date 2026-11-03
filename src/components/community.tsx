@@ -23,31 +23,56 @@ export function DemoNotice() {
   );
 }
 
+const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
+
 export function ProfilePhoto({
   name,
   src,
   path,
   className = "",
+  priority = false,
 }: {
   name: string;
   src?: string | undefined;
   path?: string | undefined;
   className?: string;
+  priority?: boolean;
 }) {
   const signedPhoto = useQuery({
     queryKey: ["signed-profile-photo", path],
-    enabled: !!path,
+    enabled: !!path && !src,
     staleTime: 50 * 60_000,
+    gcTime: 55 * 60_000,
     queryFn: async () => {
+      const cached = path ? signedUrlCache.get(path) : undefined;
+      if (cached && cached.expiresAt > Date.now()) {
+        return cached.url;
+      }
       const { data, error } = await supabase.storage
         .from("profile-photos")
         .createSignedUrl(path!, 60 * 60);
       if (error) throw error;
+      if (path) {
+        signedUrlCache.set(path, {
+          url: data.signedUrl,
+          expiresAt: Date.now() + 50 * 60_000,
+        });
+      }
       return data.signedUrl;
     },
   });
   const image = src ?? signedPhoto.data;
-  if (image) return <img src={image} alt={`${name}'s profile`} className={className} />;
+  if (image) {
+    return (
+      <img
+        src={image}
+        alt={`${name}'s profile`}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        className={className}
+      />
+    );
+  }
   return (
     <div
       aria-label={`${name}'s profile photo`}

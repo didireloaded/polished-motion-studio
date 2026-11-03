@@ -10,7 +10,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Drawer,
@@ -28,9 +28,9 @@ import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
-import { MatchCelebrationModal, type CelebrationMatch } from "@/components/MatchCelebrationModal";
-import { RandomFridayModal } from "@/components/RandomFridayModal";
+import type { CelebrationMatch } from "@/components/MatchCelebrationModal";
 import { ElevatorPitchCard, TwoTruthsCard } from "@/components/SocialGames";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { sendMatchAlertEmail } from "@/lib/email.functions";
 import {
@@ -39,6 +39,17 @@ import {
   getPersonThisOrThatAnswers,
   getTwoTruthsForPerson,
 } from "@/lib/social-games";
+
+const MatchCelebrationModal = lazy(() =>
+  import("@/components/MatchCelebrationModal").then((m) => ({
+    default: m.MatchCelebrationModal,
+  })),
+);
+const RandomFridayModal = lazy(() =>
+  import("@/components/RandomFridayModal").then((m) => ({
+    default: m.RandomFridayModal,
+  })),
+);
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -240,18 +251,20 @@ function Home() {
           <BrandLogo />
         </Link>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic("like");
-              setRandomFridayOpen(true);
-            }}
-            aria-label="Open Random Friday 30-second live sprint"
-            className="inline-flex h-8 items-center gap-1 rounded-full bg-accent px-2.5 text-[11px] font-semibold text-primary transition active:scale-95"
-          >
-            <Zap className="h-3.5 w-3.5 fill-current" />
-            Random Friday
-          </button>
+          {isFeatureEnabled("randomFriday") && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("like");
+                setRandomFridayOpen(true);
+              }}
+              aria-label="Open Random Friday 30-second live sprint"
+              className="inline-flex h-8 items-center gap-1 rounded-full bg-accent px-2.5 text-[11px] font-semibold text-primary transition active:scale-95"
+            >
+              <Zap className="h-3.5 w-3.5 fill-current" />
+              Random Friday
+            </button>
+          )}
           {last && (
             <IconButton
               label="Undo last pass"
@@ -479,13 +492,24 @@ function Home() {
         </DrawerContent>
       </Drawer>
 
-      <MatchCelebrationModal match={celebrationMatch} onClose={() => setCelebrationMatch(null)} />
-      <RandomFridayModal
-        open={randomFridayOpen}
-        town={town}
-        userId={user?.id}
-        onClose={() => setRandomFridayOpen(false)}
-      />
+      {celebrationMatch && (
+        <Suspense fallback={null}>
+          <MatchCelebrationModal
+            match={celebrationMatch}
+            onClose={() => setCelebrationMatch(null)}
+          />
+        </Suspense>
+      )}
+      {randomFridayOpen && (
+        <Suspense fallback={null}>
+          <RandomFridayModal
+            open={randomFridayOpen}
+            town={town}
+            userId={user?.id}
+            onClose={() => setRandomFridayOpen(false)}
+          />
+        </Suspense>
+      )}
 
       <AnimatePresence>
         {notice && (

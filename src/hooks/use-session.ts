@@ -28,10 +28,22 @@ export function useSession() {
   return { session, user: session?.user ?? null, ready };
 }
 
+const PROFILE_CACHE_PREFIX = "mutal:profile:v1:";
+
 export function useMyProfile(userId: string | undefined) {
   return useQuery({
     queryKey: ["my-profile", userId],
     enabled: !!userId,
+    staleTime: 2 * 60_000,
+    initialData: () => {
+      if (!userId || typeof window === "undefined") return undefined;
+      try {
+        const raw = window.localStorage.getItem(`${PROFILE_CACHE_PREFIX}${userId}`);
+        return raw ? JSON.parse(raw) : undefined;
+      } catch {
+        return undefined;
+      }
+    },
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -39,6 +51,13 @@ export function useMyProfile(userId: string | undefined) {
         .eq("id", userId!)
         .maybeSingle();
       if (error) throw error;
+      if (data && typeof window !== "undefined") {
+        try {
+          window.localStorage.setItem(`${PROFILE_CACHE_PREFIX}${userId}`, JSON.stringify(data));
+        } catch {
+          // ignore storage quota errors
+        }
+      }
       return data;
     },
   });

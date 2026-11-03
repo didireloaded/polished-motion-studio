@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   AlertCircle,
@@ -19,6 +19,7 @@ import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { captureProductEvent } from "@/lib/telemetry";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { suggestDatePlan } from "@/lib/date-suggestion.functions";
@@ -33,7 +34,14 @@ import {
   getFirstDateDilemmaForTown,
   getTwoTruthsForPerson,
 } from "@/lib/social-games";
-import { ConversationOpenerStudio } from "@/components/ConversationOpenerStudio";
+
+const ConversationOpenerStudio = lazy(() =>
+  import("@/components/ConversationOpenerStudio").then((m) => ({
+    default: m.ConversationOpenerStudio,
+  })),
+);
+
+const MESSAGE_PAGE_SIZE = 25;
 
 export const Route = createFileRoute("/chats")({
   validateSearch: (
@@ -516,10 +524,10 @@ function LiveThread({
         .select("id,match_id,sender_id,body,created_at")
         .eq("match_id", match.id)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(MESSAGE_PAGE_SIZE);
       if (error) throw error;
       const rows = (data ?? []) as MessageRow[];
-      setHasOlder(rows.length === 50);
+      setHasOlder(rows.length === MESSAGE_PAGE_SIZE);
       return rows;
     },
     refetchInterval: threadRealtimeConnected ? false : 12000,
@@ -602,11 +610,11 @@ function LiveThread({
         .eq("match_id", match.id)
         .lt("created_at", oldest.created_at)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(MESSAGE_PAGE_SIZE);
       if (error) throw error;
       const rows = (data ?? []) as MessageRow[];
       setOlder((current) => [...current, ...rows]);
-      setHasOlder(rows.length === 50);
+      setHasOlder(rows.length === MESSAGE_PAGE_SIZE);
     } catch {
       setNotice("We couldn't load earlier messages.");
     } finally {
@@ -777,13 +785,15 @@ function LiveThread({
           <p className="truncate font-semibold">{person.display_name}</p>
           <p className="text-xs text-muted-foreground">{person.town}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowOpenerStudio((v) => !v)}
-          className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary"
-        >
-          <Wand2 className="h-3 w-3" /> AI Opener
-        </button>
+        {isFeatureEnabled("aiOpenerStudio") && (
+          <button
+            type="button"
+            onClick={() => setShowOpenerStudio((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary"
+          >
+            <Wand2 className="h-3 w-3" /> AI Opener
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowPrompts((v) => !v)}
@@ -794,24 +804,26 @@ function LiveThread({
       </header>
       <AnimatePresence>
         {showOpenerStudio && (
-          <ConversationOpenerStudio
-            matchId={match.id}
-            matchName={person.display_name}
-            profile={{
-              town: person.town ?? "Windhoek",
-              intent: person.intent ?? "A relationship",
-              tags: person.tags ?? [],
-              bio: person.bio ?? "",
-              seeking: "",
-            }}
-            live={true}
-            onUseOpener={(openerText) => {
-              setText(openerText);
-              setShowOpenerStudio(false);
-              inputRef.current?.focus();
-            }}
-            onClose={() => setShowOpenerStudio(false)}
-          />
+          <Suspense fallback={null}>
+            <ConversationOpenerStudio
+              matchId={match.id}
+              matchName={person.display_name}
+              profile={{
+                town: person.town ?? "Windhoek",
+                intent: person.intent ?? "A relationship",
+                tags: person.tags ?? [],
+                bio: person.bio ?? "",
+                seeking: "",
+              }}
+              live={true}
+              onUseOpener={(openerText) => {
+                setText(openerText);
+                setShowOpenerStudio(false);
+                inputRef.current?.focus();
+              }}
+              onClose={() => setShowOpenerStudio(false)}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
       <div className="flex-1 space-y-1.5 overflow-y-auto px-4 py-5">
@@ -1293,14 +1305,16 @@ function Thread({
           <p className="font-semibold">{p.name}</p>
           <p className="text-xs text-muted-foreground">{p.town}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowOpenerStudio((v) => !v)}
-          className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-primary"
-        >
-          <Wand2 className="h-3.5 w-3.5" />
-          AI Opener
-        </button>
+        {isFeatureEnabled("aiOpenerStudio") && (
+          <button
+            type="button"
+            onClick={() => setShowOpenerStudio((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-primary"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            AI Opener
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setShowTwoTruths((v) => !v)}
@@ -1311,24 +1325,26 @@ function Thread({
       </header>
       <AnimatePresence>
         {showOpenerStudio && (
-          <ConversationOpenerStudio
-            matchId={p.id}
-            matchName={p.name}
-            profile={{
-              town: p.town,
-              intent: p.intent,
-              tags: p.tags,
-              bio: p.bio,
-              seeking: p.answer,
-            }}
-            live={false}
-            onUseOpener={(openerText) => {
-              setText(openerText);
-              setShowOpenerStudio(false);
-              inputRef.current?.focus();
-            }}
-            onClose={() => setShowOpenerStudio(false)}
-          />
+          <Suspense fallback={null}>
+            <ConversationOpenerStudio
+              matchId={p.id}
+              matchName={p.name}
+              profile={{
+                town: p.town,
+                intent: p.intent,
+                tags: p.tags,
+                bio: p.bio,
+                seeking: p.answer,
+              }}
+              live={false}
+              onUseOpener={(openerText) => {
+                setText(openerText);
+                setShowOpenerStudio(false);
+                inputRef.current?.focus();
+              }}
+              onClose={() => setShowOpenerStudio(false)}
+            />
+          </Suspense>
         )}
       </AnimatePresence>
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">

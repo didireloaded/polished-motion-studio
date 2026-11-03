@@ -11,7 +11,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { events, people, photo, towns, update, useStore } from "@/lib/namlink";
 import { useSession } from "@/hooks/use-session";
@@ -23,15 +23,26 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
 import { captureProductEvent } from "@/lib/telemetry";
+import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { ThisOrThatRapidRadar } from "@/components/SocialGames";
-import { SpeedDatingRoom } from "@/components/SpeedDatingRoom";
-import { RandomFridayBanner, RandomFridayModal } from "@/components/RandomFridayModal";
+import { RandomFridayBanner } from "@/components/RandomFridayModal";
 import {
   computeVibeAlignment,
   getNextMixerWindow,
   getPersonThisOrThatAnswers,
 } from "@/lib/social-games";
+
+const SpeedDatingRoom = lazy(() =>
+  import("@/components/SpeedDatingRoom").then((m) => ({
+    default: m.SpeedDatingRoom,
+  })),
+);
+const RandomFridayModal = lazy(() =>
+  import("@/components/RandomFridayModal").then((m) => ({
+    default: m.RandomFridayModal,
+  })),
+);
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
@@ -445,32 +456,36 @@ function NearbyPage() {
               </div>
             )}
 
-            <RandomFridayBanner onOpen={() => setRandomFridayOpen(true)} />
+            {isFeatureEnabled("randomFriday") && (
+              <RandomFridayBanner onOpen={() => setRandomFridayOpen(true)} />
+            )}
 
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic("match");
-                setMixerOpen(true);
-              }}
-              className="flex w-full items-center gap-3 border-t border-border py-3 text-left"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/12 text-primary">
-                <Clock3 className="h-[18px] w-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-1.5 text-[13px] font-semibold">
-                  Speed Dating Live Lounge
-                  <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-semibold text-primary-foreground">
-                    3m rounds
+            {isFeatureEnabled("speedDatingMixer") && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("match");
+                  setMixerOpen(true);
+                }}
+                className="flex w-full items-center gap-3 border-t border-border py-3 text-left"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/12 text-primary">
+                  <Clock3 className="h-[18px] w-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-[13px] font-semibold">
+                    Speed Dating Live Lounge
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-semibold text-primary-foreground">
+                      3m rounds
+                    </span>
+                  </span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {mixerWindow.label}
                   </span>
                 </span>
-                <span className="block truncate text-[11px] text-muted-foreground">
-                  {mixerWindow.label}
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
 
             <button
               type="button"
@@ -804,18 +819,26 @@ function NearbyPage() {
           )}
         </DrawerContent>
       </Drawer>
-      <SpeedDatingRoom
-        open={mixerOpen}
-        town={town}
-        userId={user?.id}
-        onClose={() => setMixerOpen(false)}
-      />
-      <RandomFridayModal
-        open={randomFridayOpen}
-        town={town}
-        userId={user?.id}
-        onClose={() => setRandomFridayOpen(false)}
-      />
+      {mixerOpen && (
+        <Suspense fallback={null}>
+          <SpeedDatingRoom
+            open={mixerOpen}
+            town={town}
+            userId={user?.id}
+            onClose={() => setMixerOpen(false)}
+          />
+        </Suspense>
+      )}
+      {randomFridayOpen && (
+        <Suspense fallback={null}>
+          <RandomFridayModal
+            open={randomFridayOpen}
+            town={town}
+            userId={user?.id}
+            onClose={() => setRandomFridayOpen(false)}
+          />
+        </Suspense>
+      )}
     </main>
   );
 }
