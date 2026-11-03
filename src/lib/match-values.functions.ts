@@ -123,7 +123,13 @@ export const rankMatchesByValues = createServerFn({ method: "POST" })
       return { source: "ai", items: hydrate([...ranked, ...missing]) };
     } catch (err) {
       const e = err as { name?: string; code?: string; httpStatus?: number; message?: string };
-      console.error("Values ranking failed", e.name, e.code ?? "", e.httpStatus ?? "", e.message ?? "");
+      console.error(
+        "Values ranking failed",
+        e.name,
+        e.code ?? "",
+        e.httpStatus ?? "",
+        e.message ?? "",
+      );
       return fallback(
         e.name === "PaymentRequiredError"
           ? "Personalized explanations are paused right now. Here's a simple ranking instead."

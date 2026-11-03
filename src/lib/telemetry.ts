@@ -37,9 +37,15 @@ export async function setAnalyticsConsent(allowed: boolean) {
   else if (analyticsPromise) (await analyticsPromise)?.opt_out_capturing();
 }
 
-export async function captureProductEvent(
-  event: "like_sent" | "event_interest" | "date_confirmed",
-) {
+export type ProductEventName =
+  | "profile_completed"
+  | "like_sent"
+  | "match_created"
+  | "first_message_sent"
+  | "event_interest"
+  | "date_confirmed";
+
+export async function captureProductEvent(event: ProductEventName) {
   try {
     const client = await analytics();
     if (client && analyticsConsent()) client.capture(event);

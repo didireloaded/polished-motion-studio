@@ -16,7 +16,8 @@ export const Route = createFileRoute("/match-values")({
       { title: "What you value — Mutal" },
       {
         name: "description",
-        content: "Describe what matters to you and see your matches ranked with personal explanations.",
+        content:
+          "Describe what matters to you and see your matches ranked with personal explanations.",
       },
       { property: "og:title", content: "What you value — Mutal" },
       {
@@ -30,7 +31,14 @@ export const Route = createFileRoute("/match-values")({
   component: MatchValues,
 });
 
-const IDEAS = ["Kindness", "Faith", "Loves the outdoors", "Wants family", "Ambitious", "Good humour"];
+const IDEAS = [
+  "Kindness",
+  "Faith",
+  "Loves the outdoors",
+  "Wants family",
+  "Ambitious",
+  "Good humour",
+];
 
 function MatchValues() {
   const { user, ready } = useSession();
@@ -71,11 +79,20 @@ function MatchValues() {
   };
 
   const addIdea = (idea: string) =>
-    setValues((v) => (v.toLowerCase().includes(idea.toLowerCase()) ? v : v ? `${v}, ${idea}` : idea).slice(0, MAX_VALUES_LENGTH));
+    setValues((v) =>
+      (v.toLowerCase().includes(idea.toLowerCase()) ? v : v ? `${v}, ${idea}` : idea).slice(
+        0,
+        MAX_VALUES_LENGTH,
+      ),
+    );
 
   return (
     <div className="mx-auto min-h-screen max-w-md px-5 pb-32 pt-6">
-      <Link to="/chats" search={{ matchId: undefined }} className="inline-flex items-center gap-1 text-sm text-muted-foreground">
+      <Link
+        to="/chats"
+        search={{ matchId: undefined }}
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground"
+      >
         <ArrowLeft className="h-4 w-4" /> Chats
       </Link>
       <motion.h1

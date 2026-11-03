@@ -20,6 +20,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhoto } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer, VoiceIntroRecorder } from "@/components/voice-intro";
+import { namibianPrompts, triggerHaptic } from "@/lib/icebreakers";
+import { sendWelcomeEmail } from "@/lib/email.functions";
+import { captureProductEvent } from "@/lib/telemetry";
 
 const choices = [
   { id: "weekend", prompt: "A free Saturday", options: ["A road trip", "A slow morning"] },
@@ -123,8 +126,9 @@ function You() {
 
   if (!ready)
     return (
-      <main className="mx-auto max-w-md px-5 py-10 text-sm text-muted-foreground">
-        Loading your account…
+      <main className="mx-auto max-w-md pb-28">
+        <PageHeader title="Mutal" />
+        <YouProfileSkeleton label="Loading your account…" />
       </main>
     );
   if (user)
@@ -727,7 +731,7 @@ function LiveProfile({
     <main className="mx-auto max-w-md pb-28">
       <PageHeader title="Mutal" />
       {loading ? (
-        <p className="px-5 py-8 text-sm text-muted-foreground">Loading your profile…</p>
+        <YouProfileSkeleton label="Loading your profile…" />
       ) : (
         <>
           {profile && (
@@ -1322,6 +1326,24 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
             />
           </Field>
           <Field label="A little about you">
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {namibianPrompts.slice(0, 4).map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() =>
+                    setBio((current) =>
+                      current.includes(prompt)
+                        ? current
+                        : `${current ? `${current.trim()} ` : ""}${prompt}: `,
+                    )
+                  }
+                  className="rounded-full border border-border bg-secondary/60 px-2.5 py-1 text-[11px] text-muted-foreground transition hover:border-primary/40 hover:text-foreground"
+                >
+                  + {prompt}
+                </button>
+              ))}
+            </div>
             <textarea
               className="input resize-none"
               rows={3}
@@ -1411,15 +1433,22 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
             busy ||
             (step === 0 && (name.trim().length < 2 || !birthDate || age < 18 || age > 99 || !adult))
           }
-          onClick={() =>
-            step === 0
-              ? setStep(1)
-              : step === 1
-                ? void saveBasics()
-                : step === 2
-                  ? setStep(3)
-                  : onComplete()
-          }
+          onClick={() => {
+            if (step === 0) {
+              setStep(1);
+            } else if (step === 1) {
+              void saveBasics();
+            } else if (step === 2) {
+              setStep(3);
+            } else {
+              triggerHaptic("match");
+              void captureProductEvent("profile_completed");
+              void sendWelcomeEmail({
+                data: { displayName: name.trim(), town },
+              }).catch(() => undefined);
+              onComplete();
+            }
+          }}
           className="h-12 w-full rounded-full bg-primary text-sm font-semibold text-white disabled:opacity-50"
         >
           {busy ? "Saving…" : step === 3 ? "Finish setup" : "Continue"}
@@ -1431,6 +1460,27 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
         )}
       </div>
     </main>
+  );
+}
+
+function YouProfileSkeleton({ label }: { label: string }) {
+  return (
+    <div className="mx-5 space-y-3" aria-busy="true">
+      <p className="sr-only">{label}</p>
+      <div className="overflow-hidden rounded-[15px] border border-border bg-white shadow-float">
+        <div className="h-[155px] w-full animate-pulse bg-secondary" />
+        <div className="space-y-2.5 p-3">
+          <div className="h-5 w-36 animate-pulse rounded-full bg-secondary" />
+          <div className="h-3.5 w-24 animate-pulse rounded-full bg-secondary/80" />
+          <div className="h-3.5 w-full animate-pulse rounded-full bg-secondary/70" />
+          <div className="h-3.5 w-3/4 animate-pulse rounded-full bg-secondary/60" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <div className="h-9 flex-1 animate-pulse rounded-full bg-secondary" />
+        <div className="h-9 flex-1 animate-pulse rounded-full bg-secondary" />
+      </div>
+    </div>
   );
 }
 

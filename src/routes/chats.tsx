@@ -3,12 +3,14 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
+  AlertCircle,
   ArrowLeft,
   CalendarDays,
   Check,
+  Clock3,
   MapPin,
-  Send,
   MessagesSquare,
+  Send,
   Sparkles,
 } from "lucide-react";
 import { people, photo, update, useStore, timeAgo } from "@/lib/namlink";
@@ -19,10 +21,14 @@ import { captureProductEvent } from "@/lib/telemetry";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { suggestDatePlan } from "@/lib/date-suggestion.functions";
+import { generateIcebreakers, localDateSpots, triggerHaptic } from "@/lib/icebreakers";
 
 export const Route = createFileRoute("/chats")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { matchId: string | undefined; draft?: string | undefined } => ({
     matchId: typeof search["matchId"] === "string" ? search["matchId"] : undefined,
+    ...(typeof search["draft"] === "string" ? { draft: search["draft"] } : {}),
   }),
   head: () => ({
     meta: [
@@ -38,19 +44,30 @@ export const Route = createFileRoute("/chats")({
 function Chats() {
   const s = useStore();
   const { user, ready } = useSession();
-  const { matchId } = Route.useSearch();
-  const [openId, setOpenId] = useState<string | null>(null);
+  const { matchId, draft } = Route.useSearch();
+  const [openId, setOpenId] = useState<string | null>(matchId ?? null);
+  useEffect(() => {
+    if (matchId) setOpenId(matchId);
+  }, [matchId]);
   const matches = people.filter((p) => s.matches.includes(p.id));
   const list = matches.length ? matches : [people[0]!, people[5]!, people[1]!, people[2]!];
-  const person = list.find((p) => p.id === openId);
+  const person = list.find((p) => p.id === openId) ?? people.find((p) => p.id === openId);
 
   if (!ready)
     return (
-      <main className="mx-auto max-w-md px-5 py-10 text-sm text-muted-foreground">Loading…</main>
+      <main className="mx-auto max-w-md pb-28">
+        <PageHeader title="Mutal" />
+        <ChatsListSkeleton />
+      </main>
     );
   if (user)
     return (
-      <LiveChats key={user.id} userId={user.id} {...(matchId ? { initialMatchId: matchId } : {})} />
+      <LiveChats
+        key={user.id}
+        userId={user.id}
+        {...(matchId ? { initialMatchId: matchId } : {})}
+        {...(draft ? { initialDraft: draft } : {})}
+      />
     );
 
   return (
@@ -160,7 +177,12 @@ function Chats() {
             )}
           </motion.div>
         ) : (
-          <Thread key={person.id} id={person.id} onBack={() => setOpenId(null)} />
+          <Thread
+            key={person.id}
+            id={person.id}
+            {...(draft ? { initialDraft: draft } : {})}
+            onBack={() => setOpenId(null)}
+          />
         )}
       </AnimatePresence>
     </main>
@@ -188,6 +210,12 @@ type MessageRow = {
   body: string;
   created_at: string;
 };
+type PendingMessage = {
+  id: string;
+  body: string;
+  created_at: string;
+  status: "sending" | "failed";
+};
 type ChatProfile = {
   id: string;
   display_name: string;
@@ -200,9 +228,20 @@ type ChatProfile = {
   photo_paths: string[];
 };
 
-function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?: string }) {
+function LiveChats({
+  userId,
+  initialMatchId,
+  initialDraft,
+}: {
+  userId: string;
+  initialMatchId?: string;
+  initialDraft?: string;
+}) {
   const client = useQueryClient();
   const [openMatchId, setOpenMatchId] = useState<string | null>(initialMatchId ?? null);
+  useEffect(() => {
+    if (initialMatchId) setOpenMatchId(initialMatchId);
+  }, [initialMatchId]);
   const [listRealtimeConnected, setListRealtimeConnected] = useState(false);
   const matchesQuery = useQuery({
     queryKey: ["matches", userId],
@@ -268,7 +307,6 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
       : openMatch.user_a
     : null;
   const person = data?.profiles.find((profile) => profile.id === otherId) ?? null;
-  const messages = data?.messages ?? [];
   const refresh = () => {
     void client.invalidateQueries({ queryKey: ["matches", userId] });
   };
@@ -279,9 +317,7 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
         <>
           <PageHeader title="Mutal" />
           {matchesQuery.isLoading ? (
-            <p className="px-5 py-8 text-center text-sm text-muted-foreground">
-              Loading conversations…
-            </p>
+            <ChatsListSkeleton />
           ) : !data?.matches.length ? (
             <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
               <div className="rounded-full bg-primary/15 p-4 text-primary">
@@ -377,6 +413,7 @@ function LiveChats({ userId, initialMatchId }: { userId: string; initialMatchId?
           userId={userId}
           match={openMatch}
           person={person}
+          {...(initialDraft ? { initialDraft } : {})}
           onBack={() => setOpenMatchId(null)}
           onBlocked={() => {
             setOpenMatchId(null);
@@ -401,17 +438,22 @@ function LiveThread({
   userId,
   match,
   person,
+  initialDraft,
   onBack,
   onBlocked,
 }: {
   userId: string;
   match: MatchRow;
   person: ChatProfile;
+  initialDraft?: string;
   onBack: () => void;
   onBlocked: () => void;
 }) {
   const client = useQueryClient();
-  const [text, setText] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [text, setText] = useState(initialDraft ?? "");
+  const [pending, setPending] = useState<PendingMessage[]>([]);
+  const [showPrompts, setShowPrompts] = useState(false);
   const [older, setOlder] = useState<MessageRow[]>([]);
   const [hasOlder, setHasOlder] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
@@ -429,6 +471,16 @@ function LiveThread({
   const [suggestingDate, setSuggestingDate] = useState(false);
   const [suggestionReason, setSuggestionReason] = useState("");
   const [threadRealtimeConnected, setThreadRealtimeConnected] = useState(false);
+
+  const icebreakers = generateIcebreakers({
+    name: person.display_name,
+    town: person.town,
+    tags: person.tags,
+    intent: person.intent,
+    bio: person.bio,
+  });
+  const curatedSpots = localDateSpots[town] ?? localDateSpots["Windhoek"] ?? [];
+
   const datePlanQuery = useQuery({
     queryKey: ["date-plan", match.id],
     queryFn: async () => {
@@ -481,23 +533,44 @@ function LiveThread({
     };
   }, [client, match.id, userId]);
 
-  const send = async () => {
-    const body = text.trim();
+  const allMessages = [...older, ...(messageQuery.data ?? [])].sort((a, b) =>
+    a.created_at.localeCompare(b.created_at),
+  );
+
+  const sendBody = async (bodyText: string, existingTempId?: string) => {
+    const body = bodyText.trim();
     if (!body || body.length > 1000) return;
     setNotice("");
+    triggerHaptic(10);
+    const tempId = existingTempId ?? `temp-${crypto.randomUUID()}`;
+    const nowIso = new Date().toISOString();
+    const isFirstMessage = allMessages.length === 0;
+
+    setPending((prev) =>
+      existingTempId
+        ? prev.map((m) => (m.id === existingTempId ? { ...m, status: "sending" } : m))
+        : [...prev, { id: tempId, body, created_at: nowIso, status: "sending" }],
+    );
+    if (!existingTempId) {
+      setText("");
+      setShowPrompts(false);
+    }
+
     const { error } = await supabase
       .from("messages")
       .insert({ match_id: match.id, sender_id: userId, body });
     if (error) {
+      setPending((prev) => prev.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m)));
       setNotice(
         error.code === "P0001"
           ? "Please wait a moment before sending another message."
-          : "This conversation is unavailable. Refresh and try again.",
+          : "Message couldn't be delivered. Tap retry on the bubble.",
       );
       return;
     }
-    setText("");
+    if (isFirstMessage) void captureProductEvent("first_message_sent");
     await client.invalidateQueries({ queryKey: ["messages", match.id] });
+    setPending((prev) => prev.filter((m) => m.id !== tempId));
     void client.invalidateQueries({ queryKey: ["matches", userId] });
   };
 
@@ -527,9 +600,6 @@ function LiveThread({
       setLoadingOlder(false);
     }
   };
-  const allMessages = [...older, ...(messageQuery.data ?? [])].sort((a, b) =>
-    a.created_at.localeCompare(b.created_at),
-  );
   const shared = person.tags ?? [];
   const datePlan = datePlanQuery.data;
   const amUserA = userId === match.user_a;
@@ -668,6 +738,9 @@ function LiveThread({
     if (!myConfirmed && theirConfirmed) void captureProductEvent("date_confirmed");
   };
 
+  const showIcebreakers =
+    (!messageQuery.isLoading && allMessages.length === 0 && pending.length === 0) || showPrompts;
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 24 }}
@@ -691,8 +764,15 @@ function LiveThread({
           <p className="truncate font-semibold">{person.display_name}</p>
           <p className="text-xs text-muted-foreground">{person.town}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowPrompts((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-primary"
+        >
+          <Sparkles className="h-3 w-3" /> Icebreakers
+        </button>
       </header>
-      <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
+      <div className="flex-1 space-y-1.5 overflow-y-auto px-4 py-5">
         {hasOlder && (
           <button
             onClick={() => void loadOlder()}
@@ -778,6 +858,29 @@ function LiveThread({
               onSubmit={(event) => void savePlan(event)}
               className="mt-4 space-y-3 border-t border-border pt-4"
             >
+              {curatedSpots.length > 0 && (
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold text-muted-foreground">
+                    Local date spots in {town}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {curatedSpots.map((spot) => (
+                      <button
+                        key={spot.venue}
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic(8);
+                          setActivity(spot.activity);
+                          setVenueName(spot.venue);
+                        }}
+                        className="rounded-full border border-border bg-secondary/70 px-3 py-1 text-xs font-medium transition-colors hover:border-primary/40 hover:bg-primary/5"
+                      >
+                        {spot.venue}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="space-y-2 rounded-xl bg-secondary/60 p-3">
                 <p className="text-sm font-semibold">Find a date idea</p>
                 <p className="text-xs text-muted-foreground">
@@ -898,20 +1001,66 @@ function LiveThread({
           )}
         </section>
         {messageQuery.isLoading ? (
-          <p className="text-center text-sm text-muted-foreground">Loading messages…</p>
+          <MessagesSkeleton />
         ) : (
-          allMessages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.sender_id === userId ? "justify-end" : "justify-start"}`}
-            >
-              <p
-                className={`max-w-[78%] rounded-3xl px-4 py-2.5 text-[15px] ${message.sender_id === userId ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-card"}`}
-              >
-                {message.body}
-              </p>
-            </div>
-          ))
+          <>
+            {allMessages.map((message, index) => {
+              const mine = message.sender_id === userId;
+              const prev = index > 0 ? allMessages[index - 1] : undefined;
+              const grouped =
+                !!prev &&
+                prev.sender_id === message.sender_id &&
+                Math.abs(
+                  new Date(message.created_at).getTime() - new Date(prev.created_at).getTime(),
+                ) < 120_000;
+              return (
+                <div
+                  key={message.id}
+                  className={`flex ${mine ? "justify-end" : "justify-start"} ${grouped ? "mt-0.5" : "mt-2"}`}
+                >
+                  <div
+                    className={`flex max-w-[78%] items-end gap-1.5 rounded-3xl px-4 py-2.5 text-[15px] ${
+                      mine
+                        ? `${grouped ? "rounded-tr-lg" : ""} rounded-br-md bg-primary text-primary-foreground`
+                        : `${grouped ? "rounded-tl-lg" : ""} rounded-bl-md bg-card`
+                    }`}
+                  >
+                    <span>{message.body}</span>
+                    {mine && (
+                      <Check aria-label="Sent" className="mb-0.5 h-3.5 w-3.5 shrink-0 opacity-85" />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+            {pending.map((item) => (
+              <div key={item.id} className="mt-1.5 flex justify-end">
+                <div
+                  className={`flex max-w-[78%] items-center gap-2 rounded-3xl rounded-br-md px-4 py-2.5 text-[15px] ${
+                    item.status === "failed"
+                      ? "border border-destructive/40 bg-destructive/10 text-foreground"
+                      : "bg-primary/85 text-primary-foreground"
+                  }`}
+                >
+                  <span>{item.body}</span>
+                  {item.status === "sending" ? (
+                    <Clock3
+                      aria-label="Sending"
+                      className="h-3.5 w-3.5 shrink-0 animate-pulse opacity-80"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void sendBody(item.body, item.id)}
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-destructive px-2 py-0.5 text-[11px] font-semibold text-white"
+                    >
+                      <AlertCircle className="h-3 w-3" /> Retry
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </>
         )}
         {notice && (
           <p role="status" className="text-center text-xs text-muted-foreground">
@@ -919,6 +1068,42 @@ function LiveThread({
           </p>
         )}
       </div>
+
+      {showIcebreakers && (
+        <div className="border-t border-border bg-secondary/40 px-4 py-2.5">
+          <div className="mb-1.5 flex items-center justify-between">
+            <span className="flex items-center gap-1 text-[11px] font-semibold text-primary">
+              <Sparkles className="h-3 w-3" /> Tap an icebreaker to start talking
+            </span>
+            {allMessages.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowPrompts(false)}
+                className="text-[11px] text-muted-foreground"
+              >
+                Hide
+              </button>
+            )}
+          </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
+            {icebreakers.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => {
+                  triggerHaptic(10);
+                  setText(prompt);
+                  inputRef.current?.focus();
+                }}
+                className="shrink-0 rounded-2xl border border-border bg-card px-3 py-1.5 text-left text-xs text-foreground shadow-2xs transition-colors hover:border-primary/50"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="border-t border-border px-4 py-2">
         <SafetyActions
           userId={userId}
@@ -930,11 +1115,12 @@ function LiveThread({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          void send();
+          void sendBody(text);
         }}
         className="flex items-center gap-2 px-4 py-3"
       >
         <input
+          ref={inputRef}
           value={text}
           maxLength={1000}
           onChange={(e) => setText(e.target.value)}
@@ -954,7 +1140,15 @@ function LiveThread({
   );
 }
 
-function Thread({ id, onBack }: { id: string; onBack: () => void }) {
+function Thread({
+  id,
+  initialDraft,
+  onBack,
+}: {
+  id: string;
+  initialDraft?: string;
+  onBack: () => void;
+}) {
   const s = useStore();
   const p = people.find((x) => x.id === id)!;
   const msgs = s.chats[id]?.length
@@ -976,14 +1170,25 @@ function Thread({ id, onBack }: { id: string; onBack: () => void }) {
           },
         ]
       : [];
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialDraft ?? "");
+  const inputRef = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
+  const icebreakers = generateIcebreakers({
+    name: p.name,
+    town: p.town,
+    tags: p.tags,
+    intent: p.intent,
+    bio: p.bio,
+    prompt: p.prompt,
+    answer: p.answer,
+  });
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs.length]);
   const send = () => {
     const t = text.trim();
     if (!t) return;
+    triggerHaptic(10);
     update((st) => ({
       ...st,
       chats: {
@@ -1050,16 +1255,40 @@ function Thread({ id, onBack }: { id: string; onBack: () => void }) {
               className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}
               style={{ originX: m.from === "me" ? 1 : 0 }}
             >
-              <p
-                className={`max-w-[78%] rounded-3xl px-4 py-2.5 text-[15px] ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-card"}`}
+              <div
+                className={`flex max-w-[78%] items-end gap-1.5 rounded-3xl px-4 py-2.5 text-[15px] ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-card"}`}
               >
-                {m.text}
-              </p>
+                <span>{m.text}</span>
+                {m.from === "me" && <Check className="mb-0.5 h-3.5 w-3.5 shrink-0 opacity-85" />}
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
         <div ref={end} />
       </div>
+      {msgs.length === 0 && (
+        <div className="border-t border-border bg-secondary/40 px-4 py-2.5">
+          <p className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-primary">
+            <Sparkles className="h-3 w-3" /> Tap an icebreaker to start talking
+          </p>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
+            {icebreakers.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => {
+                  triggerHaptic(10);
+                  setText(prompt);
+                  inputRef.current?.focus();
+                }}
+                className="shrink-0 rounded-2xl border border-border bg-card px-3 py-1.5 text-left text-xs text-foreground shadow-2xs transition-colors hover:border-primary/50"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -1068,6 +1297,7 @@ function Thread({ id, onBack }: { id: string; onBack: () => void }) {
         className="flex items-center gap-2 border-t border-border px-4 py-3"
       >
         <input
+          ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={`Message ${p.name}…`}
@@ -1083,5 +1313,47 @@ function Thread({ id, onBack }: { id: string; onBack: () => void }) {
         </motion.button>
       </form>
     </motion.div>
+  );
+}
+
+function ChatsListSkeleton() {
+  return (
+    <div role="status" aria-label="Loading conversations" className="space-y-5 px-5 pt-2">
+      <div className="flex gap-4 overflow-hidden">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-1.5">
+            <span className="h-16 w-16 animate-pulse rounded-full bg-secondary" />
+            <span className="h-3 w-12 animate-pulse rounded-full bg-secondary" />
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3 pt-2">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-2xl p-2">
+            <span className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-secondary" />
+            <div className="flex-1 space-y-2">
+              <span className="block h-3.5 w-28 animate-pulse rounded-full bg-secondary" />
+              <span className="block h-3 w-48 animate-pulse rounded-full bg-secondary" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MessagesSkeleton() {
+  return (
+    <div role="status" aria-label="Loading messages" className="space-y-2.5 py-2">
+      <div className="flex justify-start">
+        <span className="h-10 w-48 animate-pulse rounded-3xl rounded-bl-md bg-secondary" />
+      </div>
+      <div className="flex justify-end">
+        <span className="h-10 w-56 animate-pulse rounded-3xl rounded-br-md bg-primary/20" />
+      </div>
+      <div className="flex justify-start">
+        <span className="h-10 w-40 animate-pulse rounded-3xl rounded-bl-md bg-secondary" />
+      </div>
+    </div>
   );
 }

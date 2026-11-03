@@ -23,6 +23,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
 import { captureProductEvent } from "@/lib/telemetry";
+import { triggerHaptic } from "@/lib/icebreakers";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
@@ -178,10 +179,22 @@ function NearbyPage() {
 
   if (!ready)
     return (
-      <main className="mx-auto max-w-md px-5 py-10 text-sm text-muted-foreground">Loading…</main>
+      <main className="mx-auto max-w-md pb-24" aria-busy="true">
+        <header className="flex h-[58px] items-center justify-between px-5">
+          <BrandLogo />
+        </header>
+        <p className="sr-only">Loading…</p>
+        <div className="h-[318px] w-full animate-pulse bg-secondary" />
+        <div className="mt-4 flex gap-3 overflow-hidden px-5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="h-36 w-28 shrink-0 animate-pulse rounded-2xl bg-secondary" />
+          ))}
+        </div>
+      </main>
     );
 
   const like = async (profile: NearbyProfile) => {
+    triggerHaptic("like");
     if (user) {
       const { error } = await supabase
         .from("decisions")

@@ -43,7 +43,9 @@ export function validateRanking(output: unknown, list: MatchCandidate[]): Ranked
     seen.add(c.matchId);
     const raw = Number((item as { score?: unknown }).score);
     const score = Number.isFinite(raw) ? Math.max(0, Math.min(100, Math.round(raw))) : 0;
-    const reason = String((item as { reason?: unknown }).reason ?? "").trim().slice(0, 220);
+    const reason = String((item as { reason?: unknown }).reason ?? "")
+      .trim()
+      .slice(0, 220);
     out.push({ matchId: c.matchId, score, reason });
   }
   return out.sort((a, b) => b.score - a.score);

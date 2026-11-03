@@ -39,6 +39,8 @@ export type Person = {
   job: string;
   photo: string;
   designPhoto?: string;
+  gallery?: string[];
+  verified?: boolean;
   tags: string[];
   prompt: string;
   answer: string;
@@ -60,6 +62,8 @@ export const people: Person[] = [
     job: "Marketing Executive",
     photo: "ndapewa",
     designPhoto: "/design/lead-woman.jpg",
+    gallery: ["/design/lead-woman.jpg", "/editorial/ndapewa.jpg", "/design/event-rooftop.jpg"],
+    verified: true,
     photoPosition: "68% 34%",
     tags: ["Art & design", "Coffee", "Road trips"],
     prompt: "The way to my heart is",
@@ -75,12 +79,15 @@ export const people: Person[] = [
     town: "Swakopmund",
     job: "Creative with a coastal soul",
     photo: "leah",
+    gallery: ["/editorial/leah.jpg", "/design/event-beach.jpg"],
+    verified: true,
     photoPosition: "35% 34%",
     tags: ["Beach days", "Photography", "Coffee"],
     prompt: "My perfect Sunday",
     answer: "A slow coffee, salty air, and a walk that turns into an entire afternoon.",
     bio: "Coast girl. Film photos, second-hand bookshops, and cooking for people I like. Tell me your favourite spot by the sea.",
     intent: "A relationship",
+    mutualInterest: true,
   },
   {
     id: "p3",
@@ -89,6 +96,8 @@ export const people: Person[] = [
     town: "Windhoek",
     job: "Designer. Occasionally a DJ.",
     photo: "amara",
+    gallery: ["/editorial/amara.jpg", "/design/event-rooftop.jpg"],
+    verified: true,
     tags: ["Live music", "Art & design", "Amapiano"],
     prompt: "We’ll get along if",
     answer: "You have a song for every mood and you’re not afraid of the dance floor.",
@@ -102,6 +111,8 @@ export const people: Person[] = [
     town: "Windhoek",
     job: "Engineer, amateur braai master",
     photo: "johannes",
+    gallery: ["/editorial/johannes.jpg", "/editorial/dunes.jpg"],
+    verified: true,
     tags: ["Hiking", "Camping", "Food"],
     prompt: "A small hill I’ll die on",
     answer: "The best conversations happen around a fire. I’ll bring the wood.",
@@ -115,6 +126,7 @@ export const people: Person[] = [
     town: "Oshakati",
     job: "Teacher & a very good listener",
     photo: "selma",
+    gallery: ["/editorial/selma.jpg", "/design/auth-landscape.jpg"],
     tags: ["Food", "Road trips", "Live music"],
     prompt: "Something I’d love to learn",
     answer: "How to grow a garden that actually survives my travel plans.",
@@ -129,12 +141,15 @@ export const people: Person[] = [
     job: "Ocean air, every day",
     photo: "daniel",
     designPhoto: "/design/lead-man.jpg",
+    gallery: ["/design/lead-man.jpg", "/editorial/daniel.jpg", "/editorial/dunes.jpg"],
+    verified: true,
     tags: ["Beach days", "Coffee", "Photography"],
     prompt: "Let’s make a plan to",
     answer:
       "Watch the flamingos, find the best fish and chips, and miss the sunset by five minutes.",
     bio: "Marine life enthusiast. A terrible singer with excellent road trip snacks. Looking for someone who laughs easily.",
     intent: "Open to exploring",
+    mutualInterest: true,
   },
   {
     id: "p7",
@@ -143,6 +158,7 @@ export const people: Person[] = [
     town: "Otjiwarongo",
     job: "Conservationist & trail seeker",
     photo: "tuli",
+    gallery: ["/editorial/tuli.jpg", "/design/auth-landscape.jpg"],
     photoPosition: "26% 34%",
     tags: ["Hiking", "Camping", "Photography"],
     prompt: "My happy place",
@@ -157,6 +173,8 @@ export const people: Person[] = [
     town: "Rundu",
     job: "Chef, collecting little adventures",
     photo: "michael",
+    gallery: ["/editorial/michael.jpg", "/design/event-rooftop.jpg"],
+    verified: true,
     tags: ["Food", "Road trips", "Art & design"],
     prompt: "I’ll cook you",
     answer: "Something that takes all afternoon, with a story for every ingredient.",

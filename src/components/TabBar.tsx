@@ -1,7 +1,13 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { Compass, MapPin, NotebookText, MessageCircle, UserRound } from "lucide-react";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BrandLogo } from "./BrandLogo";
+import { useSession } from "@/hooks/use-session";
+import { supabase } from "@/integrations/supabase/client";
+import { useStore } from "@/lib/namlink";
+import { triggerHaptic } from "@/lib/icebreakers";
 
 const tabs = [
   { to: "/", label: "Discover", icon: Compass },
@@ -13,6 +19,52 @@ const tabs = [
 
 export function TabBar() {
   const { pathname } = useLocation();
+  const { user } = useSession();
+  const store = useStore();
+  const queryClient = useQueryClient();
+
+  const unreadQuery = useQuery({
+    queryKey: ["unread-notifications-count", user?.id],
+    enabled: !!user,
+    staleTime: 20_000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user!.id)
+        .is("read_at", null);
+      if (error) return 0;
+      return count ?? 0;
+    },
+  });
+
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`tabbar-unread-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["unread-notifications-count", user.id],
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient, user]);
+
+  const demoUnreadCount = store.matches.filter((id) => !(store.chats[id]?.length ?? 0)).length;
+  const chatsBadgeCount = user ? (unreadQuery.data ?? 0) : demoUnreadCount;
+
   if (
     [
       "/welcome",
@@ -31,18 +83,30 @@ export function TabBar() {
       <ul className="mx-auto flex h-[60px] max-w-md items-center justify-around px-2">
         {tabs.map(({ to, label, icon: Icon }) => {
           const active = to === "/" ? pathname === "/" : pathname.startsWith(to);
+          const showBadge = to === "/chats" && chatsBadgeCount > 0;
           return (
             <li key={to}>
               <Link
                 to={to}
+                {...(to === "/chats" ? { search: { matchId: undefined, draft: undefined } } : {})}
+                onClick={() => triggerHaptic(8)}
                 aria-current={active ? "page" : undefined}
                 className="relative flex min-w-[60px] flex-col items-center gap-0.5 rounded-full px-2 py-1.5 text-[10px] font-medium"
               >
                 <motion.span
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.92 }}
+                  transition={{ type: "spring", stiffness: 420, damping: 22 }}
                   className={active ? "relative text-primary" : "relative text-muted-foreground"}
                 >
                   <Icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.4 : 1.7} />
+                  {showBadge && (
+                    <span
+                      aria-label={`${chatsBadgeCount} unread`}
+                      className="absolute -right-2 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full border-2 border-white bg-primary px-1 text-[9px] font-bold leading-none text-primary-foreground"
+                    >
+                      {chatsBadgeCount > 9 ? "9+" : chatsBadgeCount}
+                    </span>
+                  )}
                 </motion.span>
                 <span
                   className={active ? "relative text-primary" : "relative text-muted-foreground"}

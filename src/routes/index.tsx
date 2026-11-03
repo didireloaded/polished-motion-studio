@@ -1,7 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
-import { ArrowLeft, Bookmark, ChevronUp, Heart, MapPin, SlidersHorizontal, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ChevronUp,
+  Heart,
+  Share2,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Drawer,
@@ -11,14 +19,17 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { people, photo, towns, update, useStore, toggle, type Person } from "@/lib/namlink";
-import { useSession } from "@/hooks/use-session";
+import { people, photo, towns, update, useStore, type Person } from "@/lib/namlink";
+import { useMyProfile, useSession } from "@/hooks/use-session";
 import { getRecommendations, type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
+import { MatchCelebrationModal, type CelebrationMatch } from "@/components/MatchCelebrationModal";
+import { triggerHaptic } from "@/lib/icebreakers";
+import { sendMatchAlertEmail } from "@/lib/email.functions";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,6 +45,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   const s = useStore();
   const { user, ready } = useSession();
+  const myProfile = useMyProfile(user?.id);
   const queryClient = useQueryClient();
   const [town, setTown] = useState("All");
   const [minAge, setMinAge] = useState(18);
@@ -48,9 +60,9 @@ function Home() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
-  const [celebrate, setCelebrate] = useState<Person | null>(null);
   const [hiddenRecommendations, setHiddenRecommendations] = useState<string[]>([]);
   const [exitCue, setExitCue] = useState<{ id: string; direction: number } | null>(null);
+  const [celebrationMatch, setCelebrationMatch] = useState<CelebrationMatch | null>(null);
   const sampleDeck = useMemo(
     () =>
       people.filter(
@@ -95,16 +107,20 @@ function Home() {
 
   if (!ready) {
     return (
-      <main className="mx-auto flex h-[calc(100svh-76px-env(safe-area-inset-bottom))] min-h-[560px] max-w-[440px] items-center justify-center px-3">
-        <p role="status" className="text-sm text-muted-foreground">
-          Loading your discovery…
-        </p>
+      <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-2">
+        <header className="flex h-[58px] shrink-0 items-center justify-between px-2">
+          <BrandLogo />
+          <span className="h-10 w-10 animate-pulse rounded-full bg-secondary" />
+        </header>
+        <section aria-label="Loading discovery" className="relative min-h-0 flex-1">
+          <ProfileCardSkeleton />
+        </section>
       </main>
     );
   }
 
   const decide = async (p: Person, liked: boolean) => {
-    // celebrate state declared below via hook order-safe closure
+    triggerHaptic(liked ? 18 : 10);
     if (user) {
       setExitCue({ id: p.id, direction: liked ? 1 : -1 });
       setHiddenRecommendations((current) => [...current, p.id]);
@@ -140,20 +156,42 @@ function Home() {
       }
       if (liked) {
         void captureProductEvent("like_sent");
-        const { data: m } = await supabase
+        const [a, b] = user.id < p.id ? [user.id, p.id] : [p.id, user.id];
+        const { data: matchRow } = await supabase
           .from("matches")
           .select("id")
-          .or(
-            `and(user_a.eq.${user.id},user_b.eq.${p.id}),and(user_a.eq.${p.id},user_b.eq.${user.id})`,
-          )
+          .eq("user_a", a)
+          .eq("user_b", b)
           .maybeSingle();
-        if (m) {
-          setCelebrate(p);
-          if (typeof navigator !== "undefined") navigator.vibrate?.([30, 40, 60]);
+        if (matchRow?.id) {
+          triggerHaptic([30, 50, 40]);
+          void captureProductEvent("match_created");
+          void queryClient.invalidateQueries({ queryKey: ["matches", user.id] });
+          void queryClient.invalidateQueries({
+            queryKey: ["unread-notifications-count", user.id],
+          });
+          void sendMatchAlertEmail({
+            data: { matchId: matchRow.id, partnerName: p.name },
+          }).catch(() => undefined);
+          setCelebrationMatch({
+            matchId: matchRow.id,
+            partnerId: p.id,
+            partnerName: p.name,
+            partnerTown: p.town,
+            partnerTags: p.tags,
+            partnerIntent: p.intent,
+            ...(p.photoPaths?.[0] ? { partnerPhotoPath: p.photoPaths[0] } : {}),
+            myName: myProfile.data?.display_name ?? "You",
+            ...(myProfile.data?.photo_paths?.[0]
+              ? { myPhotoPath: myProfile.data.photo_paths[0] }
+              : {}),
+          });
         }
       }
       return true;
     }
+
+    const isMutual = liked && !!p.mutualInterest;
     update((st) => {
       if (!liked) return { ...st, passed: [...st.passed, p.id] };
       const matches =
@@ -165,7 +203,19 @@ function Home() {
         chats: matches.includes(p.id) && !st.chats[p.id] ? { ...st.chats, [p.id]: [] } : st.chats,
       };
     });
-    if (!liked) {
+    if (isMutual) {
+      triggerHaptic([30, 50, 40]);
+      setCelebrationMatch({
+        partnerId: p.id,
+        partnerName: p.name,
+        partnerTown: p.town,
+        partnerTags: p.tags,
+        partnerIntent: p.intent,
+        partnerPhotoSrc: photo(p),
+        myName: s.profile.name || "Alex",
+        myPhotoSrc: "/design/lead-man.jpg",
+      });
+    } else if (!liked) {
       setNotice("Passed.");
       window.setTimeout(() => setNotice(""), 1500);
     }
@@ -231,6 +281,32 @@ function Home() {
         {!current && !recs.isFetching && (
           <Empty
             needsProfile={!!user && recs.data?.notice === "Create your profile first."}
+            canRewind={!user && s.passed.length > 0}
+            onRewind={() => {
+              update((st) => ({ ...st, passed: st.passed.slice(0, -1) }));
+              setNotice("Brought back your last pass.");
+              window.setTimeout(() => setNotice(""), 1800);
+            }}
+            onInvite={async () => {
+              const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
+              try {
+                if (typeof navigator !== "undefined" && navigator.share) {
+                  await navigator.share({
+                    title: "Mutal — Namibia",
+                    text: "Meet people worth knowing in Namibia on Mutal.",
+                    url: shareUrl,
+                  });
+                  return;
+                }
+                if (typeof navigator !== "undefined" && navigator.clipboard) {
+                  await navigator.clipboard.writeText(shareUrl);
+                  setNotice("Invite link copied to clipboard.");
+                  window.setTimeout(() => setNotice(""), 2200);
+                }
+              } catch {
+                // User cancelled share sheet
+              }
+            }}
             onReset={async () => {
               if (user && recs.data?.notice === "Create your profile first.") {
                 await queryClient.invalidateQueries({ queryKey: ["my-profile", user.id] });
@@ -260,7 +336,7 @@ function Home() {
           />
         )}
         {current && !recs.isLoading && expandedId !== current.id && (
-          <div className="absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-8 pointer-events-none">
+          <div className="pointer-events-none absolute inset-x-0 bottom-5 z-20 flex items-center justify-center gap-8">
             <RoundButton
               label={"Pass on " + current.name}
               onClick={() => decide(current, false)}
@@ -380,6 +456,8 @@ function Home() {
         </DrawerContent>
       </Drawer>
 
+      <MatchCelebrationModal match={celebrationMatch} onClose={() => setCelebrationMatch(null)} />
+
       <AnimatePresence>
         {notice && (
           <motion.div
@@ -390,52 +468,6 @@ function Home() {
             className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-40 w-[min(92vw,400px)] -translate-x-1/2 rounded-2xl border border-border bg-card px-4 py-3 text-center text-sm shadow-float"
           >
             {notice}
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {celebrate && (
-          <motion.div
-            role="dialog"
-            aria-label="It's a match"
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 px-6 backdrop-blur-md"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="w-full max-w-[340px] rounded-3xl bg-card p-7 text-center shadow-2xl"
-              initial={{ scale: 0.7, y: 40 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", stiffness: 260, damping: 18 }}
-            >
-              <motion.div
-                className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-3xl font-semibold text-primary-foreground"
-                animate={{ scale: [1, 1.12, 1] }}
-                transition={{ repeat: Infinity, duration: 1.6 }}
-              >
-                {celebrate.name.charAt(0)}
-              </motion.div>
-              <h2 className="text-2xl font-semibold text-foreground">It's a match!</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                You and {celebrate.name} like each other. Say hello while it's fresh.
-              </p>
-              <Link
-                to="/chats" search={{} as never}
-                className="mt-6 block rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
-                onClick={() => setCelebrate(null)}
-              >
-                Say hello
-              </Link>
-              <button
-                type="button"
-                className="mt-3 w-full py-2 text-sm text-muted-foreground"
-                onClick={() => setCelebrate(null)}
-              >
-                Keep swiping
-              </button>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -465,10 +497,28 @@ function ProfileCard({
   onBlocked?: (() => void) | undefined;
 }) {
   const top = depth === 0;
+  const [photoIdx, setPhotoIdx] = useState(0);
+  useEffect(() => setPhotoIdx(0), [person.id]);
+
+  const livePaths = person.photoPaths ?? [];
+  const sampleGallery =
+    person.gallery && person.gallery.length > 0
+      ? person.gallery
+      : person.photo
+        ? [photo(person)]
+        : [];
+  const totalPhotos = userId ? Math.max(1, livePaths.length) : Math.max(1, sampleGallery.length);
+  const activeIdx = Math.min(photoIdx, totalPhotos - 1);
+  const currentSampleSrc = !userId ? sampleGallery[activeIdx] : undefined;
+  const currentLivePath = userId ? livePaths[activeIdx] : undefined;
+
   const dragX = useMotionValue(0);
-  const rotate = useTransform(dragX, [-240, 0, 240], [-8, 0, 8]);
-  const likeOpacity = useTransform(dragX, [0, 100], [0, 1]);
-  const passOpacity = useTransform(dragX, [-100, 0], [1, 0]);
+  const rotate = useTransform(dragX, [-240, 0, 240], [-9, 0, 9]);
+  const likeOpacity = useTransform(dragX, [14, 105], [0, 1]);
+  const likeScale = useTransform(dragX, [14, 120], [0.84, 1.06]);
+  const passOpacity = useTransform(dragX, [-105, -14], [1, 0]);
+  const passScale = useTransform(dragX, [-120, -14], [1.06, 0.84]);
+
   return (
     <motion.article
       aria-label={
@@ -479,7 +529,7 @@ function ProfileCard({
         ", " +
         person.town
       }
-      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[11px] bg-card text-white"
+      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[14px] bg-card text-white shadow-float"
       style={{ zIndex: 10 - depth, x: dragX, rotate }}
       drag={top && !expanded ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
@@ -511,23 +561,64 @@ function ProfileCard({
       >
         <ProfilePhoto
           name={person.name}
-          src={person.photo ? photo(person) : undefined}
-          path={person.photoPaths?.[0]}
-          className={`absolute inset-0 h-full w-full select-none ${person.photoPaths?.[0] ? "object-contain" : "object-cover"}`}
+          src={currentSampleSrc}
+          path={currentLivePath}
+          className={`absolute inset-0 h-full w-full select-none ${currentLivePath ? "object-contain" : "object-cover"}`}
         />
         <div className="bg-scrim absolute inset-0" aria-hidden="true" />
+
+        {totalPhotos > 1 && !expanded && (
+          <>
+            <div
+              aria-label={`Photo ${activeIdx + 1} of ${totalPhotos}`}
+              className="pointer-events-none absolute inset-x-4 top-2.5 z-20 flex gap-1.5"
+            >
+              {Array.from({ length: totalPhotos }).map((_, idx) => (
+                <span
+                  key={idx}
+                  className={`h-1 flex-1 rounded-full transition-colors ${idx === activeIdx ? "bg-white" : "bg-white/35"}`}
+                />
+              ))}
+            </div>
+            {top && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Previous photo"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic(8);
+                    setPhotoIdx((i) => (i > 0 ? i - 1 : totalPhotos - 1));
+                  }}
+                  className="absolute inset-y-0 left-0 z-10 w-1/3 focus:outline-none"
+                />
+                <button
+                  type="button"
+                  aria-label="Next photo"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic(8);
+                    setPhotoIdx((i) => (i + 1) % totalPhotos);
+                  }}
+                  className="absolute inset-y-0 right-0 z-10 w-1/3 focus:outline-none"
+                />
+              </>
+            )}
+          </>
+        )}
+
         {top && !expanded && (
           <>
             <motion.span
-              style={{ opacity: likeOpacity }}
-              className="absolute left-5 top-7 -rotate-12 rounded-lg border-2 border-white px-3 py-1 text-xl font-extrabold tracking-wider text-white"
+              style={{ opacity: likeOpacity, scale: likeScale }}
+              className="pointer-events-none absolute left-5 top-8 z-20 -rotate-12 rounded-xl border-2 border-emerald-300/90 bg-emerald-950/45 px-3.5 py-1 text-lg font-extrabold tracking-wider text-emerald-100 backdrop-blur-sm"
               aria-hidden="true"
             >
-              LIKE
+              CONNECT
             </motion.span>
             <motion.span
-              style={{ opacity: passOpacity }}
-              className="absolute right-5 top-7 rotate-12 rounded-lg border-2 border-white px-3 py-1 text-xl font-extrabold tracking-wider text-white"
+              style={{ opacity: passOpacity, scale: passScale }}
+              className="pointer-events-none absolute right-5 top-8 z-20 rotate-12 rounded-xl border-2 border-white/80 bg-foreground/60 px-3.5 py-1 text-lg font-extrabold tracking-wider text-white backdrop-blur-sm"
               aria-hidden="true"
             >
               PASS
@@ -535,7 +626,9 @@ function ProfileCard({
           </>
         )}
         {top && !userId && !expanded && (
-          <span className="absolute left-4 top-4 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm">
+          <span
+            className={`absolute left-4 z-20 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm ${totalPhotos > 1 ? "top-6" : "top-4"}`}
+          >
             Sample profile
           </span>
         )}
@@ -544,19 +637,30 @@ function ProfileCard({
             type="button"
             onClick={onDetails}
             aria-label="Back to photo"
-            className="absolute left-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-foreground"
+            className="absolute left-3 top-3 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
         )}
         {!expanded && (
-          <div className="absolute inset-x-0 bottom-[92px] px-5 pt-16">
+          <div className="pointer-events-none absolute inset-x-0 bottom-[92px] z-20 px-5 pt-16">
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.035em]">
-                  {person.name}
-                  <span className="ml-2 text-[21px] font-medium text-white/85">{person.age}</span>
-                </h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.035em]">
+                    {person.name}
+                    <span className="ml-2 text-[21px] font-medium text-white/85">{person.age}</span>
+                  </h1>
+                  {(person.verified || (person.photoPaths?.length ?? 0) > 0) && (
+                    <span
+                      title="Verified member"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
+                    >
+                      <CheckCircle2 className="h-3 w-3 text-emerald-300" />
+                      Verified
+                    </span>
+                  )}
+                </div>
                 <p className="mt-1 text-[13px] text-white/95">{person.town}</p>
                 <p className="mt-0.5 truncate text-[12px] text-white/85">{person.job}</p>
               </div>
@@ -566,7 +670,7 @@ function ProfileCard({
                 aria-expanded={expanded}
                 onClick={onDetails}
                 whileTap={{ scale: 0.9 }}
-                className="mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="pointer-events-auto mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 <motion.span
                   animate={{ rotate: expanded ? 180 : 0, y: expanded ? 0 : [0, -2, 0] }}
@@ -696,37 +800,65 @@ function ProfileCardSkeleton() {
 
 function Empty({
   onReset,
+  onInvite,
+  onRewind,
+  canRewind = false,
   needsProfile = false,
 }: {
   onReset: () => void | Promise<void>;
+  onInvite?: () => void | Promise<void>;
+  onRewind?: () => void;
+  canRewind?: boolean;
   needsProfile?: boolean;
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center rounded-[22px] border border-border bg-card px-7 text-center">
-      <Heart className="h-8 w-8 text-primary" />
+      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Heart className="h-7 w-7" />
+      </div>
       <h2 className="mt-4 text-xl font-semibold">
-        {needsProfile ? "A few details first" : "You’re all caught up"}
+        {needsProfile ? "A few details first" : "You’ve seen everyone nearby for now"}
       </h2>
-      <p className="mt-2 max-w-[260px] text-sm leading-5 text-muted-foreground">
+      <p className="mt-2 max-w-[270px] text-sm leading-5 text-muted-foreground">
         {needsProfile
-          ? "Finish your profile so we can find introductions that fit what you’re looking for."
-          : "Open up your age and town preferences to meet people a little further afield."}
+          ? "Finish your 3-step profile setup so we can introduce you to people who fit what you value."
+          : "Expand to all of Namibia to discover more members, or invite a friend to Mutal."}
       </p>
       {needsProfile ? (
         <Link
           to="/you"
-          className="mt-5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
+          className="mt-5 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-float"
         >
-          Set up profile
+          Complete profile setup
         </Link>
       ) : (
-        <button
-          type="button"
-          onClick={() => void onReset()}
-          className="mt-5 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground"
-        >
-          Try more towns
-        </button>
+        <div className="mt-5 flex w-full max-w-[240px] flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => void onReset()}
+            className="rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-float"
+          >
+            Expand to all of Namibia
+          </button>
+          {canRewind && onRewind && (
+            <button
+              type="button"
+              onClick={onRewind}
+              className="rounded-full border border-border bg-secondary/60 px-5 py-2 text-xs font-semibold text-foreground"
+            >
+              Second glance · rewind last pass
+            </button>
+          )}
+          {onInvite && (
+            <button
+              type="button"
+              onClick={() => void onInvite()}
+              className="inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-xs font-semibold text-primary"
+            >
+              <Share2 className="h-3.5 w-3.5" /> Invite someone to Mutal
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
