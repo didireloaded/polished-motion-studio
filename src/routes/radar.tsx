@@ -26,6 +26,7 @@ import { captureProductEvent } from "@/lib/telemetry";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { ThisOrThatRapidRadar } from "@/components/SocialGames";
 import { SpeedDatingRoom } from "@/components/SpeedDatingRoom";
+import { RandomFridayBanner, RandomFridayModal } from "@/components/RandomFridayModal";
 import {
   computeVibeAlignment,
   getNextMixerWindow,
@@ -102,6 +103,7 @@ function NearbyPage() {
   const [eventDetails, setEventDetails] = useState("");
   const [eventBusy, setEventBusy] = useState(false);
   const [mixerOpen, setMixerOpen] = useState(false);
+  const [randomFridayOpen, setRandomFridayOpen] = useState(false);
   const [showThisOrThat, setShowThisOrThat] = useState(false);
   const mixerWindow = getNextMixerWindow();
   const client = useQueryClient();
@@ -443,13 +445,15 @@ function NearbyPage() {
               </div>
             )}
 
+            <RandomFridayBanner onOpen={() => setRandomFridayOpen(true)} />
+
             <button
               type="button"
               onClick={() => {
                 triggerHaptic("match");
                 setMixerOpen(true);
               }}
-              className="mt-3 flex w-full items-center gap-3 border-t border-border py-3 text-left"
+              className="flex w-full items-center gap-3 border-t border-border py-3 text-left"
             >
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/12 text-primary">
                 <Clock3 className="h-[18px] w-[18px]" />
@@ -805,6 +809,12 @@ function NearbyPage() {
         town={town}
         userId={user?.id}
         onClose={() => setMixerOpen(false)}
+      />
+      <RandomFridayModal
+        open={randomFridayOpen}
+        town={town}
+        userId={user?.id}
+        onClose={() => setRandomFridayOpen(false)}
       />
     </main>
   );

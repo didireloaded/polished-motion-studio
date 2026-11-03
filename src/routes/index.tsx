@@ -8,6 +8,7 @@ import {
   Share2,
   SlidersHorizontal,
   X,
+  Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,6 +29,7 @@ import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
 import { MatchCelebrationModal, type CelebrationMatch } from "@/components/MatchCelebrationModal";
+import { RandomFridayModal } from "@/components/RandomFridayModal";
 import { ElevatorPitchCard, TwoTruthsCard } from "@/components/SocialGames";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { sendMatchAlertEmail } from "@/lib/email.functions";
@@ -65,6 +67,7 @@ function Home() {
     staleTime: 5 * 60_000,
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [randomFridayOpen, setRandomFridayOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [hiddenRecommendations, setHiddenRecommendations] = useState<string[]>([]);
@@ -237,6 +240,18 @@ function Home() {
           <BrandLogo />
         </Link>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("like");
+              setRandomFridayOpen(true);
+            }}
+            aria-label="Open Random Friday 30-second live sprint"
+            className="inline-flex h-8 items-center gap-1 rounded-full bg-accent px-2.5 text-[11px] font-semibold text-primary transition active:scale-95"
+          >
+            <Zap className="h-3.5 w-3.5 fill-current" />
+            Random Friday
+          </button>
           {last && (
             <IconButton
               label="Undo last pass"
@@ -465,6 +480,12 @@ function Home() {
       </Drawer>
 
       <MatchCelebrationModal match={celebrationMatch} onClose={() => setCelebrationMatch(null)} />
+      <RandomFridayModal
+        open={randomFridayOpen}
+        town={town}
+        userId={user?.id}
+        onClose={() => setRandomFridayOpen(false)}
+      />
 
       <AnimatePresence>
         {notice && (
