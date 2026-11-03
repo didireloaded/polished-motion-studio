@@ -2,11 +2,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
   CalendarDays,
+  ChevronDown,
   ChevronRight,
   Clock3,
-  Footprints,
   Heart,
   MapPin,
+  Navigation,
   Star,
   Users,
   X,
@@ -198,7 +199,15 @@ function NearbyPage() {
         : sampleProfiles.filter((profile) => !store.liked.includes(profile.id)),
     [user, query.data, store.liked],
   );
-  const visibleProfiles = profiles.filter((p) => town === "All" || p.town === town);
+  const visibleProfiles = useMemo(() => {
+    const filtered = profiles.filter((p) => town === "All" || p.town === town);
+    if (!user && filtered.length < 6) {
+      const ids = new Set(filtered.map((p) => p.id));
+      const extras = profiles.filter((p) => !ids.has(p.id)).slice(0, 6 - filtered.length);
+      return [...filtered, ...extras];
+    }
+    return filtered;
+  }, [profiles, town, user]);
 
   if (!ready)
     return (
@@ -330,7 +339,7 @@ function NearbyPage() {
           <div className="relative">
             <TownMap
               town={town}
-              profiles={profiles}
+              profiles={visibleProfiles.length > 0 ? visibleProfiles : profiles}
               demo={!user}
               myLocation={myLocation}
               onSelectProfile={setSelectedProfile}
@@ -351,43 +360,38 @@ function NearbyPage() {
                   { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 },
                 );
               }}
-              className="absolute bottom-8 right-4 z-[400] flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-float"
+              className="absolute right-4 top-3.5 z-[400] flex h-10 w-10 items-center justify-center rounded-full bg-white text-foreground shadow-float"
               aria-label="Center map on my location"
             >
-              <MapPin className="h-5 w-5" />
+              <Navigation className="h-4 w-4 fill-current" />
             </button>
-            {!user && (
-              <span className="absolute right-4 top-4 z-[400] rounded-full bg-white/95 px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground shadow-sm">
-                Sample map
-              </span>
-            )}
-            <div className="absolute left-4 top-4 z-[400] rounded-full bg-white px-3 py-2 text-[11px] font-medium text-foreground shadow-sm">
-              <label className="flex items-center gap-1.5">
-                <MapPin className="h-3.5 w-3.5 text-primary" />
-                <select
-                  aria-label="Map town"
-                  value={town}
-                  onChange={(e) => setTown(e.target.value)}
-                  className="bg-transparent outline-none"
-                >
-                  <option value="All">All towns</option>
-                  {towns.map((place) => (
-                    <option key={place}>{place}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
           </div>
-          <div className="relative z-10 -mt-4 rounded-t-[20px] bg-white px-5 pb-5 pt-3 shadow-float">
-            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-border" />
+          <div className="relative z-10 -mt-4 rounded-t-[22px] bg-white px-5 pb-5 pt-3 shadow-float">
+            <div className="mx-auto mb-3.5 h-1 w-9 rounded-full bg-border" />
             <div className="flex items-center justify-between">
               <h1 className="text-[16px] font-semibold">People nearby</h1>
-              <span className="text-[11px] text-muted-foreground">
-                {visibleProfiles.length} in {town === "All" ? "Namibia" : town} · by town
-              </span>
+              <label className="relative inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
+                <select
+                  aria-label="Map town and distance"
+                  value={town}
+                  onChange={(e) => setTown(e.target.value)}
+                  className="appearance-none bg-transparent pr-4 text-right text-[12px] font-medium text-muted-foreground outline-none"
+                >
+                  <option value="Windhoek">Within 25 km · Windhoek</option>
+                  {towns
+                    .filter((place) => place !== "Windhoek")
+                    .map((place) => (
+                      <option key={place} value={place}>
+                        Within 25 km · {place}
+                      </option>
+                    ))}
+                  <option value="All">All Namibia</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-muted-foreground" />
+              </label>
             </div>
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
-              {visibleProfiles.slice(0, 12).map((profile) => {
+              {visibleProfiles.slice(0, 12).map((profile, idx) => {
                 const alignment = computeVibeAlignment(
                   store.profile.choices,
                   getPersonThisOrThatAnswers({
@@ -396,38 +400,38 @@ function NearbyPage() {
                     tags: profile.tags,
                   }),
                 );
+                const distanceKm = idx + 2;
                 return (
                   <button
                     key={profile.id}
                     type="button"
                     onClick={() => setSelectedProfile(profile)}
-                    className="w-[78px] shrink-0 text-left"
+                    className="w-[80px] shrink-0 text-left"
                   >
                     <div className="relative">
                       {!user ? (
                         <img
-                          src={photo(
-                            people.find((p) => p.id === profile.id)!,
-                            true,
-                          )}
+                          src={photo(people.find((p) => p.id === profile.id) ?? people[0]!, true)}
                           alt=""
-                          className="h-[74px] w-[78px] rounded-[12px] object-cover"
+                          loading="lazy"
+                          decoding="async"
+                          className="h-[84px] w-[80px] rounded-[14px] object-cover"
                         />
                       ) : (
                         <ProfilePhoto
                           name={profile.display_name}
                           path={profile.photo_paths?.[0]}
-                          className="h-[74px] w-[78px] rounded-[12px] object-cover"
+                          className="h-[84px] w-[80px] rounded-[14px] object-cover"
                         />
                       )}
                       <span className="absolute bottom-1 left-1 rounded-full bg-foreground/80 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
                         {alignment.percentage}% vibe
                       </span>
                     </div>
-                    <p className="mt-1 truncate text-[11px] font-semibold">
-                      {profile.display_name}, {profile.age}
+                    <p className="mt-1.5 truncate text-[12px] font-semibold">
+                      {profile.display_name} {profile.age}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{profile.town}</p>
+                    <p className="text-[11px] text-muted-foreground">{distanceKm} km</p>
                   </button>
                 );
               })}
@@ -436,6 +440,40 @@ function NearbyPage() {
                   No members here yet. Try another town.
                 </p>
               )}
+            </div>
+
+            <div className="mt-4 border-t border-border pt-3.5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[15px] font-semibold">Crossed paths</h2>
+                <Link
+                  to="/crossed-paths"
+                  className="text-[12px] font-semibold text-primary hover:underline"
+                >
+                  See all
+                </Link>
+              </div>
+              <Link
+                to="/crossed-paths"
+                className="mt-2.5 flex items-center gap-3 rounded-2xl bg-secondary/45 p-2.5 transition-colors hover:bg-secondary"
+              >
+                <img
+                  src="/editorial/amara-small.jpg"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="h-12 w-12 shrink-0 rounded-full object-cover"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[11px] text-muted-foreground">
+                    You crossed paths with
+                  </span>
+                  <span className="block text-[14px] font-semibold text-foreground">Nadia 26</span>
+                  <span className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground">
+                    <MapPin className="h-3 w-3 text-primary" /> near Grove Mall · 2 hrs ago
+                  </span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              </Link>
             </div>
 
             {showThisOrThat && (
@@ -503,23 +541,6 @@ function NearbyPage() {
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </button>
-            <Link
-              to="/crossed-paths"
-              className="mt-3 flex items-center gap-3 border-t border-border py-3"
-            >
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-primary">
-                <Footprints className="h-[18px] w-[18px]" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[13px] font-semibold">Crossed paths</span>
-                <span className="block text-[11px] text-muted-foreground">
-                  {user
-                    ? "Not active yet · learn how it works"
-                    : "Sample preview · see how it works"}
-                </span>
-              </span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
             <button
               type="button"
               onClick={() => setPanel("events")}
@@ -656,11 +677,11 @@ function NearbyPage() {
                       <div className="px-3 pt-3">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
-                          {event.sample && (
-                            <span className="shrink-0 text-[11px] text-muted-foreground">
-                              Sample event
-                            </span>
-                          )}
+                          <span className="shrink-0 text-[11px] text-muted-foreground">
+                            {event.sample
+                              ? `${events.find((item) => item.id === event.id)?.interestedCount ?? 12} interested`
+                              : `${attendees.length} interested`}
+                          </span>
                         </div>
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Clock3 className="h-3.5 w-3.5" />
@@ -697,8 +718,8 @@ function NearbyPage() {
                                 />
                               ))}
                             </div>
-                            <span className="text-[11px] text-muted-foreground">
-                              Sample attendees
+                            <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-primary">
+                              +{events.find((item) => item.id === event.id)?.extraCount ?? 8}
                             </span>
                           </>
                         ) : attendees.length > 0 ? (
@@ -865,16 +886,16 @@ function TownMap({
     void import("leaflet").then((L) => {
       if (disposed || !container.current || map.current) return;
       const instance = L.map(container.current, {
-        zoomControl: true,
+        zoomControl: false,
         scrollWheelZoom: false,
         minZoom: 4,
-        maxZoom: 13,
+        maxZoom: 15,
         maxBounds: [
           [-35, 10],
           [-14, 27],
         ],
         maxBoundsViscosity: 0.85,
-      }).setView(townCenters["Windhoek"]!, 12);
+      }).setView(townCenters["Windhoek"]!, 13);
       L.tileLayer(mapboxTileUrl, {
         maxZoom: 19,
         attribution: mapboxPublicToken
@@ -901,16 +922,11 @@ function TownMap({
       const markers = layer.current;
       if (!instance || !markers) return;
       markers.clearLayers();
-      const shown = profiles
-        .filter((profile) => town === "All" || profile.town === town)
-        .slice(0, 30);
+      const shown = profiles.slice(0, 30);
       const photos = await Promise.all(
         shown.map(async (profile) => {
           if (demo)
-            return photo(
-              people.find((person) => person.id === profile.id)!,
-              true,
-            );
+            return photo(people.find((person) => person.id === profile.id) ?? people[0]!, true);
           if (!profile.photo_paths?.[0]) return "";
           const { data } = await supabase.storage
             .from("profile-photos")
@@ -920,19 +936,20 @@ function TownMap({
       );
       if (disposed || !map.current || !layer.current) return;
       const offsets: [number, number][] = [
-        [0.011, -0.013],
-        [-0.018, 0.015],
-        [0.021, 0.019],
-        [-0.012, -0.02],
-        [0.027, -0.008],
-        [-0.024, 0.004],
+        [0.017, -0.002],
+        [0.014, 0.02],
+        [-0.001, -0.016],
+        [-0.004, 0.019],
+        [-0.02, -0.003],
+        [-0.019, 0.016],
       ];
       const indexByTown = new Map<string, number>();
       shown.forEach((profile, index) => {
-        const center = townCenters[profile.town];
+        const activeTown = town === "All" ? profile.town : town;
+        const center = townCenters[activeTown] ?? townCenters[profile.town];
         if (!center) return;
-        const placeIndex = indexByTown.get(profile.town) ?? 0;
-        indexByTown.set(profile.town, placeIndex + 1);
+        const placeIndex = indexByTown.get(activeTown) ?? 0;
+        indexByTown.set(activeTown, placeIndex + 1);
         const [lat, lng] = offsets[placeIndex % offsets.length]!;
         const markerContent = document.createElement("div");
         if (photos[index]) {
@@ -961,7 +978,7 @@ function TownMap({
           .on("click", () => onSelectProfile(profile));
       });
       if (town === "All") instance.setView([-21.8, 17.2], 5);
-      else if (townCenters[town]) instance.setView(townCenters[town], 12);
+      else if (townCenters[town]) instance.setView(townCenters[town], 13);
     });
     return () => {
       disposed = true;
@@ -969,14 +986,14 @@ function TownMap({
   }, [town, profiles, demo, onSelectProfile, mapReady]);
   useEffect(() => {
     if (!map.current || !myLocation) return;
-    map.current.setView(myLocation, 12);
+    map.current.setView(myLocation, 13);
   }, [myLocation]);
   return (
     <div
       ref={container}
       role="region"
       aria-label="Map of Namibia showing profiles by town"
-      className="namibia-map h-[300px] w-full bg-secondary"
+      className="namibia-map h-[310px] w-full bg-secondary"
     />
   );
 }

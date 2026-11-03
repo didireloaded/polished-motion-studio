@@ -212,9 +212,11 @@ export const events = [
     title: "Sunset Social",
     town: "Windhoek",
     sample: true,
-    venue: "A rooftop in Windhoek",
+    venue: "The Stellenbosch Wine Bar",
     image: "/design/event-rooftop.jpg",
     when: "Sat, 26 Apr · 16:00",
+    interestedCount: 12,
+    extraCount: 8,
   },
   {
     id: "e2",
@@ -224,6 +226,8 @@ export const events = [
     venue: "Long Beach",
     image: "/design/event-beach.jpg",
     when: "Sun, 4 May · 11:00",
+    interestedCount: 28,
+    extraCount: 24,
   },
   {
     id: "e3",
@@ -233,6 +237,8 @@ export const events = [
     venue: "Dune 7",
     image: "/editorial/dunes.jpg",
     when: "Sat, 10 May · 06:30",
+    interestedCount: 16,
+    extraCount: 12,
   },
 ];
 export type State = {
