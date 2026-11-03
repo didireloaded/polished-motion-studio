@@ -103,6 +103,7 @@ function Home() {
   }
 
   const decide = async (p: Person, liked: boolean) => {
+    // celebrate state declared below via hook order-safe closure
     if (user) {
       setExitCue({ id: p.id, direction: liked ? 1 : -1 });
       setHiddenRecommendations((current) => [...current, p.id]);
@@ -136,7 +137,20 @@ function Home() {
         setNotice(`Passed on ${p.name}.`);
         window.setTimeout(() => setNotice(""), 1500);
       }
-      if (liked) void captureProductEvent("like_sent");
+      if (liked) {
+        void captureProductEvent("like_sent");
+        const { data: m } = await supabase
+          .from("matches")
+          .select("id")
+          .or(
+            `and(user_a.eq.${user.id},user_b.eq.${p.id}),and(user_a.eq.${p.id},user_b.eq.${user.id})`,
+          )
+          .maybeSingle();
+        if (m) {
+          setCelebrate(p);
+          if (typeof navigator !== "undefined") navigator.vibrate?.([30, 40, 60]);
+        }
+      }
       return true;
     }
     update((st) => {
