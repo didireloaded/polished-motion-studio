@@ -48,6 +48,7 @@ function Home() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [celebrate, setCelebrate] = useState<Person | null>(null);
   const [hiddenRecommendations, setHiddenRecommendations] = useState<string[]>([]);
   const [exitCue, setExitCue] = useState<{ id: string; direction: number } | null>(null);
   const sampleDeck = useMemo(
@@ -389,6 +390,52 @@ function Home() {
             className="fixed bottom-[calc(88px+env(safe-area-inset-bottom))] left-1/2 z-40 w-[min(92vw,400px)] -translate-x-1/2 rounded-2xl border border-border bg-card px-4 py-3 text-center text-sm shadow-float"
           >
             {notice}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {celebrate && (
+          <motion.div
+            role="dialog"
+            aria-label="It's a match"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/85 px-6 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-[340px] rounded-3xl bg-card p-7 text-center shadow-2xl"
+              initial={{ scale: 0.7, y: 40 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 260, damping: 18 }}
+            >
+              <motion.div
+                className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-primary text-3xl font-semibold text-primary-foreground"
+                animate={{ scale: [1, 1.12, 1] }}
+                transition={{ repeat: Infinity, duration: 1.6 }}
+              >
+                {celebrate.name.charAt(0)}
+              </motion.div>
+              <h2 className="text-2xl font-semibold text-foreground">It's a match!</h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                You and {celebrate.name} like each other. Say hello while it's fresh.
+              </p>
+              <Link
+                to="/chats"
+                className="mt-6 block rounded-full bg-primary py-3 text-sm font-semibold text-primary-foreground"
+                onClick={() => setCelebrate(null)}
+              >
+                Say hello
+              </Link>
+              <button
+                type="button"
+                className="mt-3 w-full py-2 text-sm text-muted-foreground"
+                onClick={() => setCelebrate(null)}
+              >
+                Keep swiping
+              </button>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
