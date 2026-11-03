@@ -22,6 +22,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { suggestDatePlan } from "@/lib/date-suggestion.functions";
 import { generateIcebreakers, localDateSpots, triggerHaptic } from "@/lib/icebreakers";
+import { TwoTruthsCard } from "@/components/SocialGames";
+import { getTwoTruthsForPerson } from "@/lib/social-games";
 
 export const Route = createFileRoute("/chats")({
   validateSearch: (
@@ -1171,8 +1173,10 @@ function Thread({
         ]
       : [];
   const [text, setText] = useState(initialDraft ?? "");
+  const [showTwoTruths, setShowTwoTruths] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
+  const twoTruthsGame = getTwoTruthsForPerson(p);
   const icebreakers = generateIcebreakers({
     name: p.name,
     town: p.town,
@@ -1218,12 +1222,31 @@ function Thread({
           <ArrowLeft className="h-5 w-5" />
         </button>
         <img src={photo(p, true)} alt="" className="h-10 w-10 rounded-full object-cover" />
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="font-semibold">{p.name}</p>
           <p className="text-xs text-muted-foreground">{p.town}</p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowTwoTruths((v) => !v)}
+          className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-primary"
+        >
+          <Sparkles className="h-3.5 w-3.5" />2 Truths
+        </button>
       </header>
       <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
+        {showTwoTruths && (
+          <div className="mb-3">
+            <TwoTruthsCard
+              game={twoTruthsGame}
+              onSendReply={(replyDraft) => {
+                setText(replyDraft);
+                setShowTwoTruths(false);
+                inputRef.current?.focus();
+              }}
+            />
+          </div>
+        )}
         {!s.matches.includes(id) && (
           <Link
             to="/date-plan"

@@ -28,8 +28,15 @@ import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
 import { MatchCelebrationModal, type CelebrationMatch } from "@/components/MatchCelebrationModal";
+import { ElevatorPitchCard, TwoTruthsCard } from "@/components/SocialGames";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { sendMatchAlertEmail } from "@/lib/email.functions";
+import {
+  computeVibeAlignment,
+  getElevatorPitchForPerson,
+  getPersonThisOrThatAnswers,
+  getTwoTruthsForPerson,
+} from "@/lib/social-games";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -511,6 +518,13 @@ function ProfileCard({
   const activeIdx = Math.min(photoIdx, totalPhotos - 1);
   const currentSampleSrc = !userId ? sampleGallery[activeIdx] : undefined;
   const currentLivePath = userId ? livePaths[activeIdx] : undefined;
+  const store = useStore();
+  const alignment = useMemo(
+    () => computeVibeAlignment(store.profile.choices, getPersonThisOrThatAnswers(person)),
+    [store.profile.choices, person],
+  );
+  const elevatorPitch = useMemo(() => getElevatorPitchForPerson(person), [person]);
+  const twoTruthsGame = useMemo(() => getTwoTruthsForPerson(person), [person]);
 
   const dragX = useMotionValue(0);
   const rotate = useTransform(dragX, [-240, 0, 240], [-9, 0, 9]);
@@ -712,12 +726,50 @@ function ProfileCard({
               </div>
               <div>
                 <h3 className="text-[12px] font-semibold">Looking for</h3>
-                <span className="mt-1 inline-flex rounded-full bg-accent px-3 py-1.5 text-[11px] font-medium text-primary">
-                  ♥ {person.intent}
-                </span>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex rounded-full bg-accent px-3 py-1.5 text-[11px] font-medium text-primary">
+                    ♥ {person.intent}
+                  </span>
+                  <span className="inline-flex rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                    Vibe Alignment: {alignment.percentage}%
+                  </span>
+                </div>
               </div>
               {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
               {!userId && <SampleVoiceIntro />}
+              <ElevatorPitchCard
+                personName={person.name}
+                pitch={elevatorPitch}
+                onSelectReaction={(reactionText) => {
+                  update((st) => ({
+                    ...st,
+                    chats: {
+                      ...st.chats,
+                      [person.id]: [
+                        ...(st.chats[person.id] ?? []),
+                        { from: "me", text: reactionText, at: "Just now" },
+                      ],
+                    },
+                  }));
+                  void onDecide(true);
+                }}
+              />
+              <TwoTruthsCard
+                game={twoTruthsGame}
+                onSendReply={(replyDraft) => {
+                  update((st) => ({
+                    ...st,
+                    chats: {
+                      ...st.chats,
+                      [person.id]: [
+                        ...(st.chats[person.id] ?? []),
+                        { from: "me", text: replyDraft, at: "Just now" },
+                      ],
+                    },
+                  }));
+                  void onDecide(true);
+                }}
+              />
               {person.photoPaths && person.photoPaths.length > 1 && (
                 <div className="no-scrollbar flex gap-2 overflow-x-auto">
                   {person.photoPaths.slice(1).map((path) => (

@@ -24,6 +24,13 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
 import { captureProductEvent } from "@/lib/telemetry";
 import { triggerHaptic } from "@/lib/icebreakers";
+import { ThisOrThatRapidRadar } from "@/components/SocialGames";
+import { SpeedDatingRoom } from "@/components/SpeedDatingRoom";
+import {
+  computeVibeAlignment,
+  getNextMixerWindow,
+  getPersonThisOrThatAnswers,
+} from "@/lib/social-games";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
@@ -94,6 +101,9 @@ function NearbyPage() {
   const [eventDate, setEventDate] = useState("");
   const [eventDetails, setEventDetails] = useState("");
   const [eventBusy, setEventBusy] = useState(false);
+  const [mixerOpen, setMixerOpen] = useState(false);
+  const [showThisOrThat, setShowThisOrThat] = useState(false);
+  const mixerWindow = getNextMixerWindow();
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["nearby", user?.id],
@@ -364,41 +374,116 @@ function NearbyPage() {
               </span>
             </div>
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
-              {visibleProfiles.slice(0, 12).map((profile) => (
-                <button
-                  key={profile.id}
-                  type="button"
-                  onClick={() => setSelectedProfile(profile)}
-                  className="w-[70px] shrink-0 text-left"
-                >
-                  {!user ? (
-                    <img
-                      src={photo(
-                        people.find((p) => p.id === profile.id)!,
-                        true,
+              {visibleProfiles.slice(0, 12).map((profile) => {
+                const alignment = computeVibeAlignment(
+                  store.profile.choices,
+                  getPersonThisOrThatAnswers({
+                    id: profile.id,
+                    town: profile.town,
+                    tags: profile.tags,
+                  }),
+                );
+                return (
+                  <button
+                    key={profile.id}
+                    type="button"
+                    onClick={() => setSelectedProfile(profile)}
+                    className="w-[78px] shrink-0 text-left"
+                  >
+                    <div className="relative">
+                      {!user ? (
+                        <img
+                          src={photo(
+                            people.find((p) => p.id === profile.id)!,
+                            true,
+                          )}
+                          alt=""
+                          className="h-[74px] w-[78px] rounded-[12px] object-cover"
+                        />
+                      ) : (
+                        <ProfilePhoto
+                          name={profile.display_name}
+                          path={profile.photo_paths?.[0]}
+                          className="h-[74px] w-[78px] rounded-[12px] object-cover"
+                        />
                       )}
-                      alt=""
-                      className="h-[70px] w-[70px] rounded-[12px] object-cover"
-                    />
-                  ) : (
-                    <ProfilePhoto
-                      name={profile.display_name}
-                      path={profile.photo_paths?.[0]}
-                      className="h-[70px] w-[70px] rounded-[12px] object-cover"
-                    />
-                  )}
-                  <p className="mt-1 truncate text-[11px] font-semibold">
-                    {profile.display_name}, {profile.age}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">{profile.town}</p>
-                </button>
-              ))}
+                      <span className="absolute bottom-1 left-1 rounded-full bg-foreground/80 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
+                        {alignment.percentage}% vibe
+                      </span>
+                    </div>
+                    <p className="mt-1 truncate text-[11px] font-semibold">
+                      {profile.display_name}, {profile.age}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">{profile.town}</p>
+                  </button>
+                );
+              })}
               {!visibleProfiles.length && (
                 <p className="py-5 text-xs text-muted-foreground">
                   No members here yet. Try another town.
                 </p>
               )}
             </div>
+
+            {showThisOrThat && (
+              <div className="-mx-5 mt-3">
+                <ThisOrThatRapidRadar
+                  answers={store.profile.choices}
+                  onAnswer={(questionId, pick) => {
+                    update((st) => ({
+                      ...st,
+                      profile: {
+                        ...st.profile,
+                        choices: { ...st.profile.choices, [questionId]: pick },
+                      },
+                    }));
+                  }}
+                  onClose={() => setShowThisOrThat(false)}
+                />
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic("match");
+                setMixerOpen(true);
+              }}
+              className="mt-3 flex w-full items-center gap-3 border-t border-border py-3 text-left"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/12 text-primary">
+                <Clock3 className="h-[18px] w-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-[13px] font-semibold">
+                  Speed Dating Live Lounge
+                  <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-semibold text-primary-foreground">
+                    3m rounds
+                  </span>
+                </span>
+                <span className="block truncate text-[11px] text-muted-foreground">
+                  {mixerWindow.label}
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowThisOrThat((v) => !v)}
+              className="flex w-full items-center gap-3 border-t border-border py-3 text-left"
+            >
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-primary">
+                <Star className="h-[18px] w-[18px]" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[13px] font-semibold">This or That · Rapid Radar</span>
+                <span className="block text-[11px] text-muted-foreground">
+                  Compare 5 Namibian picks & see Vibe Alignment %
+                </span>
+              </span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
             <Link
               to="/crossed-paths"
               className="mt-3 flex items-center gap-3 border-t border-border py-3"
@@ -715,6 +800,12 @@ function NearbyPage() {
           )}
         </DrawerContent>
       </Drawer>
+      <SpeedDatingRoom
+        open={mixerOpen}
+        town={town}
+        userId={user?.id}
+        onClose={() => setMixerOpen(false)}
+      />
     </main>
   );
 }
