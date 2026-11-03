@@ -20,6 +20,7 @@ import type { FormEvent } from "react";
 import { SafetyActions } from "@/components/community";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerHaptic } from "@/lib/icebreakers";
+import { joinLiveQueueServerFn } from "@/lib/social-backend.functions";
 import { people, photo, update, type Person } from "@/lib/namlink";
 import {
   applyTimeBoost,
@@ -212,9 +213,22 @@ export function RandomFridayModal({
     return () => window.clearInterval(timer);
   }, [open, phase]);
 
-  // Realtime Presence channel `random_friday:live`
+  // Realtime Presence channel `random_friday:live` + Lovable Cloud queue heartbeat
   useEffect(() => {
     if (!open) return;
+    if (userId) {
+      void joinLiveQueueServerFn({
+        data: { town, mode: "random_friday", streakCount: streak },
+      })
+        .then((res) => {
+          if (res?.ok && res.activeQueueCount > 0) {
+            setOnlineCount((prev) => Math.max(prev, res.activeQueueCount + 5));
+          }
+        })
+        .catch(() => {
+          // fallback to realtime presence count
+        });
+    }
     const channel = supabase.channel("random_friday:live", {
       config: { presence: { key: userId ?? "guest" } },
     });
@@ -234,7 +248,7 @@ export function RandomFridayModal({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [open, town, userId]);
+  }, [open, streak, town, userId]);
 
   useEffect(
     () => () => {
