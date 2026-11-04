@@ -98,7 +98,6 @@ function AuthPage() {
   };
 
   const resetPassword = async () => {
-
     if (!email) {
       setMsg("Enter your email address first.");
       return;
@@ -192,7 +191,6 @@ function AuthPage() {
           Sign in with Apple
         </button>
         {msg && (
-
           <p role="status" className="text-sm text-muted-foreground">
             {msg}
           </p>
