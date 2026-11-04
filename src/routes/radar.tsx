@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -10,7 +10,6 @@ import {
   MapPin,
   Navigation,
   Star,
-  Users,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -24,7 +23,6 @@ import { VoiceIntroPlayer } from "@/components/voice-intro";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
-import { captureProductEvent } from "@/lib/telemetry";
 import { triggerHaptic } from "@/lib/icebreakers";
 
 export const Route = createFileRoute("/radar")({
@@ -58,7 +56,7 @@ type CommunityEvent = {
   details: string;
   starts_at: string;
 };
-type EventInterest = { event_id: string; user_id: string; display_name: string };
+type EventMatch = { id: string; display_name: string; town: string };
 
 const townCenters: Record<string, [number, number]> = {
   Windhoek: [-22.56, 17.08],
@@ -85,6 +83,7 @@ const sampleProfiles: NearbyProfile[] = people.map((p) => ({
 export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) {
   const store = useStore();
   const { user, ready } = useSession();
+  const navigate = useNavigate({ from: "/radar" });
   const [town, setTown] = useState("Windhoek");
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const panel = page;
@@ -101,6 +100,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
   const [eventDate, setEventDate] = useState("");
   const [eventDetails, setEventDetails] = useState("");
   const [eventBusy, setEventBusy] = useState(false);
+  const [selectedEventToShare, setSelectedEventToShare] = useState<CommunityEvent | null>(null);
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["nearby", user?.id],
@@ -149,29 +149,32 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
       return data as CommunityEvent[];
     },
   });
-  const communityEventIds = communityEventsQuery.data?.map((event) => event.id) ?? [];
-  const eventInterestQuery = useQuery({
-    queryKey: ["event-interests", user?.id, communityEventIds],
-    enabled: !!user && communityEventIds.length > 0,
+  const eventMatchesQuery = useQuery({
+    queryKey: ["event-share-matches", user?.id],
+    enabled: !!user && page === "events",
     queryFn: async () => {
-      const { data: rsvps, error } = await supabase
-        .from("event_rsvps")
-        .select("event_id,user_id")
-        .in("event_id", communityEventIds);
+      const { data: matches, error } = await supabase
+        .from("matches")
+        .select("id,user_a,user_b")
+        .or(`user_a.eq.${user!.id},user_b.eq.${user!.id}`)
+        .limit(50);
       if (error) throw error;
-      const userIds = [...new Set((rsvps ?? []).map((rsvp) => rsvp.user_id))];
-      if (!userIds.length) return [] as EventInterest[];
+      const partnerIds = (matches ?? []).map((match) =>
+        match.user_a === user!.id ? match.user_b : match.user_a,
+      );
+      if (!partnerIds.length) return [] as EventMatch[];
       const { data: memberProfiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id,display_name")
-        .in("id", userIds);
+        .select("id,display_name,town")
+        .in("id", partnerIds);
       if (profilesError) throw profilesError;
-      const names = new Map(
-        (memberProfiles ?? []).map((profile) => [profile.id, profile.display_name]),
-      );
-      return (rsvps ?? []).flatMap((rsvp) => {
-        const displayName = names.get(rsvp.user_id);
-        return displayName ? [{ ...rsvp, display_name: displayName }] : [];
+      const profiles = new Map((memberProfiles ?? []).map((profile) => [profile.id, profile]));
+      return (matches ?? []).flatMap((match) => {
+        const id = match.user_a === user!.id ? match.user_b : match.user_a;
+        const profile = profiles.get(id);
+        return profile
+          ? [{ id: match.id, display_name: profile.display_name, town: profile.town }]
+          : [];
       });
     },
   });
@@ -259,17 +262,15 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
     void client.invalidateQueries({ queryKey: ["community-events"] });
   };
 
-  const toggleEventInterest = async (eventId: string, interested: boolean) => {
-    if (!user) return;
-    const result = interested
-      ? await supabase.from("event_rsvps").delete().eq("event_id", eventId).eq("user_id", user.id)
-      : await supabase.from("event_rsvps").insert({ event_id: eventId, user_id: user.id });
-    if (result.error) {
-      setNotice("We couldn't update your event interest. Please try again.");
-      return;
-    }
-    void client.invalidateQueries({ queryKey: ["event-interests", user.id] });
-    if (!interested) void captureProductEvent("event_interest");
+  const suggestEventToMatch = async (event: CommunityEvent, match: EventMatch) => {
+    await navigate({
+      to: "/chats",
+      search: {
+        matchId: match.id,
+        draft: `Would you like to go to ${event.title} at ${event.venue_name}, ${event.town}? It’s on ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.starts_at))}.`,
+      },
+    });
+    setSelectedEventToShare(null);
   };
 
   const visibleEvents = user
@@ -281,8 +282,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
         starts_at: "",
         sample: true,
       }));
-  const eventInterests = eventInterestQuery.data ?? [];
-
   return (
     <main className={`mx-auto max-w-md bg-white ${panel === "nearby" ? "pb-0" : "pb-24"}`}>
       <header className="flex h-[58px] items-center justify-between px-5">
@@ -494,7 +493,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
           <div className="px-5 pb-2">
             <h1 className="text-[20px] font-semibold">Events</h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Meet people through shared interests
+              Suggest a local plan to someone you’ve matched with
             </p>
           </div>
           {notice && (
@@ -570,12 +569,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                 </li>
               ) : (
                 visibleEvents.map((event) => {
-                  const attendees = eventInterests.filter(
-                    (interest) => interest.event_id === event.id,
-                  );
-                  const interested = user
-                    ? attendees.some((interest) => interest.user_id === user.id)
-                    : store.interestedEvents.includes(event.id);
                   return (
                     <li
                       key={event.id}
@@ -633,43 +626,20 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                           {event.details}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 px-3 pt-3">
-                        {event.sample ? (
-                          <span className="text-[11px] text-muted-foreground">
-                            Preview a shared plan
-                          </span>
-                        ) : attendees.length > 0 ? (
-                          <>
-                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-primary">
-                              <Users className="h-3.5 w-3.5" />
-                            </span>
-                            <span className="truncate text-[11px] text-muted-foreground">
-                              {attendees.map((attendee) => attendee.display_name).join(", ")}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[11px] text-muted-foreground">
-                            Be the first to show interest
-                          </span>
-                        )}
-                      </div>
+                      <p className="px-3 pt-3 text-[11px] text-muted-foreground">
+                        Suggest this plan privately to someone you’ve matched with.
+                      </p>
                       <button
                         type="button"
-                        aria-pressed={interested}
-                        onClick={() =>
-                          user
-                            ? void toggleEventInterest(event.id, interested)
-                            : update((s) => ({
-                                ...s,
-                                interestedEvents: interested
-                                  ? s.interestedEvents.filter((id) => id !== event.id)
-                                  : [...s.interestedEvents, event.id],
-                              }))
-                        }
-                        className={`mx-3 mb-3 mt-3 flex h-9 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 rounded-full text-xs font-semibold ${interested ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
+                        disabled={!user || event.sample}
+                        onClick={() => {
+                          if (user && !event.sample) setSelectedEventToShare(event);
+                          else setNotice("Sign in and match with someone to suggest an event.");
+                        }}
+                        className="mx-3 mb-3 mt-3 flex h-10 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 bg-primary text-xs font-semibold text-primary-foreground disabled:opacity-70"
                       >
-                        <Star className="h-3.5 w-3.5" />
-                        {interested ? "Interested" : "I’m interested"}
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {user ? "Suggest to a match" : "Sign in to suggest"}
                       </button>
                     </li>
                   );
@@ -682,9 +652,8 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
               )}
             </ul>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              {user
-                ? "Your interest is visible to members who can also see your profile. Choose public places and meet safely."
-                : "Your interest is saved on this device."}
+              Event suggestions are private between you and your match. Meet in public and make the
+              plan together.
             </p>
           </section>
         </>
@@ -753,6 +722,51 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                 </div>
               )}
             </>
+          )}
+        </DrawerContent>
+      </Drawer>
+      <Drawer
+        open={!!selectedEventToShare}
+        onOpenChange={(open) => !open && setSelectedEventToShare(null)}
+      >
+        <DrawerContent className="mx-auto max-w-md bg-white px-5 pb-8">
+          <DrawerHeader className="px-0 text-left">
+            <DrawerTitle>Suggest this event to a match</DrawerTitle>
+          </DrawerHeader>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {selectedEventToShare?.title} · {selectedEventToShare?.town}. We’ll add it as a draft in
+            your private chat.
+          </p>
+          {eventMatchesQuery.isLoading ? (
+            <p className="mt-5 text-sm text-muted-foreground">Loading your matches…</p>
+          ) : eventMatchesQuery.isError ? (
+            <p role="alert" className="mt-5 text-sm text-destructive">
+              Your matches couldn’t load. Close this and try again.
+            </p>
+          ) : !eventMatchesQuery.data?.length ? (
+            <p className="mt-5 text-sm text-muted-foreground">
+              You need a mutual match before you can suggest an event.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-border">
+              {eventMatchesQuery.data.map((match) => (
+                <li key={match.id}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectedEventToShare && void suggestEventToMatch(selectedEventToShare, match)
+                    }
+                    className="flex min-h-14 w-full items-center justify-between text-left"
+                  >
+                    <span>
+                      <span className="block text-sm font-semibold">{match.display_name}</span>
+                      <span className="text-xs text-muted-foreground">{match.town}</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
         </DrawerContent>
       </Drawer>

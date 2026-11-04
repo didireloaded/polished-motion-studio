@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, CalendarDays, Heart, MapPin } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
-import { people, photo } from "@/lib/namlink";
+import { people } from "@/lib/namlink";
 
 export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
   const { user } = useSession();
@@ -80,22 +80,23 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
         <h1 className="flex-1 pr-5 text-center text-sm font-semibold">Date plan</h1>
       </header>
       <div className="px-5 pt-5 text-center">
-        <div className="flex items-center justify-center gap-3">
-          <img
-            src="/design/lead-woman.jpg"
-            alt="Profile portrait"
-            loading="lazy"
-            decoding="async"
-            className="h-14 w-14 rounded-full object-cover"
-          />
+        <div
+          className="flex items-center justify-center gap-3"
+          aria-label={`Date plan for you and ${name}`}
+        >
+          <span
+            aria-label="You"
+            className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-secondary text-sm font-semibold"
+          >
+            You
+          </span>
           <Heart className="h-5 w-5 fill-primary text-primary" />
-          <img
-            src={sample ? photo(previewPerson, true) : "/design/lead-man.jpg"}
-            alt="Profile portrait"
-            loading="lazy"
-            decoding="async"
-            className="h-14 w-14 rounded-full object-cover"
-          />
+          <span
+            aria-label={name}
+            className="flex h-14 w-14 items-center justify-center rounded-full border border-border bg-secondary text-sm font-semibold"
+          >
+            {name.slice(0, 1).toLocaleUpperCase()}
+          </span>
         </div>
         <p className="mt-3 text-sm font-semibold">You and {name}</p>
         <p className="text-xs text-muted-foreground">Planning something together</p>

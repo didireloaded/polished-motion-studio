@@ -232,9 +232,12 @@ function RandomFridayPage() {
           className="mt-6 rounded-[20px] border border-border bg-white p-5 shadow-float"
           aria-label="Your introduction"
         >
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
             <div>
-              <h3 className="mt-1.5 text-[16px] font-semibold">Your 30-second profile pitch</h3>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Your introduction
+              </p>
+              <h3 className="mt-1 text-[16px] font-semibold">A quick hello, in your own words</h3>
             </div>
             <button
               type="button"
@@ -245,23 +248,20 @@ function RandomFridayPage() {
             </button>
           </div>
 
-          {/* Shared Dating Profile Summary Card */}
-          <div className="mt-3 rounded-2xl bg-secondary/50 p-3.5 text-xs">
-            <div className="flex items-center justify-between">
+          <div className="mt-4 text-xs">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
               <p className="font-semibold text-foreground">
                 {currentProfileInput.displayName}, {currentProfileInput.age} ·{" "}
                 {currentProfileInput.town}
               </p>
-              <span className="rounded-full bg-white px-2.5 py-0.5 text-[11px] font-medium text-primary">
-                {currentProfileInput.intent}
-              </span>
+              <span className="text-muted-foreground">· {currentProfileInput.intent}</span>
             </div>
             {currentProfileInput.tags.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {currentProfileInput.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="rounded-full bg-white px-2.5 py-0.5 text-[11px] text-muted-foreground"
+                    className="border-b border-border pb-0.5 text-[11px] text-muted-foreground"
                   >
                     {tag}
                   </span>
@@ -434,7 +434,7 @@ function RandomFridayPage() {
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 rounded-2xl border border-primary/25 bg-accent/35 p-4"
+              className="mt-4 border-l-2 border-primary bg-accent/25 px-4 py-3"
             >
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-semibold text-primary">
@@ -499,7 +499,7 @@ function RandomFridayPage() {
               transition={{ duration: 0.2 }}
               className="mt-5 min-h-20 text-[17px] font-semibold leading-7"
             >
-              {pitchResult ? `“${pitchResult.draft.pitch}”` : randomFridayDicePrompts[promptIndex]}
+              {randomFridayDicePrompts[promptIndex]}
             </motion.p>
           </AnimatePresence>
           <div className="mt-5" aria-label={`${seconds} seconds remaining`}>

@@ -54,6 +54,9 @@ beforeAll(async () => {
   ]) {
     await database.exec(uncommentHistoricalMigration(`drizzle/migrations/${migration}.sql`));
   }
+  await database.exec(
+    readFileSync(resolve("supabase/migrations/20261104171500_private_event_interest.sql"), "utf8"),
+  );
   await database.query("INSERT INTO auth.users (id) VALUES ($1), ($2), ($3), ($4)", [
     alice,
     bob,
@@ -199,6 +202,26 @@ describe("member access rules in PostgreSQL", () => {
     expect(
       await asMember(carol, "SELECT id FROM public.post_replies WHERE id=$1", [replyId]),
     ).toEqual([]);
+  });
+
+  it("keeps event interest private to its owner", async () => {
+    const eventId = "50000000-0000-4000-8000-000000000001";
+    await database.query(
+      `INSERT INTO public.community_events (id,title,town,venue_name,starts_at,created_by)
+       VALUES ($1,'Public concert','Windhoek','Town Hall',now() + interval '3 days',$2)`,
+      [eventId, moderator],
+    );
+    await database.query(
+      "INSERT INTO public.event_rsvps (event_id,user_id) VALUES ($1,$2),($1,$3)",
+      [eventId, alice, bob],
+    );
+    expect(await asMember(alice, "SELECT user_id FROM public.event_rsvps")).toEqual([
+      { user_id: alice },
+    ]);
+    expect(await asMember(bob, "SELECT user_id FROM public.event_rsvps")).toEqual([
+      { user_id: bob },
+    ]);
+    expect(await asMember(carol, "SELECT user_id FROM public.event_rsvps")).toEqual([]);
   });
 
   it("limits report visibility to the reporter and moderators", async () => {
