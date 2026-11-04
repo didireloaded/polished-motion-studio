@@ -81,6 +81,22 @@ function AuthPage() {
     }
   };
 
+  const signInWithApple = async () => {
+    if (busy) return;
+    setBusy(true);
+    setMsg("");
+    try {
+      const result = await lovable.auth.signInWithOAuth("apple", {
+        redirect_uri: new URL(currentNextPath() ?? "/you", window.location.origin).href,
+      });
+      if (result?.error) setMsg(result.error.message ?? "Apple sign-in couldn't be started.");
+    } catch {
+      setMsg("Apple sign-in couldn't be started. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const resetPassword = async () => {
     if (!email) {
       setMsg("Enter your email address first.");
@@ -163,6 +179,16 @@ function AuthPage() {
           className="h-11 w-full rounded-full border border-border text-sm font-semibold"
         >
           <span className="mr-2 font-bold text-[#4285f4]">G</span> Sign in with Google
+        </button>
+        <button
+          onClick={() => void signInWithApple()}
+          disabled={busy}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-full bg-foreground text-sm font-semibold text-background"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-[17px] w-[17px] fill-current">
+            <path d="M17.05 12.6c-.03-2.36 1.93-3.49 2.02-3.55-1.1-1.61-2.81-1.83-3.42-1.86-1.45-.15-2.84.86-3.58.86-.74 0-1.88-.84-3.1-.82-1.59.02-3.06.93-3.88 2.36-1.66 2.87-.42 7.11 1.19 9.43.79 1.14 1.73 2.41 2.96 2.37 1.19-.05 1.64-.77 3.08-.77 1.44 0 1.84.77 3.1.75 1.28-.02 2.09-1.16 2.87-2.31.9-1.32 1.27-2.6 1.29-2.67-.03-.01-2.48-.95-2.53-3.79ZM14.6 5.3c.65-.79 1.09-1.89.97-2.98-.94.04-2.08.63-2.75 1.42-.6.69-1.13 1.8-.99 2.86 1.05.08 2.12-.53 2.77-1.3Z" />
+          </svg>
+          Sign in with Apple
         </button>
         {msg && (
           <p role="status" className="text-sm text-muted-foreground">
