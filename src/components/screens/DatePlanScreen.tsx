@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, CalendarDays, Heart, MapPin } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
+import { people, photo } from "@/lib/namlink";
 
 export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
   const { user } = useSession();
@@ -39,7 +40,8 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
   });
   const sample = !user;
   const plan = query.data?.plan;
-  const name = sample ? "Tobias" : (query.data?.name ?? "your match");
+  const previewPerson = people.find((person) => person.id === matchId) ?? people[13]!;
+  const name = sample ? previewPerson.name : (query.data?.name ?? "your match");
   const amUserA = query.data?.match.user_a === user?.id;
   const myConfirmed = plan ? (amUserA ? plan.confirmed_a : plan.confirmed_b) : false;
   const theirConfirmed = plan ? (amUserA ? plan.confirmed_b : plan.confirmed_a) : false;
@@ -81,15 +83,15 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
         <div className="flex items-center justify-center gap-3">
           <img
             src="/design/lead-woman.jpg"
-            alt="Sample member"
+            alt="Profile portrait"
             loading="lazy"
             decoding="async"
             className="h-14 w-14 rounded-full object-cover"
           />
           <Heart className="h-5 w-5 fill-primary text-primary" />
           <img
-            src="/design/lead-man.jpg"
-            alt="Sample member"
+            src={sample ? photo(previewPerson, true) : "/design/lead-man.jpg"}
+            alt="Profile portrait"
             loading="lazy"
             decoding="async"
             className="h-14 w-14 rounded-full object-cover"
@@ -120,7 +122,7 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
             <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
               <CalendarDays className="h-4 w-4" />{" "}
               {sample
-                ? `Sample · ${sampleTime === 0 ? "Friday at 18:00" : "Saturday at 17:00"}`
+                ? `${sampleTime === 0 ? "Friday at 18:00" : "Saturday at 17:00"}`
                 : plan!.scheduled_at
                   ? new Intl.DateTimeFormat(undefined, {
                       dateStyle: "medium",
@@ -150,8 +152,8 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
             <p className="mt-4 text-xs text-primary">
               {sample
                 ? sampleConfirmed
-                  ? "You’re in · waiting for Tobias"
-                  : "Tentative sample plan"
+                  ? `You’re in · waiting for ${name}`
+                  : "Choose a time together"
                 : plan!.confirmed_a && plan!.confirmed_b
                   ? "Confirmed by both of you"
                   : myConfirmed

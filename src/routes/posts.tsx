@@ -338,7 +338,7 @@ function Posts() {
                         people.find((person) => person.name === post.authorName) ?? null,
                       )
                     }
-                    aria-label={`View ${post.authorName}'s sample profile`}
+                    aria-label={`View ${post.authorName}'s profile`}
                     className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                   >
                     {people.find((person) => person.name === post.authorName) ? (
@@ -364,11 +364,6 @@ function Posts() {
                       </p>
                     </div>
                   </button>
-                  {post.sample && (
-                    <span className="rounded-full bg-secondary px-2 py-1 text-[10px] text-muted-foreground">
-                      Sample
-                    </span>
-                  )}
                 </div>
                 <p className="mt-3 text-[14px] leading-6">{post.text}</p>
                 <div className="mt-3 flex items-center gap-4 text-xs">
@@ -492,12 +487,10 @@ function Posts() {
               </DrawerHeader>
               <img loading="lazy" decoding="async"
                 src={selectedAuthor.designPhoto ?? `/editorial/${selectedAuthor.photo}.jpg`}
-                alt={`${selectedAuthor.name}'s sample profile`}
+                alt={`${selectedAuthor.name}'s profile`}
                 className="h-48 w-full rounded-xl object-cover"
               />
-              <p className="mt-3 text-xs text-muted-foreground">
-                {selectedAuthor.town} · Sample profile
-              </p>
+              <p className="mt-3 text-xs text-muted-foreground">{selectedAuthor.town}</p>
               <p className="mt-3 text-sm leading-6">{selectedAuthor.bio}</p>
               <p className="mt-3 text-xs font-semibold">Looking for {selectedAuthor.intent}</p>
               <SampleVoiceIntro />
@@ -564,9 +557,7 @@ function Posts() {
                 const person = people.find((entry) => entry.id === reply.personId);
                 return (
                   <div key={reply.id} className="mt-3 rounded-2xl border border-border p-4">
-                    <p className="text-[11px] text-muted-foreground">
-                      {reply.sample ? "Sample reply" : "Private reply"}
-                    </p>
+                    <p className="text-[11px] text-muted-foreground">Private reply</p>
                     <p className="mt-2 text-sm leading-5">{reply.text}</p>
                     <button
                       onClick={() => startChat(reply)}

@@ -193,7 +193,7 @@ function You() {
             <button
               type="button"
               onClick={() => setEditing(true)}
-              aria-label="Edit sample profile"
+              aria-label="Edit profile"
               className="relative mx-auto block"
             >
               <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-[42px] font-semibold text-white">
@@ -208,16 +208,13 @@ function You() {
               {s.profile.town} · {s.profile.age} · {s.profile.intent}
             </p>
             <p className="mt-3 text-[11px] text-muted-foreground">
-              <span className="mr-2 rounded-full bg-accent px-2 py-0.5 font-semibold uppercase text-primary">
-                Sample
-              </span>
-              Sample preview account
+              Preview account · fictional activity, saved on this device
             </p>
           </section>
           <div className="mx-4 mt-5 space-y-2.5">
             <AccountMenuRow
               label="Notifications"
-              detail="Sample alerts"
+              detail="Activity and updates"
               icon={Bell}
               to="/notifications"
             />
@@ -253,14 +250,14 @@ function You() {
       >
         <img loading="lazy" decoding="async"
           src="/design/lead-man.jpg"
-          alt="Sample profile portrait"
+          alt="Profile portrait"
           className="h-[155px] w-full object-cover object-[center_38%]"
         />
         <div className="p-3">
           <p className="text-[17px] font-semibold">
             {s.profile.name || "Alex"} <span className="text-sm font-normal">{s.profile.age}</span>
           </p>
-          <p className="text-xs text-muted-foreground">{s.profile.town} · Sample profile preview</p>
+          <p className="text-xs text-muted-foreground">{s.profile.town}</p>
           <p className="mt-2 text-xs leading-5">
             {s.profile.bio ||
               "Design, travel, good food and great company. Always up for a road trip."}
@@ -276,7 +273,7 @@ function You() {
               <img loading="lazy" decoding="async"
                 key={src}
                 src={src}
-                alt="Sample profile gallery"
+                alt="Profile gallery"
                 className="h-12 w-full rounded-md object-cover"
               />
             ))}
@@ -335,7 +332,7 @@ function You() {
                   >
                     <img loading="lazy" decoding="async"
                       src={photo(person, true)}
-                      alt={"Sample profile photo of " + person.name}
+                      alt={"Profile photo of " + person.name}
                       className="h-full w-full object-cover"
                     />
                     <div className="bg-scrim absolute inset-0" />

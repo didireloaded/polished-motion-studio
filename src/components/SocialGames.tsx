@@ -661,9 +661,7 @@ export function HotTakeAndFlagPollHub({
             </button>
           </div>
           {!userId && (
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              Sample poll · votes stay on this device.
-            </p>
+            <p className="mt-3 text-[11px] text-muted-foreground">Votes stay on this device.</p>
           )}
         </section>
       )}

@@ -11,6 +11,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { MotionConfig } from "framer-motion";
 import { TabBar } from "../components/TabBar";
+import { PreviewNotice } from "../components/PreviewNotice";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -138,6 +139,7 @@ function RootComponent() {
       <MotionConfig reducedMotion="user">
         <Outlet />
         <TabBar />
+        <PreviewNotice />
       </MotionConfig>
     </QueryClientProvider>
   );

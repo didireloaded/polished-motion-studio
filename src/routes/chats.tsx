@@ -69,7 +69,11 @@ function Chats() {
     if (matchId) setOpenId(matchId);
   }, [matchId]);
   const matches = people.filter((p) => s.matches.includes(p.id));
-  const list = matches.length ? matches : [people[0]!, people[5]!, people[1]!, people[2]!];
+  const list = matches;
+  const newMatches = list.filter((person) => !s.chats[person.id]?.length);
+  const conversations = list
+    .filter((person) => s.chats[person.id]?.length)
+    .sort((a, b) => (s.chats[b.id]?.at(-1)?.at ?? 0) - (s.chats[a.id]?.at(-1)?.at ?? 0));
   const person = list.find((p) => p.id === openId) ?? people.find((p) => p.id === openId);
 
   if (!ready)
@@ -124,13 +128,10 @@ function Chats() {
             ) : (
               <>
                 <div className="flex items-center justify-between px-5 pb-2">
-                  <h2 className="text-sm font-semibold">
-                    {matches.length ? "New matches" : "Sample matches"}
-                  </h2>
-                  <span className="text-[10px] text-muted-foreground">Demo mode</span>
+                  <h2 className="text-sm font-semibold">New matches</h2>
                 </div>
                 <div className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-4">
-                  {list.map((p, i) => (
+                  {newMatches.map((p, i) => (
                     <motion.button
                       key={p.id}
                       initial={{ scale: 0 }}
@@ -148,11 +149,9 @@ function Chats() {
                     </motion.button>
                   ))}
                 </div>
-                <h2 className="px-5 pb-1 text-sm font-semibold">
-                  {matches.length ? "Messages" : "Sample messages"}
-                </h2>
+                <h2 className="px-5 pb-1 text-sm font-semibold">Messages</h2>
                 <ul className="divide-y divide-border px-3">
-                  {list.map((p, i) => {
+                  {conversations.map((p, i) => {
                     const last = s.chats[p.id]?.at(-1);
                     return (
                       <motion.li
@@ -180,11 +179,7 @@ function Chats() {
                               </span>
                             </div>
                             <p className="truncate text-sm text-muted-foreground">
-                              {last
-                                ? last.text
-                                : matches.length
-                                  ? "You both chose to connect. Say hello."
-                                  : (sampleChatPreviews[p.name] ?? "Tap to preview a conversation")}
+                              {last ? last.text : "You both chose to connect. Say hello."}
                             </p>
                           </div>
                         </button>
@@ -209,13 +204,6 @@ function Chats() {
 }
 
 type MatchRow = { id: string; user_a: string; user_b: string; created_at: string };
-
-const sampleChatPreviews: Record<string, string> = {
-  Leandra: "Hey! That sounds amazing 😊",
-  Daniel: "Are you free this weekend?",
-  Leah: "That place looks great!",
-  Amara: "Let's do it! Can't wait 🌅",
-};
 
 function toDateTimeLocal(value: string) {
   const date = new Date(value);
@@ -1266,25 +1254,7 @@ function Thread({
 }) {
   const s = useStore();
   const p = people.find((x) => x.id === id)!;
-  const msgs = s.chats[id]?.length
-    ? s.chats[id]
-    : !s.matches.includes(id)
-      ? [
-          { id: "preview-1", from: "them" as const, text: "Hey! How's your week going?", at: 0 },
-          {
-            id: "preview-2",
-            from: "me" as const,
-            text: "Good! Thinking of a beach day this weekend. Want to join?",
-            at: 0,
-          },
-          {
-            id: "preview-3",
-            from: "them" as const,
-            text: "That sounds lovely. Let's make a plan.",
-            at: 0,
-          },
-        ]
-      : [];
+  const msgs = s.chats[id] ?? [];
   const [text, setText] = useState(initialDraft ?? "");
   const [showTwoTruths, setShowTwoTruths] = useState(false);
   const [showOpenerStudio, setShowOpenerStudio] = useState(false);
@@ -1413,15 +1383,13 @@ function Thread({
             />
           </div>
         )}
-        {!s.matches.includes(id) && (
-          <Link
-            to="/date-plan"
-            search={{ matchId: undefined }}
-            className="block rounded-xl border border-border bg-white p-3 text-center text-xs font-semibold text-primary"
-          >
-            View a sample date plan
-          </Link>
-        )}
+        <Link
+          to="/date-plan"
+          search={{ matchId: p.id }}
+          className="block rounded-xl border border-border bg-white p-3 text-center text-xs font-semibold text-primary"
+        >
+          Plan a date
+        </Link>
         <div className="mb-4 rounded-2xl bg-card p-4 text-center text-sm text-muted-foreground">
           {shared.length ? (
             <>
