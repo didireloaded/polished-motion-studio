@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  estimateSpokenSeconds,
   fallbackRandomFridayPitch,
   formatShareablePitchCard,
   toPitchPromptInput,
@@ -48,6 +49,42 @@ describe("Random Friday 30-second AI pitch generator", () => {
 
     const card = formatShareablePitchCard(sampleProfile, draft);
     expect(card).toContain("Leandra");
-    expect(card).toContain("Ask me:");
+    expect(card).toContain("Leandra, 26 · Windhoek");
+    expect(card).toContain(sampleProfile.bio);
+    expect(card).toContain(sampleProfile.intent);
+    expect(card).toContain(draft.pitch);
+    expect(card).toContain(draft.closingHook);
+  });
+  it("counts the 30-second boundary without rounding longer text down", () => {
+    expect(estimateSpokenSeconds("word ".repeat(69))).toBe(30);
+    expect(estimateSpokenSeconds("word ".repeat(70))).toBe(31);
+  });
+
+  it("rejects an overlong response instead of clipping its sentence or hiding its duration", () => {
+    const longPitch = "word ".repeat(100);
+    expect(estimateSpokenSeconds(longPitch)).toBeGreaterThan(30);
+    expect(
+      validatePitchOutput(
+        JSON.stringify({
+          headline: "An introduction",
+          pitch: longPitch,
+          closingHook: "What would you like to share?",
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("keeps fallback introductions under 30 seconds without inventing hobbies", () => {
+    for (const style of ["warm", "playful", "confident", "storyteller"] as const) {
+      const draft = fallbackRandomFridayPitch(
+        { ...sampleProfile, tags: [], bio: "", intent: "Friends first" },
+        style,
+        "a long weekend idea ".repeat(20),
+      );
+      expect(draft.estimatedSeconds).toBeLessThanOrEqual(30);
+      expect(draft.pitch).not.toContain("coffee");
+      expect(draft.pitch).not.toContain("playlist");
+      expect(draft.pitch).toContain("friends first");
+    }
   });
 });

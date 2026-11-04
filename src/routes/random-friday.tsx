@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Copy, RotateCcw, Share2, Sparkles, Wand2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Copy, RotateCcw, Share2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NearbyFeatureShell } from "@/components/NearbyFeatureShell";
 import { useMyProfile, useSession } from "@/hooks/use-session";
 import { triggerHaptic } from "@/lib/icebreakers";
@@ -35,7 +35,6 @@ function RandomFridayPage() {
   const [seconds, setSeconds] = useState(DURATION);
   const [running, setRunning] = useState(false);
 
-  // AI 30-Second Pitch Studio state
   const defaultProfile = useMemo<PitchProfileInput>(() => {
     if (myProfile.data) {
       return {
@@ -87,6 +86,12 @@ function RandomFridayPage() {
     draft: DraftedRandomFridayPitch;
   } | null>(null);
   const [shareFeedback, setShareFeedback] = useState("");
+  const draftRequest = useRef(0);
+  useEffect(() => {
+    draftRequest.current += 1;
+    setPitchResult(null);
+    setShareFeedback("");
+  }, [displayName, age, town, intent, selectedTags, bio, style, focusHint]);
 
   useEffect(() => {
     setDisplayName(defaultProfile.displayName);
@@ -123,6 +128,7 @@ function RandomFridayPage() {
 
   const generatePitch = async () => {
     triggerHaptic(10);
+    const request = ++draftRequest.current;
     setGenerating(true);
     setShareFeedback("");
     try {
@@ -134,18 +140,19 @@ function RandomFridayPage() {
             profileOverride: currentProfileInput,
           },
         });
-        setPitchResult(res);
+        if (request === draftRequest.current) setPitchResult(res);
       } else {
         const draft = fallbackRandomFridayPitch(
           currentProfileInput,
           style,
           focusHint.trim() || undefined,
         );
-        setPitchResult({
-          source: "fallback",
-          notice: "Sample preview · sign in to generate with live AI Gateway.",
-          draft,
-        });
+        if (request === draftRequest.current)
+          setPitchResult({
+            source: "fallback",
+            notice: "Preview introduction · sign in to tailor one from your profile.",
+            draft,
+          });
       }
       setRunning(false);
       setSeconds(DURATION);
@@ -155,39 +162,40 @@ function RandomFridayPage() {
         style,
         focusHint.trim() || undefined,
       );
-      setPitchResult({
-        source: "fallback",
-        notice: "Crafted from your profile details.",
-        draft,
-      });
+      if (request === draftRequest.current)
+        setPitchResult({
+          source: "fallback",
+          notice: "A starting point from your profile. Review it before sharing.",
+          draft,
+        });
     } finally {
       setGenerating(false);
     }
   };
 
-  const shareProfileAndPitch = async () => {
-    const activeDraft =
-      pitchResult?.draft ??
-      fallbackRandomFridayPitch(currentProfileInput, style, focusHint.trim() || undefined);
-    const cardText = formatShareablePitchCard(currentProfileInput, activeDraft);
-    const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
+  const shareProfileAndPitch = async (action: "share" | "copy" = "share") => {
+    if (!pitchResult) return;
+    const cardText = formatShareablePitchCard(currentProfileInput, pitchResult.draft);
+    if (action === "share" && navigator.share) {
+      try {
         await navigator.share({
-          title: `${currentProfileInput.displayName}'s 30s Random Friday Pitch — Mutal`,
+          title: `${currentProfileInput.displayName}'s Random Friday introduction — Mutal`,
           text: cardText,
-          url: shareUrl,
         });
-        setShareFeedback("Shared your profile & 30-second pitch.");
+        setShareFeedback("Profile card shared.");
         return;
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
       }
-      if (typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(`${cardText}\n${shareUrl}`);
-        setShareFeedback("Copied your profile & 30-second pitch to clipboard.");
-        window.setTimeout(() => setShareFeedback(""), 2400);
-      }
+    }
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(cardText);
+      setShareFeedback("Profile card copied.");
     } catch {
-      // User dismissed native share sheet
+      setShareFeedback(
+        "Sharing is unavailable here. You can select and copy the introduction below.",
+      );
     }
   };
 
@@ -208,26 +216,22 @@ function RandomFridayPage() {
     <NearbyFeatureShell title="Random Friday">
       <div className="px-5 pb-12 pt-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-          30-second introductions · AI Pitch Studio
+          30-second introductions
         </p>
         <h2 className="mt-2 text-[20px] font-semibold leading-7 tracking-[-0.02em]">
           A quick hello, in your own words.
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          Share your dating profile details to draft a personalized 30-second Random Friday pitch
-          with AI Gateway, then practise it against the 30-second clock.
+          Turn your profile into a short introduction. Review the words, practise at your own pace,
+          then share your profile card when it feels like you.
         </p>
 
-        {/* AI 30-Second Random Friday Pitch Studio */}
         <section
           className="mt-6 rounded-[20px] border border-border bg-white p-5 shadow-float"
-          aria-label="AI 30-second pitch generator"
+          aria-label="Your introduction"
         >
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                <Wand2 className="h-3 w-3" /> AI Gateway Pitch Studio
-              </span>
               <h3 className="mt-1.5 text-[16px] font-semibold">Your 30-second profile pitch</h3>
             </div>
             <button
@@ -404,14 +408,14 @@ function RandomFridayPage() {
               onClick={() => void generatePitch()}
               className="flex h-11 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 text-xs font-semibold text-white shadow-float transition active:scale-[0.98] disabled:opacity-50"
             >
-              <Sparkles className="h-4 w-4" />
-              {generating ? "Writing your 30s pitch…" : "Write 30s pitch with AI"}
+              {generating ? "Writing your 30s pitch…" : "Draft my introduction"}
             </button>
             <button
               type="button"
               onClick={() => void shareProfileAndPitch()}
-              aria-label="Share dating profile and pitch"
-              className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-white px-4 text-xs font-semibold text-foreground transition-colors hover:bg-secondary"
+              disabled={!pitchResult || generating}
+              aria-label="Share dating profile and introduction"
+              className="flex h-11 items-center justify-center gap-1.5 rounded-full border border-border bg-white px-4 text-xs font-semibold text-foreground transition-colors hover:bg-secondary disabled:opacity-40"
             >
               <Share2 className="h-3.5 w-3.5 text-primary" />
               Share
@@ -420,7 +424,7 @@ function RandomFridayPage() {
 
           {shareFeedback && (
             <p role="status" className="mt-2.5 flex items-center gap-1.5 text-xs text-primary">
-              <Check className="h-3.5 w-3.5" /> {shareFeedback}
+              {shareFeedback}
             </p>
           )}
 
@@ -461,7 +465,7 @@ function RandomFridayPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => void shareProfileAndPitch()}
+                  onClick={() => void shareProfileAndPitch("copy")}
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-border bg-white px-3 text-xs font-semibold text-foreground"
                 >
                   <Copy className="h-3.5 w-3.5" /> Copy pitch card
@@ -479,7 +483,7 @@ function RandomFridayPage() {
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
             <span>
               {pitchResult
-                ? "Practising your AI pitch"
+                ? "Practising your introduction"
                 : `Prompt ${promptIndex + 1} of ${randomFridayDicePrompts.length}`}
             </span>
             <span>30-second round</span>
