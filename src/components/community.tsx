@@ -11,6 +11,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/hooks/use-session";
 
 export function DemoNotice() {
   return (
@@ -22,8 +23,6 @@ export function DemoNotice() {
     </div>
   );
 }
-
-const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
 export function ProfilePhoto({
   name,
@@ -40,6 +39,7 @@ export function ProfilePhoto({
   priority?: boolean;
   position?: string | undefined;
 }) {
+  const { user } = useSession();
   const [loaded, setLoaded] = useState(false);
   const [inViewport, setInViewport] = useState(
     () => priority || typeof IntersectionObserver === "undefined",
@@ -67,25 +67,15 @@ export function ProfilePhoto({
   }, [inViewport]);
 
   const signedPhoto = useQuery({
-    queryKey: ["signed-profile-photo", path],
-    enabled: !!path && !src && inViewport,
-    staleTime: 50 * 60_000,
-    gcTime: 55 * 60_000,
+    queryKey: ["signed-profile-photo", user?.id, path],
+    enabled: !!user && !!path && !src && inViewport,
+    staleTime: 4 * 60_000,
+    gcTime: 5 * 60_000,
     queryFn: async () => {
-      const cached = path ? signedUrlCache.get(path) : undefined;
-      if (cached && cached.expiresAt > Date.now()) {
-        return cached.url;
-      }
       const { data, error } = await supabase.storage
         .from("profile-photos")
-        .createSignedUrl(path!, 60 * 60);
+        .createSignedUrl(path!, 300);
       if (error) throw error;
-      if (path) {
-        signedUrlCache.set(path, {
-          url: data.signedUrl,
-          expiresAt: Date.now() + 50 * 60_000,
-        });
-      }
       return data.signedUrl;
     },
   });

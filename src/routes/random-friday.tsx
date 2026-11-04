@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Copy, RotateCcw, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NearbyFeatureShell } from "@/components/NearbyFeatureShell";
+import { DemoNotice } from "@/components/community";
 import { useMyProfile, useSession } from "@/hooks/use-session";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { interests, people, towns, useStore } from "@/lib/namlink";
@@ -214,6 +215,7 @@ function RandomFridayPage() {
 
   return (
     <NearbyFeatureShell title="Random Friday">
+      {!user && <DemoNotice />}
       <div className="px-5 pb-12 pt-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
           30-second introductions

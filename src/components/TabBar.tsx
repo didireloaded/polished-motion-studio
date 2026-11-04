@@ -10,9 +10,9 @@ import { useStore } from "@/lib/namlink";
 import { triggerHaptic } from "@/lib/icebreakers";
 
 const tabs = [
-  { to: "/", label: "Discover", icon: Compass },
-  { to: "/radar", label: "Nearby", icon: MapPin },
-  { to: "/posts", label: "Posts", icon: NotebookText },
+  { to: "/", label: "Home", icon: Compass },
+  { to: "/radar", label: "Explore", icon: MapPin },
+  { to: "/posts", label: "Community", icon: NotebookText },
   { to: "/chats", label: "Chats", icon: MessageCircle },
   { to: "/you", label: "You", icon: UserRound },
 ] as const;

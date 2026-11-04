@@ -13,7 +13,7 @@ import {
 import { thisOrThatQuestions } from "@/lib/social-games";
 
 export const Route = createFileRoute("/this-or-that")({
-  head: () => ({ meta: [{ title: "This or That — Mutal" }] }),
+  head: () => ({ meta: [{ title: "Quick picks — Mutal" }] }),
   component: ThisOrThatPage,
 });
 
@@ -90,7 +90,7 @@ function ThisOrThatPage() {
   };
 
   return (
-    <NearbyFeatureShell title="This or That">
+    <NearbyFeatureShell title="Quick picks">
       <div className="px-5 pb-12 pt-8">
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
           Five quick picks

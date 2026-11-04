@@ -1357,8 +1357,8 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
       <p className="mt-1 text-sm leading-5 text-muted-foreground">
         {
           [
-            "A few basics to help you find the right people in Namibia.",
-            "Choose what feels right. You can always change this later.",
+            "A few basics to help you find the right people in Namibia. Your town is shown, never your exact location.",
+            "Likes become chats when they're mutual. Replies to posts stay private between you and the author.",
             "Choose a clear cover photo and show a bit of your life.",
             "Record 20–30 seconds about yourself. It helps you stand out and feel more real.",
           ][step]

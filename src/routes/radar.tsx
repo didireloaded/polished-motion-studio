@@ -25,16 +25,14 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/u
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
 import { captureProductEvent } from "@/lib/telemetry";
-import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { ThisOrThatRapidRadar } from "@/components/SocialGames";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
     meta: [
-      { title: "Nearby — Mutal" },
+      { title: "Explore — Mutal" },
       { name: "description", content: "Explore people and local plans by town." },
-      { property: "og:title", content: "Nearby — Mutal" },
+      { property: "og:title", content: "Explore — Mutal" },
     ],
   }),
   component: NearbyPage,
@@ -293,7 +291,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
         ) : (
           <Link to="/radar" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            <span className="text-[15px] font-semibold">Nearby</span>
+            <span className="text-[15px] font-semibold">Explore</span>
           </Link>
         )}
         <Link
@@ -349,7 +347,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
               animate={{ height: sheetOpen ? "min(76svh, 700px)" : 82 }}
               transition={{ type: "spring", stiffness: 300, damping: 34 }}
               className="absolute inset-x-0 bottom-0 z-[500] overflow-hidden rounded-t-[22px] border-t border-border bg-white shadow-float"
-              aria-label="Nearby options"
+              aria-label="Explore options"
             >
               <button
                 type="button"
@@ -361,9 +359,9 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                 <span className="mb-3 h-1 w-9 rounded-full bg-border" />
                 <span className="flex w-full items-center justify-between">
                   <span>
-                    <span className="block text-[15px] font-semibold">Explore nearby</span>
+                    <span className="block text-[15px] font-semibold">Explore</span>
                     <span className="block text-[11px] text-muted-foreground">
-                      People, crossed paths, games and events
+                      People, events and quick picks
                     </span>
                   </span>
                   <ChevronDown
@@ -446,64 +444,13 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                   )}
                 </div>
 
-                <div className="mt-4 border-t border-border pt-3.5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-[15px] font-semibold">Crossed paths</h2>
-                    <Link
-                      to="/crossed-paths"
-                      className="text-[12px] font-semibold text-primary hover:underline"
-                    >
-                      See all
-                    </Link>
-                  </div>
-                  <Link
-                    to="/crossed-paths"
-                    className="mt-2.5 flex items-center gap-3 rounded-2xl bg-secondary/45 p-3 transition-colors hover:bg-secondary"
-                  >
-                    {!user && (
-                      <img
-                        src="/editorial/amara-small.jpg"
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="h-12 w-12 shrink-0 rounded-full object-cover"
-                      />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13px] font-semibold text-foreground">
-                        {user ? "No crossings recorded" : "Nadia, 26"}
-                      </span>
-                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                        {user
-                          ? "Crossed paths needs opt-in location to become available."
-                          : "Example of how a crossing could appear"}
-                      </span>
-                    </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </Link>
-                </div>
-
-                <div className="mt-3 border-t border-border">
+                <div className="mt-4 border-t border-border">
                   {(
                     [
                       {
-                        to: "/random-friday",
-                        title: "Random Friday",
-                        detail: "A 30-second introduction",
-                        icon: Heart,
-                        enabled: isFeatureEnabled("randomFriday"),
-                      },
-                      {
-                        to: "/speed-dating",
-                        title: "Speed dating",
-                        detail: "Questions for an existing match",
-                        icon: Clock3,
-                        enabled: isFeatureEnabled("speedDatingMixer"),
-                      },
-                      {
                         to: "/this-or-that",
-                        title: "This or That",
-                        detail: "Five quick picks that say something about you",
+                        title: "Quick picks",
+                        detail: "Answer a few questions about yourself",
                         icon: Star,
                         enabled: true,
                       },
@@ -635,14 +582,18 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                       className="overflow-hidden rounded-[15px] border border-border bg-card shadow-float"
                     >
                       {event.sample ? (
-                        <img loading="lazy" decoding="async"
+                        <img
+                          loading="lazy"
+                          decoding="async"
                           src={events.find((item) => item.id === event.id)?.image}
                           alt=""
                           className="h-[135px] w-full object-cover"
                         />
                       ) : (
                         <div className="relative">
-                          <img loading="lazy" decoding="async"
+                          <img
+                            loading="lazy"
+                            decoding="async"
                             src={
                               event.town === "Swakopmund" || event.town === "Walvis Bay"
                                 ? "/design/event-beach.jpg"

@@ -35,7 +35,7 @@ import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SafetyActions } from "@/components/community";
-import { ProfilePhoto } from "@/components/community";
+import { DemoNotice, ProfilePhoto } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 import { HotTakeAndFlagPollHub } from "@/components/SocialGames";
 
@@ -44,9 +44,9 @@ type View = "Feed" | "Your posts" | "Your replies";
 export const Route = createFileRoute("/posts")({
   head: () => ({
     meta: [
-      { title: "Posts — Mutal" },
+      { title: "Community — Mutal" },
       { name: "description", content: "Local posts with private replies around Namibia." },
-      { property: "og:title", content: "Posts — Mutal" },
+      { property: "og:title", content: "Community — Mutal" },
     ],
   }),
   component: Posts,
@@ -152,7 +152,7 @@ function Posts() {
   return (
     <main className="mx-auto max-w-md pb-28">
       <PageHeader
-        title="Posts"
+        title="Community"
         right={
           <button
             type="button"
@@ -164,6 +164,13 @@ function Posts() {
           </button>
         }
       />
+      {!user && <DemoNotice />}
+      <Link
+        to="/random-friday"
+        className="mx-5 mb-4 block border-b border-border pb-3 text-sm font-medium text-primary"
+      >
+        Practice a 30-second introduction
+      </Link>
       {composeOpen && (
         <div className="mx-5 rounded-2xl border border-border bg-card p-4">
           <label htmlFor="post-compose" className="sr-only">
@@ -342,7 +349,9 @@ function Posts() {
                     className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                   >
                     {people.find((person) => person.name === post.authorName) ? (
-                      <img loading="lazy" decoding="async"
+                      <img
+                        loading="lazy"
+                        decoding="async"
                         src={
                           people.find((person) => person.name === post.authorName)!.designPhoto ??
                           `/editorial/${people.find((person) => person.name === post.authorName)!.photo}-small.jpg`
@@ -485,7 +494,9 @@ function Posts() {
                   {selectedAuthor.name}, {selectedAuthor.age}
                 </DrawerTitle>
               </DrawerHeader>
-              <img loading="lazy" decoding="async"
+              <img
+                loading="lazy"
+                decoding="async"
                 src={selectedAuthor.designPhoto ?? `/editorial/${selectedAuthor.photo}.jpg`}
                 alt={`${selectedAuthor.name}'s profile`}
                 className="h-48 w-full rounded-xl object-cover"
@@ -796,7 +807,7 @@ function LivePosts({ userId }: { userId: string }) {
   return (
     <main className="mx-auto max-w-md pb-28">
       <PageHeader
-        title="Posts"
+        title="Community"
         right={
           <button
             type="button"
@@ -808,6 +819,12 @@ function LivePosts({ userId }: { userId: string }) {
           </button>
         }
       />
+      <Link
+        to="/random-friday"
+        className="mx-5 mb-4 block border-b border-border pb-3 text-sm font-medium text-primary"
+      >
+        Practice a 30-second introduction
+      </Link>
       {composeOpen && (
         <section className="mx-5 rounded-2xl border border-border bg-card p-4">
           <label htmlFor="live-post-compose" className="sr-only">

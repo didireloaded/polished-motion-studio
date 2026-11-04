@@ -20,7 +20,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { captureProductEvent } from "@/lib/telemetry";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ProfilePhoto, SafetyActions } from "@/components/community";
+import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { suggestDatePlan } from "@/lib/date-suggestion.functions";
 import {
   dateAvailability,
@@ -110,6 +111,7 @@ function Chats() {
             exit={{ opacity: 0, x: -30 }}
           >
             <PageHeader title="Chats" />
+            <DemoNotice />
             {list.length === 0 ? (
               <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
                 <motion.div
@@ -507,6 +509,7 @@ function LiveThread({
   const [text, setText] = useState(initialDraft ?? "");
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const [showPrompts, setShowPrompts] = useState(false);
+  const [showPhotos, setShowPhotos] = useState(false);
   const [showOpenerStudio, setShowOpenerStudio] = useState(false);
   const [older, setOlder] = useState<MessageRow[]>([]);
   const [hasOlder, setHasOlder] = useState(false);
@@ -745,7 +748,7 @@ function LiveThread({
         p_activity: details.activity,
         p_venue_name: details.venue_name,
         p_town: details.town,
-        p_scheduled_at: details.scheduled_at ?? "",
+        p_scheduled_at: details.scheduled_at,
         p_note: details.note,
         p_confirmed_a: datePlan.confirmed_a,
         p_confirmed_b: datePlan.confirmed_b,
@@ -787,7 +790,7 @@ function LiveThread({
       p_activity: datePlan.activity,
       p_venue_name: datePlan.venue_name,
       p_town: datePlan.town,
-      p_scheduled_at: datePlan.scheduled_at ?? "",
+      p_scheduled_at: datePlan.scheduled_at,
       p_note: datePlan.note,
       p_confirmed_a: amUserA ? !myConfirmed : datePlan.confirmed_a,
       p_confirmed_b: amUserA ? datePlan.confirmed_b : !myConfirmed,
@@ -826,10 +829,18 @@ function LiveThread({
           path={person.photo_paths?.[0]}
           className="h-10 w-10 rounded-full object-cover"
         />
-        <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={() => setShowPhotos(true)}
+          disabled={person.photo_paths.length < 2}
+          className="min-w-0 flex-1 text-left disabled:cursor-default"
+        >
           <p className="truncate font-semibold">{person.display_name}</p>
-          <p className="text-xs text-muted-foreground">{person.town}</p>
-        </div>
+          <p className="text-xs text-muted-foreground">
+            {person.town}
+            {person.photo_paths.length > 1 ? " · View photos" : ""}
+          </p>
+        </button>
         {isFeatureEnabled("aiOpenerStudio") && (
           <button
             type="button"
@@ -847,6 +858,23 @@ function LiveThread({
           <Sparkles className="h-3 w-3" /> Icebreakers
         </button>
       </header>
+      <Drawer open={showPhotos} onOpenChange={setShowPhotos}>
+        <DrawerContent className="mx-auto max-h-[85svh] max-w-md border-border bg-white">
+          <DrawerHeader>
+            <DrawerTitle>{person.display_name}'s photos</DrawerTitle>
+          </DrawerHeader>
+          <div className="grid grid-cols-2 gap-2 overflow-y-auto px-4 pb-8">
+            {person.photo_paths.map((path, index) => (
+              <ProfilePhoto
+                key={path}
+                name={`${person.display_name}, photo ${index + 1}`}
+                path={path}
+                className="aspect-[3/4] w-full rounded-xl object-cover"
+              />
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
       <AnimatePresence>
         {showOpenerStudio && (
           <Suspense fallback={null}>
@@ -1405,6 +1433,7 @@ function Thread({
           <Sparkles className="h-3.5 w-3.5" />2 Truths
         </button>
       </header>
+      <DemoNotice />
       <AnimatePresence>
         {showOpenerStudio && (
           <Suspense fallback={null}>
