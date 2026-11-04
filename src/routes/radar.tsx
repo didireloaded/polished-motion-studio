@@ -635,14 +635,14 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                       className="overflow-hidden rounded-[15px] border border-border bg-card shadow-float"
                     >
                       {event.sample ? (
-                        <img
+                        <img loading="lazy" decoding="async"
                           src={events.find((item) => item.id === event.id)?.image}
                           alt=""
                           className="h-[135px] w-full object-cover"
                         />
                       ) : (
                         <div className="relative">
-                          <img
+                          <img loading="lazy" decoding="async"
                             src={
                               event.town === "Swakopmund" || event.town === "Walvis Bay"
                                 ? "/design/event-beach.jpg"

@@ -553,7 +553,7 @@ export function RandomFridayModal({
               <div className="flex items-center justify-between border-b border-border bg-accent/50 px-4 py-2">
                 <div className="flex items-center gap-2.5">
                   <div className="relative h-11 w-11 overflow-hidden rounded-full border-2 border-white shadow-2xs">
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={photo(partner, true)}
                       alt={partner.name}
                       className={`h-full w-full object-cover transition duration-500 ${

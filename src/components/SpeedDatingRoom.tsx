@@ -247,7 +247,7 @@ export function SpeedDatingRoom({
           {/* Partner header strip */}
           <div className="flex items-center justify-between border-b border-border/60 bg-white px-4 py-2">
             <div className="flex items-center gap-2.5">
-              <img
+              <img loading="lazy" decoding="async"
                 src={photo(partner, true)}
                 alt={partner.name}
                 className="h-9 w-9 rounded-full object-cover"
@@ -335,7 +335,7 @@ export function SpeedDatingRoom({
 
           {phase === "decision" && (
             <div className="space-y-4 p-5 text-center">
-              <img
+              <img loading="lazy" decoding="async"
                 src={photo(partner, true)}
                 alt={partner.name}
                 className="mx-auto h-20 w-20 rounded-full object-cover ring-4 ring-primary/20"

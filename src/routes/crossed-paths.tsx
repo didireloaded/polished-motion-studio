@@ -171,7 +171,7 @@ function CrossedPaths() {
         <DrawerContent className="mx-auto max-w-md rounded-t-[24px] bg-white pb-8">
           {selected && (
             <>
-              <img
+              <img loading="lazy" decoding="async"
                 src={photo(selected.person)}
                 alt={`${selected.displayName}'s profile`}
                 className="h-52 w-full bg-foreground object-contain"

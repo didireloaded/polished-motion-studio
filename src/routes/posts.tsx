@@ -342,7 +342,7 @@ function Posts() {
                     className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                   >
                     {people.find((person) => person.name === post.authorName) ? (
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={
                           people.find((person) => person.name === post.authorName)!.designPhoto ??
                           `/editorial/${people.find((person) => person.name === post.authorName)!.photo}-small.jpg`
@@ -490,7 +490,7 @@ function Posts() {
                   {selectedAuthor.name}, {selectedAuthor.age}
                 </DrawerTitle>
               </DrawerHeader>
-              <img
+              <img loading="lazy" decoding="async"
                 src={selectedAuthor.designPhoto ?? `/editorial/${selectedAuthor.photo}.jpg`}
                 alt={`${selectedAuthor.name}'s sample profile`}
                 className="h-48 w-full rounded-xl object-cover"

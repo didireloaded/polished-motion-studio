@@ -251,7 +251,7 @@ function You() {
       <div
         className={`${editing ? "" : "hidden"} mx-5 mb-3 overflow-hidden rounded-[20px] border border-border bg-white`}
       >
-        <img
+        <img loading="lazy" decoding="async"
           src="/design/lead-man.jpg"
           alt="Sample profile portrait"
           className="h-[155px] w-full object-cover object-[center_38%]"
@@ -273,7 +273,7 @@ function You() {
               "/design/event-rooftop.jpg",
               "/editorial/dunes.jpg",
             ].map((src) => (
-              <img
+              <img loading="lazy" decoding="async"
                 key={src}
                 src={src}
                 alt="Sample profile gallery"
@@ -333,7 +333,7 @@ function You() {
                     key={person.id}
                     className="relative h-36 w-24 shrink-0 overflow-hidden rounded-xl"
                   >
-                    <img
+                    <img loading="lazy" decoding="async"
                       src={photo(person, true)}
                       alt={"Sample profile photo of " + person.name}
                       className="h-full w-full object-cover"
@@ -600,7 +600,7 @@ function You() {
               onChange={(e) => captureSelfie(e.target.files?.[0])}
             />
             {selfieUrl && (
-              <img
+              <img loading="lazy" decoding="async"
                 src={selfieUrl}
                 alt="Selfie preview captured on this device"
                 className="mt-3 max-h-64 w-full rounded-xl object-cover"

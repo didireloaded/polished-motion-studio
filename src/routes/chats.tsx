@@ -139,7 +139,7 @@ function Chats() {
                       onClick={() => setOpenId(p.id)}
                       className="shrink-0 text-center"
                     >
-                      <img
+                      <img loading="lazy" decoding="async"
                         src={photo(p, true)}
                         alt=""
                         className="h-16 w-16 rounded-full border-2 border-primary object-cover p-0.5"
@@ -165,7 +165,7 @@ function Chats() {
                           onClick={() => setOpenId(p.id)}
                           className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors hover:bg-card"
                         >
-                          <img
+                          <img loading="lazy" decoding="async"
                             src={photo(p, true)}
                             alt=""
                             className="h-12 w-12 rounded-full object-cover"
@@ -1335,7 +1335,7 @@ function Thread({
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <img src={photo(p, true)} alt="" className="h-10 w-10 rounded-full object-cover" />
+        <img loading="lazy" decoding="async" src={photo(p, true)} alt="" className="h-10 w-10 rounded-full object-cover" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{p.name}</p>
           <p className="text-xs text-muted-foreground">{p.town}</p>
