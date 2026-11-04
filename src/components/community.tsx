@@ -12,17 +12,6 @@ import {
 } from "@/components/ui/drawer";
 import { supabase } from "@/integrations/supabase/client";
 
-export function DemoNotice() {
-  return (
-    <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-xl bg-secondary px-3 py-2.5 text-xs text-muted-foreground">
-      <span>Preview content · activity is saved on this device.</span>
-      <Link to="/auth" className="shrink-0 font-semibold text-primary">
-        Sign in
-      </Link>
-    </div>
-  );
-}
-
 const signedUrlCache = new Map<string, { url: string; expiresAt: number }>();
 
 export function ProfilePhoto({

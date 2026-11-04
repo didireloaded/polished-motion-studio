@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { NearbyFeatureShell } from "@/components/NearbyFeatureShell";
 import { useSession } from "@/hooks/use-session";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { update, useStore } from "@/lib/namlink";
 import {
   getMyThisOrThatAnswersServerFn,
   saveThisOrThatAnswerServerFn,
@@ -19,8 +18,6 @@ export const Route = createFileRoute("/this-or-that")({
 
 function ThisOrThatPage() {
   const { user } = useSession();
-  const store = useStore();
-  const guestChoices = store.profile.choices;
   const [answers, setAnswers] = useState<Record<string, "A" | "B">>({});
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(Boolean(user));
@@ -31,15 +28,6 @@ function ThisOrThatPage() {
   useEffect(() => {
     let active = true;
     if (!user) {
-      const saved = Object.fromEntries(
-        Object.entries(guestChoices).filter(([, choice]) => choice === "A" || choice === "B"),
-      ) as Record<string, "A" | "B">;
-      setAnswers(saved);
-      setIndex(
-        thisOrThatQuestions.findIndex((item) => !saved[item.id]) < 0
-          ? thisOrThatQuestions.length
-          : thisOrThatQuestions.findIndex((item) => !saved[item.id]),
-      );
       setLoading(false);
       return;
     }
@@ -60,28 +48,19 @@ function ThisOrThatPage() {
     return () => {
       active = false;
     };
-  }, [user, guestChoices]);
+  }, [user]);
 
   const choose = async (choice: "A" | "B") => {
     if (!question || saving) return;
     setSaving(true);
     setNotice("");
-    if (user) {
-      try {
-        await saveThisOrThatAnswerServerFn({ data: { questionId: question.id, choice } });
-      } catch {
-        setNotice("Your answer did not save. Please try again.");
-        setSaving(false);
-        return;
-      }
-    } else {
-      update((current) => ({
-        ...current,
-        profile: {
-          ...current.profile,
-          choices: { ...current.profile.choices, [question.id]: choice },
-        },
-      }));
+    if (!user) return;
+    try {
+      await saveThisOrThatAnswerServerFn({ data: { questionId: question.id, choice } });
+    } catch {
+      setNotice("Your answer did not save. Please try again.");
+      setSaving(false);
+      return;
     }
     triggerHaptic("like");
     setAnswers((current) => ({ ...current, [question.id]: choice }));
@@ -181,11 +160,6 @@ function ThisOrThatPage() {
               Change my picks
             </button>
           </section>
-        )}
-        {!user && (
-          <p className="mt-5 text-xs text-muted-foreground">
-            Sample picks stay on this device until you create an account.
-          </p>
         )}
       </div>
     </NearbyFeatureShell>

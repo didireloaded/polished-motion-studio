@@ -1,6 +1,5 @@
 import { isFeatureEnabled } from "@/lib/feature-flags";
 
-export { RandomFridayBanner, RandomFridayModal } from "@/components/RandomFridayModal";
 export {
   applyTimeBoost,
   getRandomFridayState,

@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { events, people, photo, towns, update, useStore } from "@/lib/namlink";
+import { towns } from "@/lib/namlink";
 import { useSession } from "@/hooks/use-session";
 import { type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,6 @@ import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
 import { captureProductEvent } from "@/lib/telemetry";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { ThisOrThatRapidRadar } from "@/components/SocialGames";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
@@ -71,21 +70,7 @@ const townCenters: Record<string, [number, number]> = {
   Rundu: [-17.91, 19.77],
 };
 
-const sampleProfiles: NearbyProfile[] = people.map((p) => ({
-  id: p.id,
-  display_name: p.name,
-  age: p.age,
-  town: p.town,
-  bio: p.bio,
-  tags: p.tags,
-  intent: p.intent,
-  seeking: p.answer,
-  voice_intro_path: null,
-  photo_paths: [],
-}));
-
 export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) {
-  const store = useStore();
   const { user, ready } = useSession();
   const [town, setTown] = useState("Windhoek");
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
@@ -177,13 +162,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
       });
     },
   });
-  const profiles = useMemo(
-    () =>
-      user
-        ? (query.data ?? [])
-        : sampleProfiles.filter((profile) => !store.liked.includes(profile.id)),
-    [user, query.data, store.liked],
-  );
+  const profiles = useMemo(() => query.data ?? [], [query.data]);
   const visibleProfiles = useMemo(
     () => profiles.filter((profile) => town === "All" || profile.town === town),
     [profiles, town],
@@ -226,14 +205,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             : current,
         );
       }
-    } else {
-      update((value) =>
-        value.liked.includes(profile.id)
-          ? value
-          : { ...value, liked: [...value.liked, profile.id] },
-      );
-      setNotice("Like saved.");
-      window.setTimeout(() => setNotice(""), 1600);
     }
   };
 
@@ -274,15 +245,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
     if (!interested) void captureProductEvent("event_interest");
   };
 
-  const visibleEvents = user
-    ? (communityEventsQuery.data ?? []).map((event) => ({ ...event, sample: false }))
-    : events.map((event) => ({
-        ...event,
-        venue_name: "",
-        details: "",
-        starts_at: "",
-        sample: true,
-      }));
+  const visibleEvents = communityEventsQuery.data ?? [];
   const eventInterests = eventInterestQuery.data ?? [];
 
   return (
@@ -319,7 +282,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             <TownMap
               town={town}
               profiles={visibleProfiles}
-              demo={!user}
               myLocation={myLocation}
               onSelectTown={openTown}
             />
@@ -399,9 +361,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                   </label>
                 </div>
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  {user
-                    ? "Map markers show towns, not anyone's exact location."
-                    : "Profiles grouped by town. Markers are not live locations."}
+                  Map markers show towns, not anyone's exact location.
                 </p>
                 <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
                   {visibleProfiles.slice(0, 12).map((profile) => {
@@ -413,24 +373,11 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                         className="w-[80px] shrink-0 text-left"
                       >
                         <div className="relative">
-                          {!user ? (
-                            <img
-                              src={photo(
-                                people.find((p) => p.id === profile.id) ?? people[0]!,
-                                true,
-                              )}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              className="h-[84px] w-[80px] rounded-[14px] object-cover"
-                            />
-                          ) : (
-                            <ProfilePhoto
-                              name={profile.display_name}
-                              path={profile.photo_paths?.[0]}
-                              className="h-[84px] w-[80px] rounded-[14px] object-cover"
-                            />
-                          )}
+                          <ProfilePhoto
+                            name={profile.display_name}
+                            path={profile.photo_paths?.[0]}
+                            className="h-[84px] w-[80px] rounded-[14px] object-cover"
+                          />
                         </div>
                         <p className="mt-1.5 truncate text-[12px] font-semibold">
                           {profile.display_name} {profile.age}
@@ -460,23 +407,12 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                     to="/crossed-paths"
                     className="mt-2.5 flex items-center gap-3 rounded-2xl bg-secondary/45 p-3 transition-colors hover:bg-secondary"
                   >
-                    {!user && (
-                      <img
-                        src="/editorial/amara-small.jpg"
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="h-12 w-12 shrink-0 rounded-full object-cover"
-                      />
-                    )}
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-semibold text-foreground">
-                        {user ? "No crossings recorded" : "Nadia, 26"}
+                        Not available yet
                       </span>
                       <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                        {user
-                          ? "Crossed paths needs opt-in location to become available."
-                          : "Example of how a crossing could appear"}
+                        Crossed paths needs opt-in location to become available.
                       </span>
                     </span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -619,62 +555,33 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             <ul className="mt-3 space-y-2">
               {user && communityEventsQuery.isLoading ? (
                 <li className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                  Loading local events…
+                  Loading events…
                 </li>
               ) : (
                 visibleEvents.map((event) => {
                   const attendees = eventInterests.filter(
                     (interest) => interest.event_id === event.id,
                   );
-                  const interested = user
-                    ? attendees.some((interest) => interest.user_id === user.id)
-                    : store.interestedEvents.includes(event.id);
+                  const interested = attendees.some((interest) => interest.user_id === user?.id);
                   return (
                     <li
                       key={event.id}
                       className="overflow-hidden rounded-[15px] border border-border bg-card shadow-float"
                     >
-                      {event.sample ? (
-                        <img loading="lazy" decoding="async"
-                          src={events.find((item) => item.id === event.id)?.image}
-                          alt=""
-                          className="h-[135px] w-full object-cover"
-                        />
-                      ) : (
-                        <div className="relative">
-                          <img loading="lazy" decoding="async"
-                            src={
-                              event.town === "Swakopmund" || event.town === "Walvis Bay"
-                                ? "/design/event-beach.jpg"
-                                : "/design/event-rooftop.jpg"
-                            }
-                            alt="Illustrative scenery for the event town"
-                            className="h-[135px] w-full object-cover"
-                          />
-                          <span className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[10px] text-foreground">
-                            Illustrative photo
-                          </span>
-                        </div>
-                      )}
                       <div className="px-3 pt-3">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
                         </div>
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Clock3 className="h-3.5 w-3.5" />
-                          {event.sample
-                            ? events.find((item) => item.id === event.id)?.when
-                            : new Intl.DateTimeFormat(undefined, {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              }).format(new Date(event.starts_at))}
+                          {new Intl.DateTimeFormat(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          }).format(new Date(event.starts_at))}
                         </p>
                         <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5" />
-                          {event.sample
-                            ? events.find((item) => item.id === event.id)?.venue
-                            : event.venue_name}{" "}
-                          · {event.town}
+                          {event.venue_name} · {event.town}
                         </p>
                       </div>
                       {event.details && (
@@ -683,11 +590,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                         </p>
                       )}
                       <div className="flex items-center gap-2 px-3 pt-3">
-                        {event.sample ? (
-                          <span className="text-[11px] text-muted-foreground">
-                            Preview a shared plan
-                          </span>
-                        ) : attendees.length > 0 ? (
+                        {attendees.length > 0 ? (
                           <>
                             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-primary">
                               <Users className="h-3.5 w-3.5" />
@@ -705,16 +608,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                       <button
                         type="button"
                         aria-pressed={interested}
-                        onClick={() =>
-                          user
-                            ? void toggleEventInterest(event.id, interested)
-                            : update((s) => ({
-                                ...s,
-                                interestedEvents: interested
-                                  ? s.interestedEvents.filter((id) => id !== event.id)
-                                  : [...s.interestedEvents, event.id],
-                              }))
-                        }
+                        onClick={() => void toggleEventInterest(event.id, interested)}
                         className={`mx-3 mb-3 mt-3 flex h-9 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 rounded-full text-xs font-semibold ${interested ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
                       >
                         <Star className="h-3.5 w-3.5" />
@@ -724,16 +618,15 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                   );
                 })
               )}
-              {user && !communityEventsQuery.isLoading && visibleEvents.length === 0 && (
+              {!communityEventsQuery.isLoading && visibleEvents.length === 0 && (
                 <li className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
                   No upcoming events have been posted for this area yet.
                 </li>
               )}
             </ul>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              {user
-                ? "Your interest is visible to members who can also see your profile. Choose public places and meet safely."
-                : "Your interest is saved on this device."}
+              Your interest is visible to members who can also see your profile. Choose public
+              places and meet safely.
             </p>
           </section>
         </>
@@ -744,11 +637,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             <>
               <ProfilePhoto
                 name={selectedProfile.display_name}
-                src={
-                  !user
-                    ? photo(people.find((person) => person.id === selectedProfile.id)!)
-                    : undefined
-                }
                 path={selectedProfile.photo_paths?.[0]}
                 className="h-44 w-full rounded-xl object-cover"
               />
@@ -812,13 +700,11 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
 function TownMap({
   town,
   profiles,
-  demo,
   myLocation,
   onSelectTown,
 }: {
   town: string;
   profiles: NearbyProfile[];
-  demo: boolean;
   myLocation: [number, number] | null;
   onSelectTown: (town: string) => void;
 }) {
@@ -889,7 +775,7 @@ function TownMap({
         L.marker(center, {
           icon,
           keyboard: true,
-          title: `${count} ${demo ? "sample " : ""}${count === 1 ? "profile" : "profiles"} in ${place} · town-level placement`,
+          title: `${count} ${count === 1 ? "profile" : "profiles"} in ${place} · town-level placement`,
         })
           .addTo(markers)
           .on("click", () => onSelectTown(place));
@@ -897,7 +783,7 @@ function TownMap({
       if (town === "All") instance.setView([-21.8, 17.2], 5);
       else if (townCenters[town]) instance.setView(townCenters[town], 10);
     });
-  }, [town, profiles, demo, onSelectTown, mapReady]);
+  }, [town, profiles, onSelectTown, mapReady]);
   useEffect(() => {
     if (!map.current || !myLocation) return;
     map.current.setView(myLocation, 13);

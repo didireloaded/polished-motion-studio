@@ -1,14 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ChevronUp,
-  Heart,
-  Share2,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { ArrowLeft, ChevronUp, Heart, Share2, SlidersHorizontal, X } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,19 +11,17 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { people, photo, towns, update, useStore, type Person } from "@/lib/namlink";
+import { towns, type Person } from "@/lib/namlink";
 import { useMyProfile, useSession } from "@/hooks/use-session";
 import { getRecommendations, type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
-import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
+import { VoiceIntroPlayer } from "@/components/voice-intro";
 import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
 import type { CelebrationMatch } from "@/components/MatchCelebrationModal";
-import { ElevatorPitchCard, TwoTruthsCard } from "@/components/SocialGames";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { sendMatchAlertEmail } from "@/lib/email.functions";
-import { getElevatorPitchForPerson, getTwoTruthsForPerson } from "@/lib/social-games";
 
 const MatchCelebrationModal = lazy(() =>
   import("@/components/MatchCelebrationModal").then((m) => ({
@@ -51,7 +41,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
-  const s = useStore();
   const { user, ready } = useSession();
   const myProfile = useMyProfile(user?.id);
   const queryClient = useQueryClient();
@@ -71,26 +60,12 @@ function Home() {
   const [hiddenRecommendations, setHiddenRecommendations] = useState<string[]>([]);
   const [exitCue, setExitCue] = useState<{ id: string; direction: number } | null>(null);
   const [celebrationMatch, setCelebrationMatch] = useState<CelebrationMatch | null>(null);
-  const sampleDeck = useMemo(
-    () =>
-      people.filter(
-        (p) =>
-          !s.liked.includes(p.id) &&
-          !s.passed.includes(p.id) &&
-          (town === "All" || p.town === town) &&
-          p.age >= minAge &&
-          (intentFilter === "Any intention" || p.intent === intentFilter) &&
-          p.age <= maxAge,
-      ),
-    [s.liked, s.passed, town, minAge, maxAge, intentFilter],
-  );
   const liveDeck: Person[] = (recs.data?.items ?? []).map((item) => ({
     id: item.profile.id,
     name: item.profile.display_name,
     age: item.profile.age,
     town: item.profile.town,
     job: item.profile.intent,
-    photo: "",
     tags: item.profile.tags,
     prompt: "What they’re looking for",
     answer: item.profile.seeking || item.profile.intent,
@@ -100,18 +75,15 @@ function Home() {
     voiceIntroPath: item.profile.voice_intro_path ?? null,
     photoPaths: item.profile.photo_paths ?? [],
   }));
-  const deck = user
-    ? liveDeck.filter(
-        (p) =>
-          !hiddenRecommendations.includes(p.id) &&
-          (town === "All" || p.town === town) &&
-          p.age >= minAge &&
-          (intentFilter === "Any intention" || p.intent === intentFilter) &&
-          p.age <= maxAge,
-      )
-    : sampleDeck;
+  const deck = liveDeck.filter(
+    (p) =>
+      !hiddenRecommendations.includes(p.id) &&
+      (town === "All" || p.town === town) &&
+      p.age >= minAge &&
+      (intentFilter === "Any intention" || p.intent === intentFilter) &&
+      p.age <= maxAge,
+  );
   const current = deck[0];
-  const last = [...s.passed].pop();
 
   if (!ready) {
     return (
@@ -128,6 +100,7 @@ function Home() {
   }
 
   const decide = async (p: Person, liked: boolean) => {
+    if (!user) return false;
     triggerHaptic(liked ? 18 : 10);
     if (user) {
       setExitCue({ id: p.id, direction: liked ? 1 : -1 });
@@ -199,35 +172,6 @@ function Home() {
       return true;
     }
 
-    const isMutual = liked && !!p.mutualInterest;
-    update((st) => {
-      if (!liked) return { ...st, passed: [...st.passed, p.id] };
-      const matches =
-        p.mutualInterest && !st.matches.includes(p.id) ? [...st.matches, p.id] : st.matches;
-      return {
-        ...st,
-        liked: [...st.liked, p.id],
-        matches,
-        chats: matches.includes(p.id) && !st.chats[p.id] ? { ...st.chats, [p.id]: [] } : st.chats,
-      };
-    });
-    if (isMutual) {
-      triggerHaptic([30, 50, 40]);
-      void captureProductEvent("match_created", { mode: "demo" });
-      setCelebrationMatch({
-        partnerId: p.id,
-        partnerName: p.name,
-        partnerTown: p.town,
-        partnerTags: p.tags,
-        partnerIntent: p.intent,
-        partnerPhotoSrc: photo(p),
-        myName: s.profile.name || "Alex",
-        myPhotoSrc: "/design/lead-man.jpg",
-      });
-    } else if (!liked) {
-      setNotice("Passed.");
-      window.setTimeout(() => setNotice(""), 1500);
-    }
     return true;
   };
 
@@ -238,14 +182,6 @@ function Home() {
           <BrandLogo />
         </Link>
         <div className="flex items-center gap-2">
-          {last && (
-            <IconButton
-              label="Undo last pass"
-              onClick={() => update((st) => ({ ...st, passed: st.passed.slice(0, -1) }))}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </IconButton>
-          )}
           <IconButton label="Open filters" onClick={() => setFiltersOpen(true)}>
             <SlidersHorizontal className="h-[18px] w-[18px]" />
           </IconButton>
@@ -290,12 +226,7 @@ function Home() {
         {!current && !recs.isFetching && (
           <Empty
             needsProfile={!!user && recs.data?.notice === "Create your profile first."}
-            canRewind={!user && s.passed.length > 0}
-            onRewind={() => {
-              update((st) => ({ ...st, passed: st.passed.slice(0, -1) }));
-              setNotice("Brought back your last pass.");
-              window.setTimeout(() => setNotice(""), 1800);
-            }}
+            canRewind={false}
             onInvite={async () => {
               const shareUrl = typeof window !== "undefined" ? window.location.origin : "";
               try {
@@ -336,9 +267,6 @@ function Home() {
                     : "Search widened to all towns and ages 18–99.",
                 );
                 void queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
-              } else {
-                update((st) => ({ ...st, passed: [] }));
-                setNotice("Showing profiles from all towns.");
               }
               window.setTimeout(() => setNotice(""), 2200);
             }}
@@ -517,22 +445,10 @@ function ProfileCard({
   useEffect(() => setPhotoIdx(0), [person.id]);
 
   const livePaths = person.photoPaths ?? [];
-  const sampleGallery =
-    person.gallery && person.gallery.length > 0
-      ? person.gallery
-      : person.photo
-        ? [photo(person)]
-        : [];
-  const totalPhotos = userId ? Math.max(1, livePaths.length) : Math.max(1, sampleGallery.length);
+  const totalPhotos = Math.max(1, livePaths.length);
   const activeIdx = Math.min(photoIdx, totalPhotos - 1);
-  const currentSampleSrc = !userId ? sampleGallery[activeIdx] : undefined;
-  const currentLivePath = userId ? livePaths[activeIdx] : undefined;
-  const viewer = useStore();
-  const connectionReason =
-    recommendationReason ??
-    (!userId && viewer.profile.town === person.town ? `Also in ${person.town}` : undefined);
-  const elevatorPitch = useMemo(() => getElevatorPitchForPerson(person), [person]);
-  const twoTruthsGame = useMemo(() => getTwoTruthsForPerson(person), [person]);
+  const currentLivePath = livePaths[activeIdx];
+  const connectionReason = recommendationReason;
 
   const dragX = useMotionValue(0);
   const rotate = useTransform(dragX, [-240, 0, 240], [-9, 0, 9]);
@@ -576,10 +492,8 @@ function ProfileCard({
       >
         <ProfilePhoto
           name={person.name}
-          src={currentSampleSrc}
           path={currentLivePath}
           priority={top}
-          position={activeIdx === 0 ? person.photoPosition : undefined}
           className={`absolute inset-0 h-full w-full select-none ${currentLivePath ? "object-contain" : "object-cover"}`}
         />
         <div className="home-photo-scrim absolute inset-0" aria-hidden="true" />
@@ -672,14 +586,6 @@ function ProfileCard({
                   <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.035em]">
                     {person.name}, <span className="text-[24px]">{person.age}</span>
                   </h1>
-                  {(person.verified || (person.photoPaths?.length ?? 0) > 0) && (
-                    <span
-                      title="Verified member"
-                      className="inline-flex shrink-0 items-center gap-1 text-primary"
-                    >
-                      <CheckCircle2 className="h-4 w-4 fill-primary text-white" />
-                    </span>
-                  )}
                 </div>
                 <p className="mt-1 truncate text-[13px] text-white/95">
                   {person.town} · {person.job}
@@ -767,40 +673,6 @@ function ProfileCard({
                 </div>
               )}
               {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
-              {!userId && <SampleVoiceIntro />}
-              <ElevatorPitchCard
-                personName={person.name}
-                pitch={elevatorPitch}
-                onSelectReaction={(reactionText) => {
-                  update((st) => ({
-                    ...st,
-                    chats: {
-                      ...st.chats,
-                      [person.id]: [
-                        ...(st.chats[person.id] ?? []),
-                        { from: "me", text: reactionText, at: Date.now(), id: crypto.randomUUID() },
-                      ],
-                    },
-                  }));
-                  void onDecide(true);
-                }}
-              />
-              <TwoTruthsCard
-                game={twoTruthsGame}
-                onSendReply={(replyDraft) => {
-                  update((st) => ({
-                    ...st,
-                    chats: {
-                      ...st.chats,
-                      [person.id]: [
-                        ...(st.chats[person.id] ?? []),
-                        { from: "me", text: replyDraft, at: Date.now(), id: crypto.randomUUID() },
-                      ],
-                    },
-                  }));
-                  void onDecide(true);
-                }}
-              />
               {recommendationReason && (
                 <p className="text-[11px] leading-4 text-muted-foreground">
                   You may connect over {recommendationReason}
