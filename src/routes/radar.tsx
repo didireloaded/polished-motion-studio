@@ -414,7 +414,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                       >
                         <div className="relative">
                           {!user ? (
-                            <img loading="lazy" decoding="async"
+                            <img
                               src={photo(
                                 people.find((p) => p.id === profile.id) ?? people[0]!,
                                 true,
