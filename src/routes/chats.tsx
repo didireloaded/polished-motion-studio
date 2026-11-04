@@ -841,22 +841,27 @@ function LiveThread({
             {person.photo_paths.length > 1 ? " · View photos" : ""}
           </p>
         </button>
-        {isFeatureEnabled("aiOpenerStudio") && (
+        {!showOpenerStudio && isFeatureEnabled("aiOpenerStudio") && (
           <button
             type="button"
-            onClick={() => setShowOpenerStudio((v) => !v)}
+            onClick={() => {
+              setShowPrompts(false);
+              setShowOpenerStudio(true);
+            }}
             className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary"
           >
             <MessagesSquare className="h-3 w-3" /> Ideas
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => setShowPrompts((v) => !v)}
-          className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-primary"
-        >
-          <Sparkles className="h-3 w-3" /> Icebreakers
-        </button>
+        {!showOpenerStudio && (
+          <button
+            type="button"
+            onClick={() => setShowPrompts((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-[11px] font-semibold text-primary"
+          >
+            <Sparkles className="h-3 w-3" /> Icebreakers
+          </button>
+        )}
       </header>
       <Drawer open={showPhotos} onOpenChange={setShowPhotos}>
         <DrawerContent className="mx-auto max-h-[85svh] max-w-md border-border bg-white">
@@ -1144,35 +1149,56 @@ function LiveThread({
                   </div>
                 )}
               </div>
+              <label htmlFor="date-activity" className="block text-xs font-medium">
+                What are you doing?
+              </label>
               <input
+                id="date-activity"
                 required
                 minLength={2}
                 maxLength={80}
                 value={activity}
                 onChange={(event) => setActivity(event.target.value)}
-                placeholder="What would you like to do?"
+                placeholder="Coffee and a walk"
                 className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
+              <label htmlFor="date-venue" className="block text-xs font-medium">
+                Public venue
+              </label>
               <input
+                id="date-venue"
+                required
+                minLength={2}
                 maxLength={120}
                 value={venueName}
                 onChange={(event) => setVenueName(event.target.value)}
-                placeholder="Venue (optional)"
+                placeholder="Choose a public place"
                 className="w-full rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
+              <label htmlFor="date-scheduled-at" className="block text-xs font-medium">
+                Date and time
+              </label>
               <div className="grid grid-cols-1 gap-2">
                 <input
+                  id="date-scheduled-at"
                   type="datetime-local"
+                  required
+                  min={toDateTimeLocal(new Date(Date.now() + 5 * 60_000).toISOString())}
                   value={scheduledAt}
                   onChange={(event) => setScheduledAt(event.target.value)}
                   className="min-w-0 rounded-xl bg-secondary px-2 py-2.5 text-xs outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
+              <label htmlFor="date-note" className="block text-xs font-medium">
+                Dress code or other details{" "}
+                <span className="font-normal text-muted-foreground">(optional)</span>
+              </label>
               <textarea
+                id="date-note"
                 maxLength={300}
                 value={planNote}
                 onChange={(event) => setPlanNote(event.target.value)}
-                placeholder="Add a note (optional)"
+                placeholder="Smart casual, accessibility needs, or anything else to agree on"
                 rows={2}
                 className="w-full resize-none rounded-xl bg-secondary px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
               />
@@ -1415,23 +1441,28 @@ function Thread({
           <p className="font-semibold">{p.name}</p>
           <p className="text-xs text-muted-foreground">{p.town}</p>
         </div>
-        {isFeatureEnabled("aiOpenerStudio") && (
+        {!showOpenerStudio && isFeatureEnabled("aiOpenerStudio") && (
           <button
             type="button"
-            onClick={() => setShowOpenerStudio((v) => !v)}
+            onClick={() => {
+              setShowTwoTruths(false);
+              setShowOpenerStudio(true);
+            }}
             className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-primary"
           >
             <MessagesSquare className="h-3.5 w-3.5" />
             Ideas
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => setShowTwoTruths((v) => !v)}
-          className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-primary"
-        >
-          <Sparkles className="h-3.5 w-3.5" />2 Truths
-        </button>
+        {!showOpenerStudio && (
+          <button
+            type="button"
+            onClick={() => setShowTwoTruths((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-primary"
+          >
+            <Sparkles className="h-3.5 w-3.5" />2 Truths
+          </button>
+        )}
       </header>
       <DemoNotice />
       <AnimatePresence>

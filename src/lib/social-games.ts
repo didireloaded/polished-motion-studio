@@ -65,6 +65,27 @@ export const thisOrThatQuestions: ThisOrThatQuestion[] = [
   },
 ];
 
+export function getWindhoekDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Africa/Windhoek",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value["year"]}-${value["month"]}-${value["day"]}`;
+}
+
+export function getDailyThisOrThatQuestion(now = new Date()): ThisOrThatQuestion {
+  const localDate = getWindhoekDate(now);
+  const day = Math.floor(
+    (Date.parse(`${localDate}T00:00:00Z`) - Date.UTC(2026, 0, 1)) / 86_400_000,
+  );
+  return thisOrThatQuestions[
+    ((day % thisOrThatQuestions.length) + thisOrThatQuestions.length) % thisOrThatQuestions.length
+  ]!;
+}
+
 export const speedDatingPrompts = [
   {
     id: "coast-vs-bush",
