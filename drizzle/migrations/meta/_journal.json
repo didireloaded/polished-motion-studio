@@ -78,6 +78,13 @@
       "when": 1793762657918,
       "tag": "0010_perf_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793776800686,
+      "tag": "0011_restrict_poll_vote_reads",
+      "breakpoints": true
     }
   ]
 }
