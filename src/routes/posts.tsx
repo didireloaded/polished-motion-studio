@@ -4,7 +4,6 @@ import {
   Bookmark,
   Heart,
   LockKeyhole,
-  MapPin,
   MessageCircle,
   PenSquare,
   Send,
@@ -372,7 +371,7 @@ function Posts() {
                   )}
                 </div>
                 <p className="mt-3 text-[14px] leading-6">{post.text}</p>
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-3 flex items-center gap-4 text-xs">
                   <button
                     type="button"
                     aria-label={s.likedPosts.includes(post.id) ? "Unlike post" : "Like post"}
@@ -388,38 +387,28 @@ function Posts() {
                     {s.likedPosts.includes(post.id) ? "Liked" : "Like"}
                   </button>
                   <button
+                    onClick={() => {
+                      setReplyTo(post);
+                      setReplyText("");
+                    }}
+                    className="flex items-center gap-1.5 text-muted-foreground"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Private reply
+                  </button>
+                  <button
                     type="button"
                     aria-label={s.savedPosts.includes(post.id) ? "Unsave post" : "Save post"}
                     aria-pressed={s.savedPosts.includes(post.id)}
                     onClick={() =>
                       update((st) => ({ ...st, savedPosts: toggle(st.savedPosts, post.id) }))
                     }
-                    className={
-                      s.savedPosts.includes(post.id) ? "text-primary" : "text-muted-foreground"
-                    }
+                    className={`ml-auto flex items-center gap-1 ${s.savedPosts.includes(post.id) ? "text-primary" : "text-muted-foreground"}`}
                   >
                     <Bookmark
                       className={`h-4 w-4 ${s.savedPosts.includes(post.id) ? "fill-current" : ""}`}
                     />
-                  </button>
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {post.town}
-                    </span>
-                    <span>{timeAgo(post.at)}</span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setReplyTo(post);
-                      setReplyText("");
-                    }}
-                    className="flex items-center gap-1.5 rounded-xl bg-secondary px-3 py-2 text-xs font-semibold"
-                  >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    Reply privately
+                    Save
                   </button>
                 </div>
               </motion.li>
@@ -957,7 +946,7 @@ function LivePosts({ userId }: { userId: string }) {
                   )}
                 </div>
                 <p className="mt-2 text-[15px] leading-6">{post.body}</p>
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-3 flex items-center gap-4 text-xs">
                   <button
                     type="button"
                     aria-label={reaction?.liked ? "Unlike post" : "Like post"}
@@ -968,35 +957,28 @@ function LivePosts({ userId }: { userId: string }) {
                     <Heart className={`h-4 w-4 ${reaction?.liked ? "fill-current" : ""}`} />
                     {reaction?.liked ? "Liked" : "Like"}
                   </button>
-                  <button
-                    type="button"
-                    aria-label={reaction?.saved ? "Unsave post" : "Save post"}
-                    aria-pressed={!!reaction?.saved}
-                    onClick={() => void toggleReaction(post.id, "saved")}
-                    className={reaction?.saved ? "text-primary" : "text-muted-foreground"}
-                  >
-                    <Bookmark className={`h-4 w-4 ${reaction?.saved ? "fill-current" : ""}`} />
-                  </button>
-                </div>
-                <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {post.town}
-                    </span>
-                    <span>{timeAgo(new Date(post.created_at).getTime())}</span>
-                  </div>
                   {post.author_id !== userId && (
                     <button
                       onClick={() => {
                         setReplyTo(post);
                         setReplyBody("");
                       }}
-                      className="rounded-xl bg-secondary px-3 py-2 text-xs font-semibold"
+                      className="flex items-center gap-1.5 text-muted-foreground"
                     >
-                      Reply privately
+                      <MessageCircle className="h-4 w-4" />
+                      Private reply
                     </button>
                   )}
+                  <button
+                    type="button"
+                    aria-label={reaction?.saved ? "Unsave post" : "Save post"}
+                    aria-pressed={!!reaction?.saved}
+                    onClick={() => void toggleReaction(post.id, "saved")}
+                    className={`ml-auto flex items-center gap-1 ${reaction?.saved ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    <Bookmark className={`h-4 w-4 ${reaction?.saved ? "fill-current" : ""}`} />
+                    Save
+                  </button>
                 </div>
                 {post.author_id === userId && postReplies.length > 0 && (
                   <div className="mt-3 space-y-2 border-t border-border pt-3">

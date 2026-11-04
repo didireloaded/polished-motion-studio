@@ -12,7 +12,6 @@ import {
   MessagesSquare,
   Send,
   Sparkles,
-  Wand2,
 } from "lucide-react";
 import { people, photo, update, useStore, timeAgo } from "@/lib/namlink";
 import { PageHeader } from "@/components/TabBar";
@@ -804,7 +803,7 @@ function LiveThread({
       animate={{ opacity: 1, x: 0 }}
       className="flex h-[calc(100svh-5rem)] flex-col"
     >
-      <header className="glass sticky top-0 z-10 flex items-center gap-3 border-b border-border px-4 py-3">
+      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-[#fff7f8] px-4 py-3">
         <button
           onClick={onBack}
           aria-label="Back"
@@ -827,7 +826,7 @@ function LiveThread({
             onClick={() => setShowOpenerStudio((v) => !v)}
             className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[11px] font-semibold text-primary"
           >
-            <Wand2 className="h-3 w-3" /> AI Opener
+            <MessagesSquare className="h-3 w-3" /> Ideas
           </button>
         )}
         <button
@@ -1138,7 +1137,7 @@ function LiveThread({
                     className={`flex max-w-[78%] items-end gap-1.5 rounded-3xl px-4 py-2.5 text-[15px] ${
                       mine
                         ? `${grouped ? "rounded-tr-lg" : ""} rounded-br-md bg-primary text-primary-foreground`
-                        : `${grouped ? "rounded-tl-lg" : ""} rounded-bl-md bg-card`
+                        : `${grouped ? "rounded-tl-lg" : ""} rounded-bl-md bg-secondary`
                     }`}
                   >
                     <span>{message.body}</span>
@@ -1328,7 +1327,7 @@ function Thread({
       exit={{ opacity: 0, x: 40 }}
       className="flex h-[calc(100vh-5rem)] flex-col"
     >
-      <header className="glass sticky top-0 z-10 flex items-center gap-3 border-b border-border px-4 py-3">
+      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-[#fff7f8] px-4 py-3">
         <button
           onClick={onBack}
           aria-label="Back"
@@ -1347,8 +1346,8 @@ function Thread({
             onClick={() => setShowOpenerStudio((v) => !v)}
             className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-primary"
           >
-            <Wand2 className="h-3.5 w-3.5" />
-            AI Opener
+            <MessagesSquare className="h-3.5 w-3.5" />
+            Ideas
           </button>
         )}
         <button
@@ -1446,7 +1445,7 @@ function Thread({
               style={{ originX: m.from === "me" ? 1 : 0 }}
             >
               <div
-                className={`flex max-w-[78%] items-end gap-1.5 rounded-3xl px-4 py-2.5 text-[15px] ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-card"}`}
+                className={`flex max-w-[78%] items-end gap-1.5 rounded-3xl px-4 py-2.5 text-[15px] ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-secondary"}`}
               >
                 <span>{m.text}</span>
                 {m.from === "me" && <Check className="mb-0.5 h-3.5 w-3.5 shrink-0 opacity-85" />}

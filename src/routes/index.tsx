@@ -31,12 +31,7 @@ import type { CelebrationMatch } from "@/components/MatchCelebrationModal";
 import { ElevatorPitchCard, TwoTruthsCard } from "@/components/SocialGames";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { sendMatchAlertEmail } from "@/lib/email.functions";
-import {
-  computeVibeAlignment,
-  getElevatorPitchForPerson,
-  getPersonThisOrThatAnswers,
-  getTwoTruthsForPerson,
-} from "@/lib/social-games";
+import { getElevatorPitchForPerson, getTwoTruthsForPerson } from "@/lib/social-games";
 
 const MatchCelebrationModal = lazy(() =>
   import("@/components/MatchCelebrationModal").then((m) => ({
@@ -122,7 +117,7 @@ function Home() {
     return (
       <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-2">
         <header className="flex h-[58px] shrink-0 items-center justify-between px-2">
-          <BrandLogo />
+          <BrandLogo className="h-5" />
           <span className="h-10 w-10 animate-pulse rounded-full bg-secondary" />
         </header>
         <section aria-label="Loading discovery" className="relative min-h-0 flex-1">
@@ -532,11 +527,10 @@ function ProfileCard({
   const activeIdx = Math.min(photoIdx, totalPhotos - 1);
   const currentSampleSrc = !userId ? sampleGallery[activeIdx] : undefined;
   const currentLivePath = userId ? livePaths[activeIdx] : undefined;
-  const store = useStore();
-  const alignment = useMemo(
-    () => computeVibeAlignment(store.profile.choices, getPersonThisOrThatAnswers(person)),
-    [store.profile.choices, person],
-  );
+  const viewer = useStore();
+  const connectionReason =
+    recommendationReason ??
+    (!userId && viewer.profile.town === person.town ? `Also in ${person.town}` : undefined);
   const elevatorPitch = useMemo(() => getElevatorPitchForPerson(person), [person]);
   const twoTruthsGame = useMemo(() => getTwoTruthsForPerson(person), [person]);
 
@@ -584,7 +578,7 @@ function ProfileCard({
       <motion.div
         layout
         className="relative w-full shrink-0 overflow-hidden bg-foreground"
-        animate={{ height: expanded ? "40%" : "100%" }}
+        animate={{ height: expanded ? "42%" : "100%" }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
       >
         <ProfilePhoto
@@ -661,10 +655,8 @@ function ProfileCard({
           </>
         )}
         {top && !userId && !expanded && (
-          <span
-            className={`absolute left-4 z-20 rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-medium text-white ${totalPhotos > 1 ? "top-6" : "top-4"}`}
-          >
-            Sample profile
+          <span className="absolute bottom-[138px] right-5 z-20 rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            Sample
           </span>
         )}
         {expanded && (
@@ -679,25 +671,30 @@ function ProfileCard({
         )}
         {!expanded && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[92px] z-20 px-5 pt-16">
+            {connectionReason && (
+              <p className="mb-2 w-fit max-w-[85%] truncate rounded-full bg-black/55 px-3 py-1.5 text-[11px] font-medium text-white">
+                ✦ {connectionReason}
+              </p>
+            )}
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.035em]">
-                    {person.name}
-                    <span className="ml-2 text-[21px] font-medium text-white/85">{person.age}</span>
+                    {person.name}, <span className="text-[24px]">{person.age}</span>
                   </h1>
                   {(person.verified || (person.photoPaths?.length ?? 0) > 0) && (
                     <span
                       title="Verified member"
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white"
+                      className="inline-flex shrink-0 items-center gap-1 text-primary"
                     >
-                      <CheckCircle2 className="h-3 w-3 text-emerald-300" />
-                      Verified
+                      <CheckCircle2 className="h-4 w-4 fill-primary text-white" />
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-[13px] text-white/95">{person.town}</p>
-                <p className="mt-0.5 truncate text-[12px] text-white/85">{person.job}</p>
+                <p className="mt-1 truncate text-[13px] text-white/95">
+                  {person.town} · {person.job}
+                </p>
+                <p className="mt-0.5 truncate text-[12px] text-white/85">{person.bio}</p>
               </div>
               <motion.button
                 type="button"
@@ -730,32 +727,55 @@ function ProfileCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2 }}
-            className="min-h-0 flex-1 overflow-y-auto px-5 pb-16 pt-4 text-foreground"
+            className="min-h-0 flex-1 overflow-y-auto px-5 pb-20 pt-5 text-foreground"
           >
-            <div className="space-y-3">
+            <div className="space-y-5">
               <div>
-                <h2 className="text-[18px] font-bold leading-tight">
-                  {person.name} <span className="font-normal">{person.age}</span>
+                <h2 className="text-[24px] font-bold leading-tight tracking-[-0.03em]">
+                  {person.name}, {person.age}
                 </h2>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {person.job} · {person.town}
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  {person.town} · {person.job}
                 </p>
               </div>
-              <div>
-                <h3 className="text-[12px] font-semibold">About me</h3>
-                <p className="mt-1 text-[12px] leading-[18px]">{person.bio}</p>
-              </div>
-              <div>
-                <h3 className="text-[12px] font-semibold">Looking for</h3>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex rounded-full bg-accent px-3 py-1.5 text-[11px] font-medium text-primary">
-                    ♥ {person.intent}
-                  </span>
-                  <span className="inline-flex rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                    Vibe Alignment: {alignment.percentage}%
-                  </span>
+              <span className="inline-flex rounded-full bg-accent px-3 py-1.5 text-[12px] font-medium text-primary">
+                ♥ {person.intent}
+              </span>
+              <p className="text-[14px] leading-[21px]">{person.bio}</p>
+              {person.tags.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-[14px] font-semibold">Interests</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {person.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-border bg-white px-3 py-1.5 text-[12px]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
+              )}
+              <div className="rounded-[18px] bg-secondary p-4">
+                <h3 className="text-[12px] text-muted-foreground">{person.prompt}</h3>
+                <p className="mt-1 text-[14px] font-medium leading-5">{person.answer}</p>
               </div>
+              {person.photoPaths && person.photoPaths.length > 1 && (
+                <div>
+                  <h3 className="mb-2 text-[14px] font-semibold">Photos</h3>
+                  <div className="no-scrollbar flex gap-2 overflow-x-auto">
+                    {person.photoPaths.slice(1).map((path) => (
+                      <ProfilePhoto
+                        key={path}
+                        name={person.name}
+                        path={path}
+                        className="h-24 w-20 shrink-0 rounded-xl object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
               {!userId && <SampleVoiceIntro />}
               <ElevatorPitchCard
@@ -791,38 +811,11 @@ function ProfileCard({
                   void onDecide(true);
                 }}
               />
-              {person.photoPaths && person.photoPaths.length > 1 && (
-                <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                  {person.photoPaths.slice(1).map((path) => (
-                    <ProfilePhoto
-                      key={path}
-                      name={person.name}
-                      path={path}
-                      className="h-24 w-20 shrink-0 rounded-xl object-cover"
-                    />
-                  ))}
-                </div>
-              )}
               {recommendationReason && (
                 <p className="text-[11px] leading-4 text-muted-foreground">
                   You may connect over {recommendationReason}
                 </p>
               )}
-              <div>
-                <h3 className="text-[12px] font-semibold">My answer</h3>
-                <p className="mt-1 text-[11px] font-medium">{person.prompt}</p>
-                <p className="text-[12px] leading-5 text-muted-foreground">{person.answer}</p>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {person.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
               {userId && (
                 <SafetyActions
                   userId={userId}

@@ -548,7 +548,6 @@ export function HotTakeAndFlagPollHub({
   const [loading, setLoading] = useState(Boolean(userId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [pollOpen, setPollOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -610,8 +609,8 @@ export function HotTakeAndFlagPollHub({
   };
 
   return (
-    <div className="mx-5 mt-4 space-y-3">
-      <section aria-label="Hot takes">
+    <div className="mx-4 mt-4 flex flex-col gap-3">
+      <section aria-label="Hot takes" className="order-2">
         <h2 className="mb-2 text-[14px] font-semibold text-foreground">Hot takes</h2>
         <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
           {dailyHotTakePrompts.slice(0, 3).map((take) => (
@@ -631,32 +630,24 @@ export function HotTakeAndFlagPollHub({
           ))}
         </div>
       </section>
-      {!loading && poll && !pollOpen && (
-        <button
-          type="button"
-          onClick={() => setPollOpen(true)}
-          className="w-full rounded-[18px] border border-border bg-white px-4 py-3 text-left text-[13px] font-medium text-foreground"
-        >
-          Quick poll <span className="float-right text-primary">Answer</span>
-        </button>
-      )}
-      {!loading && poll && pollOpen && (
+      {!loading && poll && (
         <section
           aria-label="Green or red flag poll"
-          className="rounded-2xl border border-border bg-white p-4"
+          className="order-1 rounded-[20px] border border-border bg-white p-4"
         >
-          <p className="text-[11px] font-medium text-muted-foreground">
-            Quick poll · {flagSwipePolls.length - pending.length + 1} of {flagSwipePolls.length}
-          </p>
+          <div className="flex justify-between text-[11px] font-semibold text-muted-foreground">
+            <span className="uppercase tracking-wide">Quick poll</span>
+            <span>{pending.length} left</span>
+          </div>
           <h2 className="mt-2 text-[15px] font-semibold leading-6 text-foreground">
             {poll.statement}
           </h2>
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               type="button"
               disabled={saving}
               onClick={() => void vote("green")}
-              className="h-11 rounded-full border border-border bg-white text-sm font-medium text-foreground transition-colors hover:border-emerald-600 hover:text-emerald-700 active:scale-[0.98] disabled:opacity-50"
+              className="h-10 rounded-full bg-secondary text-sm font-medium text-foreground transition-colors hover:text-emerald-700 active:scale-[0.98] disabled:opacity-50"
             >
               Green flag
             </button>
@@ -664,7 +655,7 @@ export function HotTakeAndFlagPollHub({
               type="button"
               disabled={saving}
               onClick={() => void vote("red")}
-              className="h-11 rounded-full border border-border bg-white text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary active:scale-[0.98] disabled:opacity-50"
+              className="h-10 rounded-full bg-primary text-sm font-medium text-white transition-colors active:scale-[0.98] disabled:opacity-50"
             >
               Red flag
             </button>

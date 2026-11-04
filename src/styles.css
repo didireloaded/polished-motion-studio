@@ -272,6 +272,9 @@ button {
 .bg-primary {
   border-radius: 9999px;
 }
+.welcome-create {
+  border-radius: 0;
+}
 button:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
