@@ -1,4 +1,6 @@
 import { useSyncExternalStore } from "react";
+import { additionalPreviewPeople } from "./preview-profiles";
+import { createPreviewContent, PREVIEW_SEED_VERSION } from "./preview-content";
 
 export const towns = [
   "Windhoek",
@@ -181,6 +183,7 @@ export const people: Person[] = [
     bio: "Back home after a few years away. Rediscovering all my favourite corners of Namibia.",
     intent: "A relationship",
   },
+  ...additionalPreviewPeople,
 ];
 
 export const photo = (p: Person, small = false) =>
@@ -214,7 +217,7 @@ export const events = [
     sample: true,
     venue: "The Stellenbosch Wine Bar",
     image: "/design/event-rooftop.jpg",
-    when: "Sample event · date to be announced",
+    when: "Friday · 18:30",
     interestedCount: 12,
     extraCount: 8,
   },
@@ -225,7 +228,7 @@ export const events = [
     sample: true,
     venue: "Long Beach",
     image: "/design/event-beach.jpg",
-    when: "Sample event · date to be announced",
+    when: "Saturday · 14:00",
     interestedCount: 28,
     extraCount: 24,
   },
@@ -236,12 +239,46 @@ export const events = [
     sample: true,
     venue: "Dune 7",
     image: "/editorial/dunes.jpg",
-    when: "Sample event · date to be announced",
+    when: "Sunday · 06:00",
     interestedCount: 16,
     extraCount: 12,
   },
+  {
+    id: "e4",
+    title: "Coffee & the Morning Market",
+    town: "Windhoek",
+    sample: true,
+    venue: "Green Market",
+    image: "/editorial/coffee.jpg",
+    when: "Saturday · 09:00",
+    interestedCount: 0,
+    extraCount: 0,
+  },
+  {
+    id: "e5",
+    title: "An Evening of Live Music",
+    town: "Oshakati",
+    sample: true,
+    venue: "Town centre",
+    image: "/design/event-rooftop.jpg",
+    when: "Friday · 19:00",
+    interestedCount: 0,
+    extraCount: 0,
+  },
+  {
+    id: "e6",
+    title: "Riverside Picnic",
+    town: "Rundu",
+    sample: true,
+    venue: "Kavango riverfront",
+    image: "/design/auth-landscape.jpg",
+    when: "Sunday · 15:00",
+    interestedCount: 0,
+    extraCount: 0,
+  },
 ];
 export type State = {
+  previewSeedVersion: number;
   liked: string[];
   passed: string[];
   saved: string[];
@@ -264,54 +301,54 @@ export type State = {
 };
 
 const initial: State = {
-  liked: [],
+  ...createPreviewContent(people, Date.now()),
+  previewSeedVersion: PREVIEW_SEED_VERSION,
   passed: [],
-  saved: [],
-  matches: [],
-  chats: {},
-  postReplies: {},
-  interestedEvents: [],
-  likedPosts: [],
-  savedPosts: [],
-  posts: [
-    {
-      id: "s1",
-      authorName: "Daniel",
-      text: "Anyone up for a sunrise at Dune 7? Coffee is on me.",
-      town: "Walvis Bay",
-      at: Date.now() - 36e5 * 3,
-      replies: 0,
-      sample: true,
-    },
-    {
-      id: "s2",
-      authorName: "Amara",
-      text: "Looking for a gallery buddy for First Friday.",
-      town: "Windhoek",
-      at: Date.now() - 36e5 * 9,
-      replies: 0,
-      sample: true,
-    },
-    {
-      id: "s3",
-      authorName: "Selma",
-      text: "What’s your favourite kapana spot in town?",
-      town: "Oshakati",
-      at: Date.now() - 36e5 * 26,
-      replies: 0,
-      sample: true,
-    },
-  ],
   profile: {
-    name: "",
-    age: 25,
+    name: "Alex",
+    age: 27,
     town: "Windhoek",
-    bio: "",
-    tags: [],
+    bio: "Coffee walks, a good book, and a road trip when the weekend allows. Looking for someone curious and kind.",
+    tags: ["Coffee", "Road trips", "Hiking"],
     intent: "A relationship",
     choices: {},
   },
 };
+
+export function restorePreviewState(saved: Partial<State>): State {
+  const restored: State = {
+    ...initial,
+    ...saved,
+    profile: { ...initial.profile, ...saved.profile, choices: saved.profile?.choices ?? {} },
+  };
+  if ((saved.previewSeedVersion ?? 0) < PREVIEW_SEED_VERSION) {
+    const retainedPosts = (saved.posts ?? []).filter(
+      (post) => !["s1", "s2", "s3"].includes(post.id),
+    );
+    const postIds = new Set(retainedPosts.map((post) => post.id));
+    restored.posts = [
+      ...retainedPosts,
+      ...initial.posts.filter((post) => !postIds.has(post.id)),
+    ].sort((a, b) => b.at - a.at);
+    const seededMatches = initial.matches.filter((id) => !saved.passed?.includes(id));
+    restored.matches = Array.from(new Set([...seededMatches, ...(saved.matches ?? [])]));
+    restored.liked = Array.from(new Set([...seededMatches, ...(saved.liked ?? [])]));
+    restored.chats = {
+      ...Object.fromEntries(
+        Object.entries(initial.chats).filter(([id]) => seededMatches.includes(id)),
+      ),
+      ...saved.chats,
+    };
+    restored.postReplies = { ...initial.postReplies, ...saved.postReplies };
+    restored.previewSeedVersion = PREVIEW_SEED_VERSION;
+    if (!saved.profile?.name.trim())
+      restored.profile = { ...initial.profile, ...restored.profile, name: initial.profile.name };
+    restored.posts = restored.posts.map((post) =>
+      post.id === "seed-post-mine" ? { ...post, authorName: restored.profile.name } : post,
+    );
+  }
+  return restored;
+}
 
 const KEY = "namlink-state-v1";
 let state: State = initial;
@@ -325,16 +362,8 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const saved = JSON.parse(raw) as Partial<State>;
-      state = {
-        ...initial,
-        ...saved,
-        matches: saved.matches ?? [],
-        postReplies: saved.postReplies ?? {},
-        interestedEvents: saved.interestedEvents ?? [],
-        likedPosts: saved.likedPosts ?? [],
-        savedPosts: saved.savedPosts ?? [],
-        profile: { ...initial.profile, ...saved.profile, choices: saved.profile?.choices ?? {} },
-      };
+      state = restorePreviewState(saved);
+      localStorage.setItem(KEY, JSON.stringify(state));
     }
   } catch {
     /* ignore invalid local demo data */

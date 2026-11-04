@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 export function DemoNotice() {
   return (
     <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-xl bg-secondary px-3 py-2.5 text-xs text-muted-foreground">
-      <span>Demo mode · activity is only saved on this device.</span>
+      <span>Preview content · activity is saved on this device.</span>
       <Link to="/auth" className="shrink-0 font-semibold text-primary">
         Sign in
       </Link>
@@ -31,12 +31,14 @@ export function ProfilePhoto({
   path,
   className = "",
   priority = false,
+  position,
 }: {
   name: string;
   src?: string | undefined;
   path?: string | undefined;
   className?: string;
   priority?: boolean;
+  position?: string | undefined;
 }) {
   const [loaded, setLoaded] = useState(false);
   const [inViewport, setInViewport] = useState(
@@ -92,6 +94,7 @@ export function ProfilePhoto({
     return (
       <img
         src={image}
+        style={{ objectPosition: position }}
         alt={`${name}'s profile`}
         loading={priority ? "eager" : "lazy"}
         decoding="async"

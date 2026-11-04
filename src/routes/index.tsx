@@ -338,7 +338,7 @@ function Home() {
                 void queryClient.invalidateQueries({ queryKey: ["recommendations", user.id] });
               } else {
                 update((st) => ({ ...st, passed: [] }));
-                setNotice("Showing sample profiles from all towns.");
+                setNotice("Showing profiles from all towns.");
               }
               window.setTimeout(() => setNotice(""), 2200);
             }}
@@ -543,14 +543,7 @@ function ProfileCard({
 
   return (
     <motion.article
-      aria-label={
-        (userId ? "Profile, " : "Sample profile, ") +
-        person.name +
-        ", " +
-        person.age +
-        ", " +
-        person.town
-      }
+      aria-label={"Profile, " + person.name + ", " + person.age + ", " + person.town}
       className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[25px] bg-card text-white"
       style={{ zIndex: 10 - depth, x: dragX, rotate }}
       drag={top && !expanded ? "x" : false}
@@ -585,6 +578,8 @@ function ProfileCard({
           name={person.name}
           src={currentSampleSrc}
           path={currentLivePath}
+          priority={top}
+          position={activeIdx === 0 ? person.photoPosition : undefined}
           className={`absolute inset-0 h-full w-full select-none ${currentLivePath ? "object-contain" : "object-cover"}`}
         />
         <div className="home-photo-scrim absolute inset-0" aria-hidden="true" />
@@ -653,11 +648,6 @@ function ProfileCard({
               PASS
             </motion.span>
           </>
-        )}
-        {top && !userId && !expanded && (
-          <span className="absolute bottom-[138px] right-5 z-20 rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
-            Sample
-          </span>
         )}
         {expanded && (
           <button
@@ -887,7 +877,7 @@ function Empty({
       </h2>
       <p className="mt-2 max-w-[270px] text-sm leading-5 text-muted-foreground">
         {needsProfile
-          ? "Finish your 3-step profile setup so we can introduce you to people who fit what you value."
+          ? "Finish your profile setup so we can introduce you to people who fit what you value."
           : "Expand to all of Namibia to discover more members, or invite a friend to Mutal."}
       </p>
       {needsProfile ? (

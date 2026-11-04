@@ -30,17 +30,15 @@ const quietWave = Array.from(
 export function SampleVoiceIntro() {
   return (
     <div className="py-1">
-      <p className="text-xs font-semibold">Voice intro · sample preview</p>
+      <p className="text-xs font-semibold">Voice intro</p>
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/40 text-white">
           <Play className="ml-0.5 h-4 w-4" fill="currentColor" />
         </span>
         <Waveform levels={quietWave} />
-        <span className="text-[10px] text-muted-foreground">0:28</span>
+        <span className="text-[10px] text-muted-foreground">—</span>
       </div>
-      <p className="text-[10px] text-muted-foreground">
-        This sample has no audio. Members can record their own.
-      </p>
+      <p className="text-[10px] text-muted-foreground">No voice intro recorded yet.</p>
     </div>
   );
 }

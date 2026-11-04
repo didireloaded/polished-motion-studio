@@ -232,7 +232,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
           ? value
           : { ...value, liked: [...value.liked, profile.id] },
       );
-      setNotice("Sample like saved on this device.");
+      setNotice("Like saved.");
       window.setTimeout(() => setNotice(""), 1600);
     }
   };
@@ -401,7 +401,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   {user
                     ? "Map markers show towns, not anyone's exact location."
-                    : "Sample profiles by town. Map markers are not live locations."}
+                    : "Profiles grouped by town. Markers are not live locations."}
                 </p>
                 <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
                   {visibleProfiles.slice(0, 12).map((profile) => {
@@ -471,7 +471,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                     )}
                     <span className="min-w-0 flex-1">
                       <span className="block text-[13px] font-semibold text-foreground">
-                        {user ? "No crossings recorded" : "Nadia, 26 · Sample"}
+                        {user ? "No crossings recorded" : "Nadia, 26"}
                       </span>
                       <span className="mt-0.5 block text-[11px] text-muted-foreground">
                         {user
@@ -659,11 +659,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                       <div className="px-3 pt-3">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
-                          {event.sample && (
-                            <span className="shrink-0 text-[11px] text-muted-foreground">
-                              Sample event
-                            </span>
-                          )}
                         </div>
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Clock3 className="h-3.5 w-3.5" />
@@ -738,7 +733,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             <p className="mt-2 text-[11px] text-muted-foreground">
               {user
                 ? "Your interest is visible to members who can also see your profile. Choose public places and meet safely."
-                : "Sample interests are saved on this device in the preview."}
+                : "Your interest is saved on this device."}
             </p>
           </section>
         </>
