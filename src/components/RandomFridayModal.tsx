@@ -9,7 +9,6 @@ import {
   Mic,
   Radio,
   Send,
-  Sparkles,
   Users,
   X,
   Zap,
@@ -19,7 +18,7 @@ import type { FormEvent } from "react";
 import { SafetyActions } from "@/components/community";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { people, photo, type Person } from "@/lib/namlink";
+import { people, photo, useStore, type Person } from "@/lib/namlink";
 import { fallbackRandomFridayPitch } from "@/lib/random-friday-pitch";
 import { draftRandomFridayPitch } from "@/lib/random-friday-pitch.functions";
 import { joinLiveQueueServerFn } from "@/lib/social-backend.functions";
@@ -114,6 +113,7 @@ export function RandomFridayModal({
   userId?: string | null | undefined;
   onClose: () => void;
 }) {
+  const ownPreviewProfile = useStore().profile;
   const candidates = useMemo(() => {
     const local = people.filter((p) => town === "All" || p.town === town);
     return local.length > 0 ? local : people;
@@ -370,30 +370,31 @@ export function RandomFridayModal({
         const res = await draftRandomFridayPitch({
           data: {
             style: "playful",
-            focusHint: `connecting with ${partner.name} in ${partner.town}`,
+            focusHint: "introducing myself in this round",
           },
         });
         setDraft(res.draft.pitch);
-        showBoostBanner("✨ AI 30s Pitch ready!");
+        showBoostBanner("Your introduction is ready.");
         return;
       } catch {
-        // fallback below
+        showBoostBanner("Drafting is unavailable. Please write your introduction.");
+        return;
       }
     }
     const fallback = fallbackRandomFridayPitch(
       {
-        displayName: "You",
-        age: 26,
-        town: partner.town,
-        intent: partner.intent,
-        tags: partner.tags,
-        bio: "",
+        displayName: ownPreviewProfile.name || "You",
+        age: ownPreviewProfile.age,
+        town: ownPreviewProfile.town,
+        intent: ownPreviewProfile.intent,
+        tags: ownPreviewProfile.tags,
+        bio: ownPreviewProfile.bio,
         seeking: "",
       },
       "playful",
     );
     setDraft(fallback.pitch);
-    showBoostBanner("✨ AI 30s Pitch ready!");
+    showBoostBanner("Your introduction is ready.");
   };
 
   return (
@@ -553,7 +554,9 @@ export function RandomFridayModal({
               <div className="flex items-center justify-between border-b border-border bg-accent/50 px-4 py-2">
                 <div className="flex items-center gap-2.5">
                   <div className="relative h-11 w-11 overflow-hidden rounded-full border-2 border-white shadow-2xs">
-                    <img loading="lazy" decoding="async"
+                    <img
+                      loading="lazy"
+                      decoding="async"
                       src={photo(partner, true)}
                       alt={partner.name}
                       className={`h-full w-full object-cover transition duration-500 ${
@@ -669,11 +672,10 @@ export function RandomFridayModal({
                     <button
                       type="button"
                       onClick={() => void generateAiLivePitch()}
-                      aria-label="Write 30-second pitch with AI"
+                      aria-label="Draft a 30-second introduction"
                       className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-accent px-2.5 py-1 text-[10px] font-semibold text-primary"
                     >
-                      <Sparkles className="h-3 w-3" />
-                      AI Pitch
+                      Draft intro
                     </button>
                     <button
                       type="button"
@@ -709,7 +711,6 @@ export function RandomFridayModal({
                       onClick={() => sendPitch(undefined, line)}
                       className="shrink-0 rounded-full border border-border bg-secondary/50 px-2.5 py-1 text-[10px] font-medium text-foreground hover:border-primary/40"
                     >
-                      <Sparkles className="mr-1 inline h-2.5 w-2.5 text-primary" />
                       {line}
                     </button>
                   ))}
