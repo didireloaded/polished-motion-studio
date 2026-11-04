@@ -266,12 +266,6 @@ body:has(.onboarding-flow) .app-tabbar {
 .app-row:last-child {
   border-bottom: 0;
 }
-button {
-  border-radius: 9999px;
-}
-.bg-primary {
-  border-radius: 9999px;
-}
 .welcome-create {
   border-radius: 0;
 }

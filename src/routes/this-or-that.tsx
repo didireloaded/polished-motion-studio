@@ -140,10 +140,7 @@ function ThisOrThatPage() {
   return (
     <NearbyFeatureShell title="This or That">
       <div className="px-5 pb-12 pt-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-          Today’s quick pick
-        </p>
-        <h2 className="mt-2 text-[20px] font-semibold leading-7 tracking-[-0.02em]">
+        <h2 className="text-[20px] font-semibold leading-7 tracking-[-0.02em]">
           One small choice. A shared starting point.
         </h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -246,7 +243,7 @@ function ThisOrThatPage() {
               <button
                 type="button"
                 onClick={() => void navigate({ to: "/chats", search: { matchId: matchedId } })}
-                className="mt-5 h-11 w-full bg-primary text-sm font-semibold text-white"
+                className="mt-5 h-11 w-full rounded-xl bg-primary text-sm font-semibold text-white"
               >
                 Open your chat
               </button>

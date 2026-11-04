@@ -636,7 +636,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                           if (user && !event.sample) setSelectedEventToShare(event);
                           else setNotice("Sign in and match with someone to suggest an event.");
                         }}
-                        className="mx-3 mb-3 mt-3 flex h-10 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 bg-primary text-xs font-semibold text-primary-foreground disabled:opacity-70"
+                        className="mx-3 mb-3 mt-3 flex h-10 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground disabled:opacity-70"
                       >
                         <CalendarDays className="h-3.5 w-3.5" />
                         {user ? "Suggest to a match" : "Sign in to suggest"}

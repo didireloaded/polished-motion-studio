@@ -217,10 +217,7 @@ function RandomFridayPage() {
     <NearbyFeatureShell title="Random Friday">
       {!user && <DemoNotice />}
       <div className="px-5 pb-12 pt-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
-          30-second introductions
-        </p>
-        <h2 className="mt-2 text-[20px] font-semibold leading-7 tracking-[-0.02em]">
+        <h2 className="text-[20px] font-semibold leading-7 tracking-[-0.02em]">
           A quick hello, in your own words.
         </h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
@@ -229,15 +226,12 @@ function RandomFridayPage() {
         </p>
 
         <section
-          className="mt-6 rounded-[20px] border border-border bg-white p-5 shadow-float"
+          className="mt-6 rounded-xl border border-border bg-white p-5"
           aria-label="Your introduction"
         >
           <div className="flex items-start justify-between gap-3 border-b border-border pb-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                Your introduction
-              </p>
-              <h3 className="mt-1 text-[16px] font-semibold">A quick hello, in your own words</h3>
+              <h3 className="text-[16px] font-semibold">Profile details</h3>
             </div>
             <button
               type="button"
