@@ -1,14 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AnimatePresence, motion, useMotionValue, useTransform } from "framer-motion";
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ChevronUp,
-  Heart,
-  Share2,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { ArrowLeft, ChevronUp, Heart, Share2, SlidersHorizontal, X } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -23,7 +15,7 @@ import { people, photo, towns, update, useStore, type Person } from "@/lib/namli
 import { useMyProfile, useSession } from "@/hooks/use-session";
 import { getRecommendations, type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { ProfilePhoto, SafetyActions } from "@/components/community";
+import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
 import { SampleVoiceIntro, VoiceIntroPlayer } from "@/components/voice-intro";
 import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
@@ -251,6 +243,7 @@ function Home() {
           </IconButton>
         </div>
       </header>
+      {!user && <DemoNotice />}
       {user && recs.data?.notice && (
         <p role="status" className="px-2 pb-2 text-center text-xs text-muted-foreground">
           {recs.data.notice}
@@ -523,7 +516,7 @@ function ProfileCard({
       : person.photo
         ? [photo(person)]
         : [];
-  const totalPhotos = userId ? Math.max(1, livePaths.length) : Math.max(1, sampleGallery.length);
+  const totalPhotos = userId ? 1 : Math.max(1, sampleGallery.length);
   const activeIdx = Math.min(photoIdx, totalPhotos - 1);
   const currentSampleSrc = !userId ? sampleGallery[activeIdx] : undefined;
   const currentLivePath = userId ? livePaths[activeIdx] : undefined;
@@ -672,14 +665,6 @@ function ProfileCard({
                   <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.035em]">
                     {person.name}, <span className="text-[24px]">{person.age}</span>
                   </h1>
-                  {(person.verified || (person.photoPaths?.length ?? 0) > 0) && (
-                    <span
-                      title="Verified member"
-                      className="inline-flex shrink-0 items-center gap-1 text-primary"
-                    >
-                      <CheckCircle2 className="h-4 w-4 fill-primary text-white" />
-                    </span>
-                  )}
                 </div>
                 <p className="mt-1 truncate text-[13px] text-white/95">
                   {person.town} · {person.job}
@@ -751,20 +736,8 @@ function ProfileCard({
                 <h3 className="text-[12px] text-muted-foreground">{person.prompt}</h3>
                 <p className="mt-1 text-[14px] font-medium leading-5">{person.answer}</p>
               </div>
-              {person.photoPaths && person.photoPaths.length > 1 && (
-                <div>
-                  <h3 className="mb-2 text-[14px] font-semibold">Photos</h3>
-                  <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                    {person.photoPaths.slice(1).map((path) => (
-                      <ProfilePhoto
-                        key={path}
-                        name={person.name}
-                        path={path}
-                        className="h-24 w-20 shrink-0 rounded-xl object-cover"
-                      />
-                    ))}
-                  </div>
-                </div>
+              {userId && livePaths.length > 1 && (
+                <p className="text-[13px] text-muted-foreground">More photos after you match.</p>
               )}
               {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
               {!userId && <SampleVoiceIntro />}

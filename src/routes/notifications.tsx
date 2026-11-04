@@ -5,6 +5,7 @@ import { ArrowLeft, Bell, Heart, MessageCircle, Reply } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { people, photo, timeAgo, useStore } from "@/lib/namlink";
+import { DemoNotice } from "@/components/community";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "Notifications — Mutal" }] }),
@@ -80,6 +81,7 @@ function Notifications() {
         <h1 className="flex-1 text-center text-sm font-semibold">Notifications</h1>
         <span className="w-5" />
       </header>
+      {ready && !user && <DemoNotice />}
       {!ready || list.isLoading ? (
         <p role="status" className="px-5 py-8 text-sm text-muted-foreground">
           Loading notifications…
