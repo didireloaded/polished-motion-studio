@@ -95,7 +95,7 @@ function ThisOrThatPage() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
           Five quick picks
         </p>
-        <h2 className="mt-2 text-[25px] font-semibold leading-8 tracking-[-0.035em]">
+        <h2 className="mt-2 text-[20px] font-semibold leading-7 tracking-[-0.02em]">
           Small choices. Better conversations.
         </h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">

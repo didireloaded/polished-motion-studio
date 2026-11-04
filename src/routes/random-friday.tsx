@@ -12,7 +12,6 @@ export const Route = createFileRoute("/random-friday")({
 });
 
 const DURATION = 30;
-const CIRCUMFERENCE = 2 * Math.PI * 48;
 
 function RandomFridayPage() {
   const [promptIndex, setPromptIndex] = useState(0);
@@ -46,7 +45,7 @@ function RandomFridayPage() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-primary">
           30-second introductions
         </p>
-        <h2 className="mt-2 text-[25px] font-semibold leading-8 tracking-[-0.035em]">
+        <h2 className="mt-2 text-[20px] font-semibold leading-7 tracking-[-0.02em]">
           A quick hello, in your own words.
         </h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -75,37 +74,17 @@ function RandomFridayPage() {
               {randomFridayDicePrompts[promptIndex]}
             </motion.p>
           </AnimatePresence>
-          <div className="mt-5 flex items-center justify-center">
-            <div className="relative h-32 w-32">
-              <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="48"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="5"
-                  className="text-secondary"
-                />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="48"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  strokeDasharray={CIRCUMFERENCE}
-                  strokeDashoffset={CIRCUMFERENCE * (1 - seconds / DURATION)}
-                  className="text-primary transition-[stroke-dashoffset] duration-500"
-                />
-              </svg>
-              <span
-                className="absolute inset-0 flex items-center justify-center text-4xl font-semibold tabular-nums"
-                aria-live="off"
-              >
-                {seconds}
-              </span>
+          <div className="mt-5" aria-label={`${seconds} seconds remaining`}>
+            <div className="flex items-baseline gap-1">
+              <span className="text-[30px] font-semibold tabular-nums">{seconds}</span>
+              <span className="text-xs text-muted-foreground">seconds</span>
+            </div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-secondary">
+              <motion.div
+                className="h-full bg-primary"
+                animate={{ width: `${(seconds / DURATION) * 100}%` }}
+                transition={{ duration: 0.25 }}
+              />
             </div>
           </div>
           <button

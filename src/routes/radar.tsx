@@ -13,7 +13,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { events, people, photo, towns, update, useStore } from "@/lib/namlink";
 import { useSession } from "@/hooks/use-session";
@@ -91,6 +91,10 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const panel = page;
   const [sheetOpen, setSheetOpen] = useState(false);
+  const openTown = useCallback((selectedTown: string) => {
+    setTown(selectedTown);
+    setSheetOpen(true);
+  }, []);
   const [selectedProfile, setSelectedProfile] = useState<NearbyProfile | null>(null);
   const [notice, setNotice] = useState("");
   const [eventTitle, setEventTitle] = useState("");
@@ -314,10 +318,10 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
           <div className="relative h-[calc(100svh-118px)] min-h-[500px] overflow-hidden">
             <TownMap
               town={town}
-              profiles={visibleProfiles.length > 0 ? visibleProfiles : profiles}
+              profiles={visibleProfiles}
               demo={!user}
               myLocation={myLocation}
-              onSelectProfile={setSelectedProfile}
+              onSelectTown={openTown}
             />
             <button
               type="button"
@@ -373,7 +377,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                 inert={!sheetOpen}
               >
                 <div className="flex items-center justify-between">
-                  <h1 className="text-[16px] font-semibold">People nearby</h1>
+                  <h1 className="text-[16px] font-semibold">People by town</h1>
                   <label className="relative inline-flex items-center gap-1 text-[12px] font-medium text-muted-foreground">
                     <select
                       aria-label="Map town"
@@ -394,6 +398,11 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                     <ChevronDown className="pointer-events-none absolute right-0 h-3.5 w-3.5 text-muted-foreground" />
                   </label>
                 </div>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {user
+                    ? "Map markers show towns, not anyone's exact location."
+                    : "Sample profiles by town. Map markers are not live locations."}
+                </p>
                 <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
                   {visibleProfiles.slice(0, 12).map((profile) => {
                     return (
@@ -487,7 +496,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                       {
                         to: "/speed-dating",
                         title: "Speed dating",
-                        detail: "A guided three-minute conversation",
+                        detail: "Questions for an existing match",
                         icon: Clock3,
                         enabled: isFeatureEnabled("speedDatingMixer"),
                       },
@@ -810,13 +819,13 @@ function TownMap({
   profiles,
   demo,
   myLocation,
-  onSelectProfile,
+  onSelectTown,
 }: {
   town: string;
   profiles: NearbyProfile[];
   demo: boolean;
   myLocation: [number, number] | null;
-  onSelectProfile: (profile: NearbyProfile) => void;
+  onSelectTown: (town: string) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -836,7 +845,7 @@ function TownMap({
           [-14, 27],
         ],
         maxBoundsViscosity: 0.85,
-      }).setView(townCenters["Windhoek"]!, 13);
+      }).setView(townCenters["Windhoek"]!, 10);
       L.tileLayer(mapboxTileUrl, {
         maxZoom: 19,
         attribution: mapboxPublicToken
@@ -857,74 +866,43 @@ function TownMap({
   }, []);
   useEffect(() => {
     if (!map.current || !layer.current) return;
-    let disposed = false;
-    void import("leaflet").then(async (L) => {
+    void import("leaflet").then((L) => {
       const instance = map.current;
       const markers = layer.current;
       if (!instance || !markers) return;
       markers.clearLayers();
-      const shown = profiles.slice(0, 30);
-      const photos = await Promise.all(
-        shown.map(async (profile) => {
-          if (demo)
-            return photo(people.find((person) => person.id === profile.id) ?? people[0]!, true);
-          if (!profile.photo_paths?.[0]) return "";
-          const { data } = await supabase.storage
-            .from("profile-photos")
-            .createSignedUrl(profile.photo_paths[0], 3600);
-          return data?.signedUrl ?? "";
-        }),
-      );
-      if (disposed || !map.current || !layer.current) return;
-      const offsets: [number, number][] = [
-        [0.017, -0.002],
-        [0.014, 0.02],
-        [-0.001, -0.016],
-        [-0.004, 0.019],
-        [-0.02, -0.003],
-        [-0.019, 0.016],
-      ];
-      const indexByTown = new Map<string, number>();
-      shown.forEach((profile, index) => {
-        const activeTown = town === "All" ? profile.town : town;
-        const center = townCenters[activeTown] ?? townCenters[profile.town];
+      const counts = new Map<string, number>();
+      profiles.forEach((profile) => {
+        counts.set(profile.town, (counts.get(profile.town) ?? 0) + 1);
+      });
+      counts.forEach((count, place) => {
+        const center = townCenters[place];
         if (!center) return;
-        const placeIndex = indexByTown.get(activeTown) ?? 0;
-        indexByTown.set(activeTown, placeIndex + 1);
-        const [lat, lng] = offsets[placeIndex % offsets.length]!;
         const markerContent = document.createElement("div");
-        if (photos[index]) {
-          const img = document.createElement("img");
-          img.src = photos[index];
-          img.alt = "";
-          markerContent.append(img);
-        } else {
-          const initials = document.createElement("span");
-          initials.className = "person-map-initials";
-          initials.textContent = profile.display_name.slice(0, 1);
-          markerContent.append(initials);
-        }
+        markerContent.className = "town-map-marker-content";
+        const label = document.createElement("span");
+        label.textContent = place;
+        const total = document.createElement("strong");
+        total.textContent = String(count);
+        markerContent.append(total, label);
         const icon = L.divIcon({
-          className: "person-map-marker",
+          className: "town-map-marker",
           html: markerContent,
-          iconSize: [48, 48],
-          iconAnchor: [24, 24],
+          iconSize: [88, 54],
+          iconAnchor: [44, 27],
         });
-        L.marker([center[0] + lat, center[1] + lng], {
+        L.marker(center, {
           icon,
           keyboard: true,
-          title: `${profile.display_name}${demo ? " · sample profile" : " · town-level placement"}`,
+          title: `${count} ${demo ? "sample " : ""}${count === 1 ? "profile" : "profiles"} in ${place} · town-level placement`,
         })
           .addTo(markers)
-          .on("click", () => onSelectProfile(profile));
+          .on("click", () => onSelectTown(place));
       });
       if (town === "All") instance.setView([-21.8, 17.2], 5);
-      else if (townCenters[town]) instance.setView(townCenters[town], 13);
+      else if (townCenters[town]) instance.setView(townCenters[town], 10);
     });
-    return () => {
-      disposed = true;
-    };
-  }, [town, profiles, demo, onSelectProfile, mapReady]);
+  }, [town, profiles, demo, onSelectTown, mapReady]);
   useEffect(() => {
     if (!map.current || !myLocation) return;
     map.current.setView(myLocation, 13);
