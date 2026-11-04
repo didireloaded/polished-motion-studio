@@ -842,6 +842,13 @@ export type Database = {
           partner_town: string
         }[]
       }
+      get_poll_tally: {
+        Args: { _poll_id: string }
+        Returns: {
+          choice: string
+          votes: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
