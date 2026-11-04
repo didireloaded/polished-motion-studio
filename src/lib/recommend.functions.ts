@@ -41,8 +41,22 @@ export const getRecommendations = createServerFn({ method: "POST" })
     if (!me) return { source: "none", notice: "Create your profile first.", items: [] };
 
     // RLS already hides inactive profiles and anyone in a block with us; we re-check in code.
+    // Push town, age, and intent filters down to Postgres so profile card queries use composite indexes.
+    let candidateQuery = supabase
+      .from("profiles")
+      .select(COLS)
+      .eq("active", true)
+      .neq("id", userId)
+      .gte("age", filters.minAge)
+      .lte("age", filters.maxAge);
+    if (filters.town && filters.town !== "All") {
+      candidateQuery = candidateQuery.eq("town", filters.town);
+    }
+    if (filters.intent && filters.intent !== "Any intention") {
+      candidateQuery = candidateQuery.eq("intent", filters.intent);
+    }
     const [{ data: candidates }, { data: decisions }, { data: blocks }] = await Promise.all([
-      supabase.from("profiles").select(COLS).eq("active", true).neq("id", userId).limit(200),
+      candidateQuery.order("created_at", { ascending: false }).limit(200),
       supabase.from("decisions").select("target_id").eq("actor_id", userId),
       supabase.from("blocks").select("blocked_id").eq("blocker_id", userId),
     ]);

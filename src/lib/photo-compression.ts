@@ -116,6 +116,12 @@ export async function compressProfilePhoto(
   }
 
   try {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext?.("2d");
+    if (!context) {
+      return file;
+    }
+
     const decoded = await decodeImageSource(file);
     try {
       const target = computeTargetDimensions(decoded.width, decoded.height, maxDimension);
@@ -123,13 +129,8 @@ export async function compressProfilePhoto(
         return file;
       }
 
-      const canvas = document.createElement("canvas");
       canvas.width = target.width;
       canvas.height = target.height;
-      const context = canvas.getContext("2d");
-      if (!context) {
-        return file;
-      }
       context.drawImage(decoded.source, 0, 0, target.width, target.height);
 
       let blob = await canvasToBlob(canvas, preferredMimeType, quality);

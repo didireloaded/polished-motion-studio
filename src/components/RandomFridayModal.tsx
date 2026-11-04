@@ -20,6 +20,9 @@ import { SafetyActions } from "@/components/community";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { people, photo, type Person } from "@/lib/namlink";
+import { fallbackRandomFridayPitch } from "@/lib/random-friday-pitch";
+import { draftRandomFridayPitch } from "@/lib/random-friday-pitch.functions";
+import { joinLiveQueueServerFn } from "@/lib/social-backend.functions";
 import {
   applyTimeBoost,
   getRandomFridayState,
@@ -360,6 +363,39 @@ export function RandomFridayModal({
     setPhase("transition");
   };
 
+  const generateAiLivePitch = async () => {
+    triggerHaptic(10);
+    if (userId) {
+      try {
+        const res = await draftRandomFridayPitch({
+          data: {
+            style: "playful",
+            focusHint: `connecting with ${partner.name} in ${partner.town}`,
+          },
+        });
+        setDraft(res.draft.pitch);
+        showBoostBanner("✨ AI 30s Pitch ready!");
+        return;
+      } catch {
+        // fallback below
+      }
+    }
+    const fallback = fallbackRandomFridayPitch(
+      {
+        displayName: "You",
+        age: 26,
+        town: partner.town,
+        intent: partner.intent,
+        tags: partner.tags,
+        bio: "",
+        seeking: "",
+      },
+      "playful",
+    );
+    setDraft(fallback.pitch);
+    showBoostBanner("✨ AI 30s Pitch ready!");
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -630,6 +666,15 @@ export function RandomFridayModal({
                     ))}
                   </div>
                   <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => void generateAiLivePitch()}
+                      aria-label="Write 30-second pitch with AI"
+                      className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-accent px-2.5 py-1 text-[10px] font-semibold text-primary"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      AI Pitch
+                    </button>
                     <button
                       type="button"
                       onClick={spinDicePrompt}

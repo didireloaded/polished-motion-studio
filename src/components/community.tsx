@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Flag, ShieldBan, X } from "lucide-react";
 import {
@@ -39,9 +39,34 @@ export function ProfilePhoto({
   priority?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const [inViewport, setInViewport] = useState(
+    () => priority || typeof IntersectionObserver === "undefined",
+  );
+  const placeholderRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (inViewport) return;
+    const node = placeholderRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setInViewport(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting || entry.intersectionRatio > 0)) {
+          setInViewport(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [inViewport]);
+
   const signedPhoto = useQuery({
     queryKey: ["signed-profile-photo", path],
-    enabled: !!path && !src,
+    enabled: !!path && !src && inViewport,
     staleTime: 50 * 60_000,
     gcTime: 55 * 60_000,
     queryFn: async () => {
@@ -62,7 +87,7 @@ export function ProfilePhoto({
       return data.signedUrl;
     },
   });
-  const image = src ?? signedPhoto.data;
+  const image = inViewport ? (src ?? signedPhoto.data) : undefined;
   if (image) {
     return (
       <img
@@ -70,6 +95,7 @@ export function ProfilePhoto({
         alt={`${name}'s profile`}
         loading={priority ? "eager" : "lazy"}
         decoding="async"
+        fetchPriority={priority ? "high" : "low"}
         onLoad={() => setLoaded(true)}
         className={`transition-[filter,opacity] duration-300 ${loaded ? "blur-none opacity-100" : "blur-[2px] opacity-90"} ${className}`}
       />
@@ -77,6 +103,7 @@ export function ProfilePhoto({
   }
   return (
     <div
+      ref={placeholderRef}
       aria-label={`${name}'s profile photo`}
       className={`flex items-center justify-center bg-accent text-2xl font-semibold text-accent-foreground ${className}`}
     >
