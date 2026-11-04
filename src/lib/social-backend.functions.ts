@@ -223,13 +223,16 @@ export const castFeedPollVoteServerFn = createServerFn({ method: "POST" })
       );
       if (voteError) throw voteError;
 
-      const { data: rows, error: rowsError } = await db
-        .from("feed_poll_votes")
-        .select("choice")
-        .eq("poll_id", data.pollId);
+      const { data: agg, error: rowsError } = await db.rpc("get_poll_tally", {
+        _poll_id: data.pollId,
+      });
       if (rowsError) throw rowsError;
 
-      const tally = tallyPollVotes((rows ?? []) as Array<{ choice: string }>, [data.choice]);
+      const rows: Array<{ choice: string }> = [];
+      for (const r of (agg ?? []) as Array<{ choice: string; votes: number }>) {
+        for (let i = 0; i < Number(r.votes); i++) rows.push({ choice: r.choice });
+      }
+      const tally = tallyPollVotes(rows, [data.choice]);
       return { ok: true, total: tally.total, counts: tally.counts };
     } catch {
       return { ok: false, total: 1, counts: { [data.choice]: 1 } };
