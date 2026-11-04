@@ -127,7 +127,7 @@ function You() {
   if (!ready)
     return (
       <main className="mx-auto max-w-md pb-28">
-        <PageHeader title="Mutal" />
+        <PageHeader title="You" />
         <YouProfileSkeleton label="Loading your account…" />
       </main>
     );
@@ -143,8 +143,8 @@ function You() {
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="Mutal" />
-      <div className="mx-5 mb-3 overflow-hidden rounded-[15px] border border-border bg-white shadow-float">
+      <PageHeader title="You" />
+      <div className="mx-5 mb-3 overflow-hidden rounded-[20px] border border-border bg-white">
         <img
           src="/design/lead-man.jpg"
           alt="Sample profile portrait"
@@ -729,7 +729,7 @@ function LiveProfile({
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="Mutal" />
+      <PageHeader title="You" />
       {loading ? (
         <YouProfileSkeleton label="Loading your profile…" />
       ) : (

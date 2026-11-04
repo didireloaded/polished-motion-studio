@@ -144,6 +144,14 @@
 @utility bg-scrim {
   background: var(--scrim);
 }
+.home-photo-scrim {
+  background: linear-gradient(
+    180deg,
+    transparent 48%,
+    rgb(0 0 0 / 0.08) 68%,
+    rgb(0 0 0 / 0.62) 100%
+  );
+}
 @utility shadow-float {
   box-shadow: var(--shadow-float);
 }

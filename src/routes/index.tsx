@@ -8,7 +8,6 @@ import {
   Share2,
   SlidersHorizontal,
   X,
-  Zap,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,7 +29,6 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
 import type { CelebrationMatch } from "@/components/MatchCelebrationModal";
 import { ElevatorPitchCard, TwoTruthsCard } from "@/components/SocialGames";
-import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { sendMatchAlertEmail } from "@/lib/email.functions";
 import {
@@ -239,23 +237,12 @@ function Home() {
   };
 
   return (
-    <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-2">
-      <header className="flex h-[58px] shrink-0 items-center justify-between px-2">
+    <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-4 pb-2">
+      <header className="flex h-[66px] shrink-0 items-center justify-between px-1">
         <Link to="/" aria-label="Mutal home">
           <BrandLogo />
         </Link>
         <div className="flex items-center gap-2">
-          {isFeatureEnabled("randomFriday") && (
-            <Link
-              to="/random-friday"
-              onClick={() => triggerHaptic("like")}
-              aria-label="Open Random Friday 30-second live sprint"
-              className="inline-flex h-8 items-center gap-1 rounded-full bg-accent px-2.5 text-[11px] font-semibold text-primary transition active:scale-95"
-            >
-              <Zap className="h-3.5 w-3.5 fill-current" />
-              Random Friday
-            </Link>
-          )}
           {last && (
             <IconButton
               label="Undo last pass"
@@ -570,7 +557,7 @@ function ProfileCard({
         ", " +
         person.town
       }
-      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[14px] bg-card text-white shadow-float"
+      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[25px] bg-card text-white"
       style={{ zIndex: 10 - depth, x: dragX, rotate }}
       drag={top && !expanded ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
@@ -606,7 +593,7 @@ function ProfileCard({
           path={currentLivePath}
           className={`absolute inset-0 h-full w-full select-none ${currentLivePath ? "object-contain" : "object-cover"}`}
         />
-        <div className="bg-scrim absolute inset-0" aria-hidden="true" />
+        <div className="home-photo-scrim absolute inset-0" aria-hidden="true" />
         <motion.div
           aria-hidden="true"
           initial={false}
@@ -659,14 +646,14 @@ function ProfileCard({
           <>
             <motion.span
               style={{ opacity: likeOpacity, scale: likeScale }}
-              className="pointer-events-none absolute left-5 top-8 z-20 -rotate-12 rounded-xl border-2 border-emerald-300/90 bg-emerald-950/45 px-3.5 py-1 text-lg font-extrabold tracking-wider text-emerald-100 backdrop-blur-sm"
+              className="pointer-events-none absolute left-5 top-8 z-20 -rotate-12 rounded-xl border-2 border-emerald-300/90 bg-emerald-950/70 px-3.5 py-1 text-lg font-extrabold tracking-wider text-emerald-100"
               aria-hidden="true"
             >
               CONNECT
             </motion.span>
             <motion.span
               style={{ opacity: passOpacity, scale: passScale }}
-              className="pointer-events-none absolute right-5 top-8 z-20 rotate-12 rounded-xl border-2 border-white/80 bg-foreground/60 px-3.5 py-1 text-lg font-extrabold tracking-wider text-white backdrop-blur-sm"
+              className="pointer-events-none absolute right-5 top-8 z-20 rotate-12 rounded-xl border-2 border-white/80 bg-foreground/75 px-3.5 py-1 text-lg font-extrabold tracking-wider text-white"
               aria-hidden="true"
             >
               PASS
@@ -675,7 +662,7 @@ function ProfileCard({
         )}
         {top && !userId && !expanded && (
           <span
-            className={`absolute left-4 z-20 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm ${totalPhotos > 1 ? "top-6" : "top-4"}`}
+            className={`absolute left-4 z-20 rounded-full bg-black/75 px-3 py-1.5 text-[11px] font-medium text-white ${totalPhotos > 1 ? "top-6" : "top-4"}`}
           >
             Sample profile
           </span>
@@ -702,7 +689,7 @@ function ProfileCard({
                   {(person.verified || (person.photoPaths?.length ?? 0) > 0) && (
                     <span
                       title="Verified member"
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
+                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold text-white"
                     >
                       <CheckCircle2 className="h-3 w-3 text-emerald-300" />
                       Verified
@@ -718,7 +705,7 @@ function ProfileCard({
                 aria-expanded={expanded}
                 onClick={onDetails}
                 whileTap={{ scale: 0.9 }}
-                className="pointer-events-auto mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="pointer-events-auto mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/60 bg-black/35 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 <motion.span
                   animate={{ rotate: expanded ? 180 : 0, y: expanded ? 0 : [0, -2, 0] }}

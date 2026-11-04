@@ -139,10 +139,16 @@ export function PageHeader({
     <motion.header
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex min-h-[56px] items-center justify-between px-5 pb-2 pt-3"
+      className={`relative flex min-h-[64px] items-center px-5 pb-2 pt-3 ${title === "Mutal" ? "justify-between" : "justify-end"}`}
     >
       <div>
-        <h1 className={title === "Mutal" ? "" : "text-[20px] font-semibold tracking-[-0.035em]"}>
+        <h1
+          className={
+            title === "Mutal"
+              ? ""
+              : "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[17px] font-semibold tracking-[-0.02em]"
+          }
+        >
           {title === "Mutal" ? <BrandLogo /> : title}
         </h1>
         {eyebrow && <p className="mt-0.5 text-[12px] text-muted-foreground">{eyebrow}</p>}

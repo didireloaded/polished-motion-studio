@@ -76,7 +76,7 @@ function Chats() {
   if (!ready)
     return (
       <main className="mx-auto max-w-md pb-28">
-        <PageHeader title="Mutal" />
+        <PageHeader title="Chats" />
         <ChatsListSkeleton />
       </main>
     );
@@ -100,7 +100,7 @@ function Chats() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -30 }}
           >
-            <PageHeader title="Mutal" />
+            <PageHeader title="Chats" />
             {list.length === 0 ? (
               <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
                 <motion.div
@@ -371,7 +371,7 @@ function LiveChats({
     <main className="mx-auto max-w-md pb-28">
       {!openMatch ? (
         <>
-          <PageHeader title="Mutal" />
+          <PageHeader title="Chats" />
           {matchesQuery.isLoading ? (
             <ChatsListSkeleton />
           ) : !data?.matches.length ? (

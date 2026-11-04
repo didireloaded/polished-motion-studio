@@ -548,6 +548,7 @@ export function HotTakeAndFlagPollHub({
   const [loading, setLoading] = useState(Boolean(userId));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [pollOpen, setPollOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -580,8 +581,6 @@ export function HotTakeAndFlagPollHub({
 
   const pending = flagSwipePolls.filter((poll) => !completed.includes(poll.id));
   const poll = pending[0];
-  const hotTake = dailyHotTakePrompts[0]!;
-  const example = hotTake.sampleTakes[0]!;
 
   const vote = async (choice: "green" | "red") => {
     if (!poll || saving) return;
@@ -612,7 +611,36 @@ export function HotTakeAndFlagPollHub({
 
   return (
     <div className="mx-5 mt-4 space-y-3">
-      {!loading && poll && (
+      <section aria-label="Hot takes">
+        <h2 className="mb-2 text-[14px] font-semibold text-foreground">Hot takes</h2>
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+          {dailyHotTakePrompts.slice(0, 3).map((take) => (
+            <button
+              key={take.id}
+              type="button"
+              onClick={() =>
+                onAgreeWithTake(`I agree: ${take.sampleTakes[0]?.quip ?? take.prompt}`)
+              }
+              className="flex min-h-[86px] min-w-[230px] max-w-[230px] flex-col justify-between rounded-[18px] border border-border bg-white p-3 text-left"
+            >
+              <span className="line-clamp-2 text-[13px] leading-[18px] text-foreground">
+                {take.prompt}
+              </span>
+              <span className="text-[11px] font-medium text-primary">Agree? Write your own</span>
+            </button>
+          ))}
+        </div>
+      </section>
+      {!loading && poll && !pollOpen && (
+        <button
+          type="button"
+          onClick={() => setPollOpen(true)}
+          className="w-full rounded-[18px] border border-border bg-white px-4 py-3 text-left text-[13px] font-medium text-foreground"
+        >
+          Quick poll <span className="float-right text-primary">Answer</span>
+        </button>
+      )}
+      {!loading && poll && pollOpen && (
         <section
           aria-label="Green or red flag poll"
           className="rounded-2xl border border-border bg-white p-4"
@@ -653,22 +681,6 @@ export function HotTakeAndFlagPollHub({
           {error}
         </p>
       )}
-      <section aria-label="Hot take" className="rounded-2xl border border-border bg-white p-4">
-        <p className="text-[11px] font-medium text-muted-foreground">Conversation starter</p>
-        <h2 className="mt-2 text-[15px] font-semibold leading-6 text-foreground">
-          {hotTake.prompt}
-        </h2>
-        <p className="mt-3 border-l-2 border-primary/30 pl-3 text-sm leading-5 text-muted-foreground">
-          “{example.quip}” <span className="text-[11px]">· Example</span>
-        </p>
-        <button
-          type="button"
-          onClick={() => onAgreeWithTake(`I agree: ${example.quip}`)}
-          className="mt-4 h-10 rounded-full bg-primary px-4 text-sm font-semibold text-white transition-transform active:scale-[0.98]"
-        >
-          Agree and write a post
-        </button>
-      </section>
     </div>
   );
 }

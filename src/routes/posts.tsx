@@ -153,7 +153,7 @@ function Posts() {
   return (
     <main className="mx-auto max-w-md pb-28">
       <PageHeader
-        title="Mutal"
+        title="Posts"
         right={
           <button
             type="button"
@@ -329,7 +329,7 @@ function Posts() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2, delay: Math.min(index, 4) * 0.025 }}
-                className="border-b border-border bg-card px-5 py-4"
+                className="mx-4 rounded-[20px] border border-border bg-card px-4 py-4"
               >
                 <div className="flex items-center gap-2.5">
                   <button
@@ -816,7 +816,7 @@ function LivePosts({ userId }: { userId: string }) {
   return (
     <main className="mx-auto max-w-md pb-28">
       <PageHeader
-        title="Mutal"
+        title="Posts"
         right={
           <button
             type="button"
@@ -928,7 +928,7 @@ function LivePosts({ userId }: { userId: string }) {
             const postReplies = replies.filter((reply) => reply.post_id === post.id);
             const reaction = reactionsQuery.data?.find((item) => item.post_id === post.id);
             return (
-              <li key={post.id} className="border-b border-border bg-card px-5 py-4">
+              <li key={post.id} className="rounded-[20px] border border-border bg-card px-4 py-4">
                 <div className="flex items-center gap-2.5">
                   <button
                     type="button"
