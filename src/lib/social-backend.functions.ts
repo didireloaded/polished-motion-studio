@@ -9,7 +9,8 @@ import {
   normalizeOrderedPair,
   saveProfileGameCardSchema,
   submitChatGameChoiceSchema,
-  tallyPollVotes,
+  pollCountsSchema,
+  tallyPollCounts,
 } from "./social-backend";
 
 // Untyped helper for new Lovable Cloud tables added in migration 0011
@@ -228,11 +229,7 @@ export const castFeedPollVoteServerFn = createServerFn({ method: "POST" })
       });
       if (rowsError) throw rowsError;
 
-      const rows: Array<{ choice: string }> = [];
-      for (const r of (agg ?? []) as Array<{ choice: string; votes: number }>) {
-        for (let i = 0; i < Number(r.votes); i++) rows.push({ choice: r.choice });
-      }
-      const tally = tallyPollVotes(rows, [data.choice]);
+      const tally = tallyPollCounts(pollCountsSchema.parse(agg ?? []), [data.choice]);
       return { ok: true, total: tally.total, counts: tally.counts };
     } catch {
       return { ok: false, total: 1, counts: { [data.choice]: 1 } };

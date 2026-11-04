@@ -66,23 +66,33 @@ export function normalizeOrderedPair(
   return { user_a: userTwo, user_b: userOne, amUserA: false };
 }
 
-/**
- * Tallies poll vote rows into counts and percentages by option key.
- */
-export function tallyPollVotes(
-  rows: Array<{ choice: string }>,
-  options: string[],
-): { total: number; counts: Record<string, number>; percentages: Record<string, number> } {
-  const counts: Record<string, number> = {};
-  for (const opt of options) counts[opt] = 0;
+export const pollCountsSchema = z.array(
+  z
+    .object({
+      choice: z.string().min(1).max(40),
+      votes: z
+        .union([z.number(), z.string().regex(/^\d+$/).transform(Number)])
+        .pipe(z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)),
+    })
+    .strict(),
+);
+
+export function tallyPollCounts(rows: z.infer<typeof pollCountsSchema>, options: string[]) {
+  const counts = new Map(options.map((option) => [option, 0]));
+  let total = 0;
   for (const row of rows) {
-    counts[row.choice] = (counts[row.choice] ?? 0) + 1;
+    total += row.votes;
+    if (!Number.isSafeInteger(total)) throw new Error("Poll count exceeds supported precision");
+    counts.set(row.choice, (counts.get(row.choice) ?? 0) + row.votes);
   }
-  const total = rows.length;
-  const percentages: Record<string, number> = {};
-  for (const opt of options) {
-    const count = counts[opt] ?? 0;
-    percentages[opt] = total > 0 ? Math.round((count / total) * 100) : 0;
-  }
-  return { total, counts, percentages };
+  return {
+    total,
+    counts: Object.fromEntries(counts),
+    percentages: Object.fromEntries(
+      options.map((option) => [
+        option,
+        total ? Math.round(((counts.get(option) ?? 0) / total) * 100) : 0,
+      ]),
+    ),
+  };
 }

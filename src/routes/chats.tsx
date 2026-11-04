@@ -22,6 +22,12 @@ import { isFeatureEnabled } from "@/lib/feature-flags";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { suggestDatePlan } from "@/lib/date-suggestion.functions";
+import {
+  dateAvailability,
+  dateSuggestionNote,
+  type DateAvailability,
+  type DateSuggestion,
+} from "@/lib/date-suggestions";
 import { generateIcebreakers, localDateSpots, triggerHaptic } from "@/lib/icebreakers";
 import {
   EmojiStoryDecodeCard,
@@ -140,7 +146,9 @@ function Chats() {
                       onClick={() => setOpenId(p.id)}
                       className="shrink-0 text-center"
                     >
-                      <img loading="lazy" decoding="async"
+                      <img
+                        loading="lazy"
+                        decoding="async"
                         src={photo(p, true)}
                         alt=""
                         className="h-16 w-16 rounded-full border-2 border-primary object-cover p-0.5"
@@ -164,7 +172,9 @@ function Chats() {
                           onClick={() => setOpenId(p.id)}
                           className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors hover:bg-card"
                         >
-                          <img loading="lazy" decoding="async"
+                          <img
+                            loading="lazy"
+                            decoding="async"
                             src={photo(p, true)}
                             alt=""
                             className="h-12 w-12 rounded-full object-cover"
@@ -513,7 +523,13 @@ function LiveThread({
   const [dateInterests, setDateInterests] = useState("");
   const [datePreferences, setDatePreferences] = useState("");
   const [suggestingDate, setSuggestingDate] = useState(false);
-  const [suggestionReason, setSuggestionReason] = useState("");
+  const [availableTimes, setAvailableTimes] = useState<DateAvailability[]>([]);
+  const [dateSuggestion, setDateSuggestion] = useState<DateSuggestion | null>(null);
+  const dateIdeaRequest = useRef(0);
+  useEffect(() => {
+    dateIdeaRequest.current += 1;
+    setDateSuggestion(null);
+  }, [town, dateInterests, datePreferences, availableTimes, planFormOpen]);
   const [threadRealtimeConnected, setThreadRealtimeConnected] = useState(false);
 
   const icebreakers = generateIcebreakers({
@@ -683,10 +699,17 @@ function LiveThread({
     setPlanFormOpen(true);
   };
   const suggestDate = async () => {
-    if (suggestingDate || !town.trim() || !dateInterests.trim() || !datePreferences.trim()) return;
+    if (
+      suggestingDate ||
+      town.trim().length < 2 ||
+      dateInterests.trim().length < 2 ||
+      !availableTimes.length
+    )
+      return;
+    const request = ++dateIdeaRequest.current;
     setSuggestingDate(true);
     setPlanNotice("");
-    setSuggestionReason("");
+    setDateSuggestion(null);
     try {
       const suggestion = await suggestDatePlan({
         data: {
@@ -694,14 +717,13 @@ function LiveThread({
           town: town.trim(),
           sharedInterests: dateInterests.trim(),
           preferences: datePreferences.trim(),
+          availability: availableTimes,
         },
       });
-      setActivity(suggestion.activity);
-      setPlanNote(suggestion.note);
-      setVenueName("");
-      setSuggestionReason(suggestion.reason);
+      if (request === dateIdeaRequest.current) setDateSuggestion(suggestion);
     } catch {
-      setPlanNotice("We couldn't suggest a date right now. You can still make a plan together.");
+      if (request === dateIdeaRequest.current)
+        setPlanNotice("We couldn't suggest a date right now. You can still make a plan together.");
     } finally {
       setSuggestingDate(false);
     }
@@ -1014,8 +1036,37 @@ function LiveThread({
                   placeholder="Music, markets, long walks…"
                   className="w-full rounded-xl bg-background px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring"
                 />
+                <fieldset>
+                  <legend className="text-xs font-medium">Your availability</legend>
+                  <p className="mb-2 mt-1 text-xs text-muted-foreground">
+                    Choose the windows that usually work for you.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {dateAvailability.map((slot) => {
+                      const selected = availableTimes.includes(slot);
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          aria-pressed={selected}
+                          disabled={suggestingDate}
+                          onClick={() =>
+                            setAvailableTimes((current) =>
+                              current.includes(slot)
+                                ? current.filter((time) => time !== slot)
+                                : [...current, slot],
+                            )
+                          }
+                          className={`min-h-11 rounded-xl border px-2 py-2 text-xs font-medium disabled:opacity-50 ${selected ? "border-primary bg-white text-primary" : "border-border bg-white text-foreground"}`}
+                        >
+                          {slot}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </fieldset>
                 <label className="block text-xs font-medium" htmlFor="date-preferences">
-                  Date preferences
+                  Date preferences (optional)
                 </label>
                 <textarea
                   id="date-preferences"
@@ -1033,16 +1084,36 @@ function LiveThread({
                     suggestingDate ||
                     town.trim().length < 2 ||
                     dateInterests.trim().length < 2 ||
-                    datePreferences.trim().length < 2
+                    availableTimes.length === 0
                   }
                   className="rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary disabled:opacity-50"
                 >
                   {suggestingDate ? "Finding an idea…" : "Suggest an idea"}
                 </button>
-                {suggestionReason && (
-                  <p role="status" className="text-xs text-muted-foreground">
-                    {suggestionReason} Review the details below before saving.
-                  </p>
+                {dateSuggestion && (
+                  <div className="space-y-2 border-t border-border pt-3" role="status">
+                    <p className="text-sm font-semibold">{dateSuggestion.activity}</p>
+                    <p className="text-xs font-medium">{dateSuggestion.timeWindow}</p>
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      {dateSuggestion.reason}
+                    </p>
+                    <p className="text-xs leading-5">{dateSuggestion.note}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActivity(dateSuggestion.activity);
+                        setPlanNote(dateSuggestionNote(dateSuggestion));
+                        setVenueName("");
+                        setDateSuggestion(null);
+                      }}
+                      className="min-h-11 rounded-full bg-primary px-4 text-sm font-semibold text-white"
+                    >
+                      Use this idea
+                    </button>
+                    <p className="text-xs text-muted-foreground">
+                      Choose an exact date below. Your match still needs to agree.
+                    </p>
+                  </div>
                 )}
               </div>
               <input
@@ -1305,7 +1376,13 @@ function Thread({
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <img loading="lazy" decoding="async" src={photo(p, true)} alt="" className="h-10 w-10 rounded-full object-cover" />
+        <img
+          loading="lazy"
+          decoding="async"
+          src={photo(p, true)}
+          alt=""
+          className="h-10 w-10 rounded-full object-cover"
+        />
         <div className="min-w-0 flex-1">
           <p className="font-semibold">{p.name}</p>
           <p className="text-xs text-muted-foreground">{p.town}</p>
