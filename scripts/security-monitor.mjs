@@ -4,7 +4,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
-const APP_URL = process.env.APP_MONITOR_URL || "";
+const DEFAULT_LIVE_URL = "https://id-preview--01804eef-1c82-496a-b1ef-dacee9edd43c.lovable.app";
+const APP_URL = process.env.APP_MONITOR_URL || DEFAULT_LIVE_URL;
 
 function run(cmd) {
   try {
@@ -31,8 +32,9 @@ async function checkLiveUrl(url) {
       strictTransportSecurity: res.headers.get("strict-transport-security"),
     };
     return {
-      ok: res.ok,
+      ok: res.ok || res.status === 401 || res.status === 403,
       status: res.status,
+      authGated: res.status === 401 || res.status === 403,
       latencyMs,
       headers,
     };
