@@ -144,6 +144,14 @@
 @utility bg-scrim {
   background: var(--scrim);
 }
+.home-photo-scrim {
+  background: linear-gradient(
+    180deg,
+    transparent 48%,
+    rgb(0 0 0 / 0.08) 68%,
+    rgb(0 0 0 / 0.62) 100%
+  );
+}
 @utility shadow-float {
   box-shadow: var(--shadow-float);
 }
@@ -263,6 +271,9 @@ button {
 }
 .bg-primary {
   border-radius: 9999px;
+}
+.welcome-create {
+  border-radius: 0;
 }
 button:focus-visible {
   outline: 2px solid var(--ring);

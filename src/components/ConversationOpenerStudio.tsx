@@ -1,6 +1,6 @@
 import { useServerFn } from "@tanstack/react-start";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, RefreshCw, Sparkles, Wand2, X } from "lucide-react";
+import { Check, MessageCircle, RefreshCw, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import {
   fallbackConversationOpener,
@@ -53,11 +53,11 @@ export function ConversationOpenerStudio({
         if (res.notice) setNotice(res.notice);
       } else {
         setDraft(fallbackConversationOpener(profile, selectedTone, customNote));
-        setNotice("Sample preview · Sign in to draft with live AI Gateway.");
+        setNotice("Sample preview · Sign in to create a personal opening line.");
       }
     } catch {
       setDraft(fallbackConversationOpener(profile, selectedTone, customNote));
-      setNotice("Couldn't reach AI Gateway right now — showing a tailored profile starter.");
+      setNotice("Suggestions are unavailable right now — showing a profile-based starter.");
     } finally {
       setBusy(false);
     }
@@ -74,8 +74,8 @@ export function ConversationOpenerStudio({
       <div className="flex items-start justify-between gap-2">
         <div>
           <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
-            <Wand2 className="h-3.5 w-3.5" />
-            AI Opener Studio
+            <MessageCircle className="h-3.5 w-3.5" />
+            Conversation ideas
           </span>
           <p className="mt-0.5 text-xs text-muted-foreground">
             Tailored to {matchName}’s profile ({profile.town}
@@ -85,7 +85,7 @@ export function ConversationOpenerStudio({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close AI Opener Studio"
+          aria-label="Close conversation ideas"
           className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
         >
           <X className="h-4 w-4" />

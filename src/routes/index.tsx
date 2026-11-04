@@ -8,7 +8,6 @@ import {
   Share2,
   SlidersHorizontal,
   X,
-  Zap,
 } from "lucide-react";
 import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -30,15 +29,9 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { captureProductEvent } from "@/lib/telemetry";
 import type { CelebrationMatch } from "@/components/MatchCelebrationModal";
 import { ElevatorPitchCard, TwoTruthsCard } from "@/components/SocialGames";
-import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
 import { sendMatchAlertEmail } from "@/lib/email.functions";
-import {
-  computeVibeAlignment,
-  getElevatorPitchForPerson,
-  getPersonThisOrThatAnswers,
-  getTwoTruthsForPerson,
-} from "@/lib/social-games";
+import { getElevatorPitchForPerson, getTwoTruthsForPerson } from "@/lib/social-games";
 
 const MatchCelebrationModal = lazy(() =>
   import("@/components/MatchCelebrationModal").then((m) => ({
@@ -124,7 +117,7 @@ function Home() {
     return (
       <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-2">
         <header className="flex h-[58px] shrink-0 items-center justify-between px-2">
-          <BrandLogo />
+          <BrandLogo className="h-5" />
           <span className="h-10 w-10 animate-pulse rounded-full bg-secondary" />
         </header>
         <section aria-label="Loading discovery" className="relative min-h-0 flex-1">
@@ -239,23 +232,12 @@ function Home() {
   };
 
   return (
-    <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-2">
-      <header className="flex h-[58px] shrink-0 items-center justify-between px-2">
+    <main className="discover-shell mx-auto flex h-[calc(100svh-60px-env(safe-area-inset-bottom))] min-h-[540px] max-w-[440px] flex-col px-4 pb-2">
+      <header className="flex h-[66px] shrink-0 items-center justify-between px-1">
         <Link to="/" aria-label="Mutal home">
           <BrandLogo />
         </Link>
         <div className="flex items-center gap-2">
-          {isFeatureEnabled("randomFriday") && (
-            <Link
-              to="/random-friday"
-              onClick={() => triggerHaptic("like")}
-              aria-label="Open Random Friday 30-second live sprint"
-              className="inline-flex h-8 items-center gap-1 rounded-full bg-accent px-2.5 text-[11px] font-semibold text-primary transition active:scale-95"
-            >
-              <Zap className="h-3.5 w-3.5 fill-current" />
-              Random Friday
-            </Link>
-          )}
           {last && (
             <IconButton
               label="Undo last pass"
@@ -545,11 +527,10 @@ function ProfileCard({
   const activeIdx = Math.min(photoIdx, totalPhotos - 1);
   const currentSampleSrc = !userId ? sampleGallery[activeIdx] : undefined;
   const currentLivePath = userId ? livePaths[activeIdx] : undefined;
-  const store = useStore();
-  const alignment = useMemo(
-    () => computeVibeAlignment(store.profile.choices, getPersonThisOrThatAnswers(person)),
-    [store.profile.choices, person],
-  );
+  const viewer = useStore();
+  const connectionReason =
+    recommendationReason ??
+    (!userId && viewer.profile.town === person.town ? `Also in ${person.town}` : undefined);
   const elevatorPitch = useMemo(() => getElevatorPitchForPerson(person), [person]);
   const twoTruthsGame = useMemo(() => getTwoTruthsForPerson(person), [person]);
 
@@ -570,7 +551,7 @@ function ProfileCard({
         ", " +
         person.town
       }
-      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[14px] bg-card text-white shadow-float"
+      className="absolute inset-0 flex touch-pan-y flex-col overflow-hidden rounded-[25px] bg-card text-white"
       style={{ zIndex: 10 - depth, x: dragX, rotate }}
       drag={top && !expanded ? "x" : false}
       dragConstraints={{ left: 0, right: 0 }}
@@ -597,7 +578,7 @@ function ProfileCard({
       <motion.div
         layout
         className="relative w-full shrink-0 overflow-hidden bg-foreground"
-        animate={{ height: expanded ? "40%" : "100%" }}
+        animate={{ height: expanded ? "42%" : "100%" }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
       >
         <ProfilePhoto
@@ -606,7 +587,7 @@ function ProfileCard({
           path={currentLivePath}
           className={`absolute inset-0 h-full w-full select-none ${currentLivePath ? "object-contain" : "object-cover"}`}
         />
-        <div className="bg-scrim absolute inset-0" aria-hidden="true" />
+        <div className="home-photo-scrim absolute inset-0" aria-hidden="true" />
         <motion.div
           aria-hidden="true"
           initial={false}
@@ -659,14 +640,14 @@ function ProfileCard({
           <>
             <motion.span
               style={{ opacity: likeOpacity, scale: likeScale }}
-              className="pointer-events-none absolute left-5 top-8 z-20 -rotate-12 rounded-xl border-2 border-emerald-300/90 bg-emerald-950/45 px-3.5 py-1 text-lg font-extrabold tracking-wider text-emerald-100 backdrop-blur-sm"
+              className="pointer-events-none absolute left-5 top-8 z-20 -rotate-12 rounded-xl border-2 border-emerald-300/90 bg-emerald-950/70 px-3.5 py-1 text-lg font-extrabold tracking-wider text-emerald-100"
               aria-hidden="true"
             >
               CONNECT
             </motion.span>
             <motion.span
               style={{ opacity: passOpacity, scale: passScale }}
-              className="pointer-events-none absolute right-5 top-8 z-20 rotate-12 rounded-xl border-2 border-white/80 bg-foreground/60 px-3.5 py-1 text-lg font-extrabold tracking-wider text-white backdrop-blur-sm"
+              className="pointer-events-none absolute right-5 top-8 z-20 rotate-12 rounded-xl border-2 border-white/80 bg-foreground/75 px-3.5 py-1 text-lg font-extrabold tracking-wider text-white"
               aria-hidden="true"
             >
               PASS
@@ -674,10 +655,8 @@ function ProfileCard({
           </>
         )}
         {top && !userId && !expanded && (
-          <span
-            className={`absolute left-4 z-20 rounded-full bg-foreground/75 px-3 py-1.5 text-[11px] font-medium text-white backdrop-blur-sm ${totalPhotos > 1 ? "top-6" : "top-4"}`}
-          >
-            Sample profile
+          <span className="absolute bottom-[138px] right-5 z-20 rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            Sample
           </span>
         )}
         {expanded && (
@@ -692,25 +671,30 @@ function ProfileCard({
         )}
         {!expanded && (
           <div className="pointer-events-none absolute inset-x-0 bottom-[92px] z-20 px-5 pt-16">
+            {connectionReason && (
+              <p className="mb-2 w-fit max-w-[85%] truncate rounded-full bg-black/55 px-3 py-1.5 text-[11px] font-medium text-white">
+                ✦ {connectionReason}
+              </p>
+            )}
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h1 className="truncate text-[26px] font-bold leading-tight tracking-[-0.035em]">
-                    {person.name}
-                    <span className="ml-2 text-[21px] font-medium text-white/85">{person.age}</span>
+                    {person.name}, <span className="text-[24px]">{person.age}</span>
                   </h1>
                   {(person.verified || (person.photoPaths?.length ?? 0) > 0) && (
                     <span
                       title="Verified member"
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-semibold text-white backdrop-blur-sm"
+                      className="inline-flex shrink-0 items-center gap-1 text-primary"
                     >
-                      <CheckCircle2 className="h-3 w-3 text-emerald-300" />
-                      Verified
+                      <CheckCircle2 className="h-4 w-4 fill-primary text-white" />
                     </span>
                   )}
                 </div>
-                <p className="mt-1 text-[13px] text-white/95">{person.town}</p>
-                <p className="mt-0.5 truncate text-[12px] text-white/85">{person.job}</p>
+                <p className="mt-1 truncate text-[13px] text-white/95">
+                  {person.town} · {person.job}
+                </p>
+                <p className="mt-0.5 truncate text-[12px] text-white/85">{person.bio}</p>
               </div>
               <motion.button
                 type="button"
@@ -718,7 +702,7 @@ function ProfileCard({
                 aria-expanded={expanded}
                 onClick={onDetails}
                 whileTap={{ scale: 0.9 }}
-                className="pointer-events-auto mb-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/35 bg-foreground/35 text-white backdrop-blur-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                className="pointer-events-auto mb-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/60 bg-black/35 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               >
                 <motion.span
                   animate={{ rotate: expanded ? 180 : 0, y: expanded ? 0 : [0, -2, 0] }}
@@ -743,32 +727,55 @@ function ProfileCard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2 }}
-            className="min-h-0 flex-1 overflow-y-auto px-5 pb-16 pt-4 text-foreground"
+            className="min-h-0 flex-1 overflow-y-auto px-5 pb-20 pt-5 text-foreground"
           >
-            <div className="space-y-3">
+            <div className="space-y-5">
               <div>
-                <h2 className="text-[18px] font-bold leading-tight">
-                  {person.name} <span className="font-normal">{person.age}</span>
+                <h2 className="text-[24px] font-bold leading-tight tracking-[-0.03em]">
+                  {person.name}, {person.age}
                 </h2>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  {person.job} · {person.town}
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  {person.town} · {person.job}
                 </p>
               </div>
-              <div>
-                <h3 className="text-[12px] font-semibold">About me</h3>
-                <p className="mt-1 text-[12px] leading-[18px]">{person.bio}</p>
-              </div>
-              <div>
-                <h3 className="text-[12px] font-semibold">Looking for</h3>
-                <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <span className="inline-flex rounded-full bg-accent px-3 py-1.5 text-[11px] font-medium text-primary">
-                    ♥ {person.intent}
-                  </span>
-                  <span className="inline-flex rounded-full bg-emerald-500/12 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                    Vibe Alignment: {alignment.percentage}%
-                  </span>
+              <span className="inline-flex rounded-full bg-accent px-3 py-1.5 text-[12px] font-medium text-primary">
+                ♥ {person.intent}
+              </span>
+              <p className="text-[14px] leading-[21px]">{person.bio}</p>
+              {person.tags.length > 0 && (
+                <div>
+                  <h3 className="mb-2 text-[14px] font-semibold">Interests</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {person.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-border bg-white px-3 py-1.5 text-[12px]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
                 </div>
+              )}
+              <div className="rounded-[18px] bg-secondary p-4">
+                <h3 className="text-[12px] text-muted-foreground">{person.prompt}</h3>
+                <p className="mt-1 text-[14px] font-medium leading-5">{person.answer}</p>
               </div>
+              {person.photoPaths && person.photoPaths.length > 1 && (
+                <div>
+                  <h3 className="mb-2 text-[14px] font-semibold">Photos</h3>
+                  <div className="no-scrollbar flex gap-2 overflow-x-auto">
+                    {person.photoPaths.slice(1).map((path) => (
+                      <ProfilePhoto
+                        key={path}
+                        name={person.name}
+                        path={path}
+                        className="h-24 w-20 shrink-0 rounded-xl object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
               {person.voiceIntroPath && <VoiceIntroPlayer path={person.voiceIntroPath} />}
               {!userId && <SampleVoiceIntro />}
               <ElevatorPitchCard
@@ -804,38 +811,11 @@ function ProfileCard({
                   void onDecide(true);
                 }}
               />
-              {person.photoPaths && person.photoPaths.length > 1 && (
-                <div className="no-scrollbar flex gap-2 overflow-x-auto">
-                  {person.photoPaths.slice(1).map((path) => (
-                    <ProfilePhoto
-                      key={path}
-                      name={person.name}
-                      path={path}
-                      className="h-24 w-20 shrink-0 rounded-xl object-cover"
-                    />
-                  ))}
-                </div>
-              )}
               {recommendationReason && (
                 <p className="text-[11px] leading-4 text-muted-foreground">
                   You may connect over {recommendationReason}
                 </p>
               )}
-              <div>
-                <h3 className="text-[12px] font-semibold">My answer</h3>
-                <p className="mt-1 text-[11px] font-medium">{person.prompt}</p>
-                <p className="text-[12px] leading-5 text-muted-foreground">{person.answer}</p>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {person.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-secondary px-2.5 py-1 text-[11px] font-medium"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
               {userId && (
                 <SafetyActions
                   userId={userId}

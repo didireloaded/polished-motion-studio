@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Bookmark,
+  Bell,
+  BadgeCheck,
   Camera,
   Check,
   Heart,
@@ -9,7 +11,9 @@ import {
   MessagesSquare,
   Pencil,
   RotateCcw,
+  ShieldCheck,
   Square,
+  UserRound,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { interests, people, photo, towns, update, useStore, toggle } from "@/lib/namlink";
@@ -23,12 +27,51 @@ import { SampleVoiceIntro, VoiceIntroPlayer, VoiceIntroRecorder } from "@/compon
 import { namibianPrompts, triggerHaptic } from "@/lib/icebreakers";
 import { sendWelcomeEmail } from "@/lib/email.functions";
 import { captureProductEvent } from "@/lib/telemetry";
+import { compressProfilePhoto, extensionForMimeType } from "@/lib/photo-compression";
 
 const choices = [
   { id: "weekend", prompt: "A free Saturday", options: ["A road trip", "A slow morning"] },
   { id: "evening", prompt: "An evening out", options: ["Live music", "Dinner for two"] },
   { id: "coffee", prompt: "My coffee order", options: ["Flat white", "Iced coffee"] },
 ];
+
+function AccountMenuRow({
+  label,
+  detail,
+  icon: Icon,
+  to,
+  onClick,
+}: {
+  label: string;
+  detail: string;
+  icon: typeof Bell;
+  to?: "/notifications" | "/verification" | "/safety";
+  onClick?: () => void;
+}) {
+  const content = (
+    <>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+        <Icon className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-semibold">{label}</span>
+        <span className="block truncate text-[12px] text-muted-foreground">{detail}</span>
+      </span>
+      <span className="text-xl text-muted-foreground">›</span>
+    </>
+  );
+  const className =
+    "flex min-h-[68px] w-full items-center gap-3 rounded-[18px] border border-border bg-white px-3.5 text-left";
+  return to ? (
+    <Link to={to} className={className}>
+      {content}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
+    </button>
+  );
+}
 
 export const Route = createFileRoute("/you")({
   head: () => ({
@@ -127,7 +170,7 @@ function You() {
   if (!ready)
     return (
       <main className="mx-auto max-w-md pb-28">
-        <PageHeader title="Mutal" />
+        <PageHeader title="You" />
         <YouProfileSkeleton label="Loading your account…" />
       </main>
     );
@@ -143,8 +186,71 @@ function You() {
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="Mutal" />
-      <div className="mx-5 mb-3 overflow-hidden rounded-[15px] border border-border bg-white shadow-float">
+      <PageHeader title="You" />
+      {!editing && (
+        <>
+          <section className="mx-4 mt-4 rounded-[22px] border border-border bg-white px-5 py-5 text-center">
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              aria-label="Edit sample profile"
+              className="relative mx-auto block"
+            >
+              <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-[42px] font-semibold text-white">
+                {(s.profile.name || "Alex").slice(0, 1).toUpperCase()}
+              </span>
+              <span className="absolute bottom-0 right-0 rounded-full border-2 border-white bg-foreground p-1.5 text-white">
+                <Pencil className="h-3.5 w-3.5" />
+              </span>
+            </button>
+            <h2 className="mt-3 text-[22px] font-semibold">{s.profile.name || "Alex"}</h2>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {s.profile.town} · {s.profile.age} · {s.profile.intent}
+            </p>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              <span className="mr-2 rounded-full bg-accent px-2 py-0.5 font-semibold uppercase text-primary">
+                Sample
+              </span>
+              Sample preview account
+            </p>
+          </section>
+          <div className="mx-4 mt-5 space-y-2.5">
+            <AccountMenuRow
+              label="Notifications"
+              detail="Sample alerts"
+              icon={Bell}
+              to="/notifications"
+            />
+            <AccountMenuRow
+              label="Saved"
+              detail="Posts and profiles you keep"
+              icon={Bookmark}
+              onClick={() => setEditing(true)}
+            />
+            <AccountMenuRow
+              label="Photo verification"
+              detail="Submit a private selfie for review"
+              icon={BadgeCheck}
+              to="/verification"
+            />
+            <AccountMenuRow
+              label="Safety & privacy"
+              detail="What protects you"
+              icon={ShieldCheck}
+              to="/safety"
+            />
+            <AccountMenuRow
+              label="Edit profile"
+              detail="Photos, bio, interests, voice intro"
+              icon={UserRound}
+              onClick={() => setEditing(true)}
+            />
+          </div>
+        </>
+      )}
+      <div
+        className={`${editing ? "" : "hidden"} mx-5 mb-3 overflow-hidden rounded-[20px] border border-border bg-white`}
+      >
         <img
           src="/design/lead-man.jpg"
           alt="Sample profile portrait"
@@ -185,12 +291,12 @@ function You() {
       <button
         type="button"
         onClick={() => setEditing((value) => !value)}
-        className="mx-5 mb-3 flex items-center gap-2 text-xs font-semibold text-primary"
+        className={`${editing ? "" : "hidden"} mx-5 mb-3 flex items-center gap-2 text-xs font-semibold text-primary`}
       >
         <Pencil className="h-4 w-4" />
         {editing ? "Done editing" : "Edit profile"}
       </button>
-      <div className="mx-5 mb-5 flex gap-2">
+      <div className={`${editing ? "" : "hidden"} mx-5 mb-5 flex gap-2`}>
         <Link
           to="/safety"
           className="flex-1 rounded-full bg-secondary px-4 py-2.5 text-center text-xs font-semibold"
@@ -667,9 +773,9 @@ function LiveProfile({
     setPhotosBusy(true);
     setPhotosNotice("");
     const uploaded: string[] = [];
-    for (const file of files) {
-      const extension =
-        file.type === "image/jpeg" ? "jpg" : file.type === "image/png" ? "png" : "webp";
+    for (const rawFile of files) {
+      const file = await compressProfilePhoto(rawFile);
+      const extension = extensionForMimeType(file.type);
       const path = `${userId}/${crypto.randomUUID()}.${extension}`;
       const { error } = await supabase.storage.from("profile-photos").upload(path, file, {
         contentType: file.type,
@@ -729,13 +835,79 @@ function LiveProfile({
 
   return (
     <main className="mx-auto max-w-md pb-28">
-      <PageHeader title="Mutal" />
+      <PageHeader title="You" />
       {loading ? (
         <YouProfileSkeleton label="Loading your profile…" />
       ) : (
         <>
-          {profile && (
-            <div className="mx-5 mb-3 overflow-hidden rounded-[15px] border border-border bg-white shadow-float">
+          {profile && !editing && (
+            <>
+              <section className="mx-4 mt-4 rounded-[22px] border border-border bg-white px-5 py-5 text-center">
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  aria-label="Edit profile"
+                  className="relative mx-auto block"
+                >
+                  {profile.photo_paths?.[0] ? (
+                    <ProfilePhoto
+                      name={profile.display_name}
+                      path={profile.photo_paths[0]}
+                      className="h-24 w-24 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex h-24 w-24 items-center justify-center rounded-full bg-primary text-[42px] font-semibold text-white">
+                      {profile.display_name.slice(0, 1)}
+                    </span>
+                  )}
+                  <span className="absolute bottom-0 right-0 rounded-full border-2 border-white bg-foreground p-1.5 text-white">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </span>
+                </button>
+                <h2 className="mt-3 text-[22px] font-semibold">{profile.display_name}</h2>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  {profile.town} · {profile.age} · {profile.intent}
+                </p>
+                {verification.data?.status === "approved" && (
+                  <p className="mt-2 text-xs font-medium text-primary">Selfie verified</p>
+                )}
+              </section>
+              <div className="mx-4 mt-5 space-y-2.5">
+                <AccountMenuRow
+                  label="Notifications"
+                  detail="Your latest alerts"
+                  icon={Bell}
+                  to="/notifications"
+                />
+                <AccountMenuRow
+                  label="Saved"
+                  detail="Posts and profiles you keep"
+                  icon={Bookmark}
+                  onClick={() => setEditing(true)}
+                />
+                <AccountMenuRow
+                  label="Photo verification"
+                  detail="Submit a private selfie for review"
+                  icon={BadgeCheck}
+                  to="/verification"
+                />
+                <AccountMenuRow
+                  label="Safety & privacy"
+                  detail="What protects you"
+                  icon={ShieldCheck}
+                  to="/safety"
+                />
+                <AccountMenuRow
+                  label="Edit profile"
+                  detail="Photos, bio, interests, voice intro"
+                  icon={UserRound}
+                  onClick={() => setEditing(true)}
+                />
+              </div>
+            </>
+          )}
+          {profile && editing && (
+            <div className="mx-5 mb-3 overflow-hidden rounded-[20px] border border-border bg-white">
               {profile.photo_paths?.[0] ? (
                 <ProfilePhoto
                   name={profile.display_name}
@@ -783,7 +955,7 @@ function LiveProfile({
               </div>
             </div>
           )}
-          {profile && (
+          {profile && editing && (
             <button
               type="button"
               onClick={() => setEditing((value) => !value)}
@@ -793,7 +965,7 @@ function LiveProfile({
               {editing ? "Done editing" : "Edit profile"}
             </button>
           )}
-          {profile && (
+          {profile && editing && (
             <div className="mx-5 mb-5 flex gap-2">
               <Link
                 to="/safety"
@@ -809,7 +981,7 @@ function LiveProfile({
               </Link>
             </div>
           )}
-          {profile && (
+          {profile && editing && (
             <Link
               to="/notifications"
               className="mx-5 mb-5 flex justify-center rounded-full bg-secondary px-4 py-2.5 text-center text-xs font-semibold"
@@ -1124,8 +1296,9 @@ function FirstRunOnboarding({ userId, onComplete }: { userId: string; onComplete
     setBusy(true);
     setNotice("");
     const uploaded: string[] = [];
-    for (const file of selected) {
-      const extension = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+    for (const rawFile of selected) {
+      const file = await compressProfilePhoto(rawFile);
+      const extension = extensionForMimeType(file.type);
       const path = `${userId}/${crypto.randomUUID()}.${extension}`;
       const { error } = await supabase.storage
         .from("profile-photos")
