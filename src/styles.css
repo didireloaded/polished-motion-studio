@@ -325,3 +325,8 @@ button:focus-visible {
   font-size: 18px;
   line-height: 1;
 }
+/* Hide the platform-injected editing badge in the member-facing app. */
+#lovable-badge {
+  display: none !important;
+}
+
