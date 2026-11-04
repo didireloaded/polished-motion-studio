@@ -45,11 +45,6 @@ const MatchCelebrationModal = lazy(() =>
     default: m.MatchCelebrationModal,
   })),
 );
-const RandomFridayModal = lazy(() =>
-  import("@/components/RandomFridayModal").then((m) => ({
-    default: m.RandomFridayModal,
-  })),
-);
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -78,7 +73,6 @@ function Home() {
     staleTime: 5 * 60_000,
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [randomFridayOpen, setRandomFridayOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [hiddenRecommendations, setHiddenRecommendations] = useState<string[]>([]);
@@ -252,18 +246,15 @@ function Home() {
         </Link>
         <div className="flex items-center gap-2">
           {isFeatureEnabled("randomFriday") && (
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic("like");
-                setRandomFridayOpen(true);
-              }}
+            <Link
+              to="/random-friday"
+              onClick={() => triggerHaptic("like")}
               aria-label="Open Random Friday 30-second live sprint"
               className="inline-flex h-8 items-center gap-1 rounded-full bg-accent px-2.5 text-[11px] font-semibold text-primary transition active:scale-95"
             >
               <Zap className="h-3.5 w-3.5 fill-current" />
               Random Friday
-            </button>
+            </Link>
           )}
           {last && (
             <IconButton
@@ -500,16 +491,6 @@ function Home() {
           />
         </Suspense>
       )}
-      {randomFridayOpen && (
-        <Suspense fallback={null}>
-          <RandomFridayModal
-            open={randomFridayOpen}
-            town={town}
-            userId={user?.id}
-            onClose={() => setRandomFridayOpen(false)}
-          />
-        </Suspense>
-      )}
 
       <AnimatePresence>
         {notice && (
@@ -626,6 +607,13 @@ function ProfileCard({
           className={`absolute inset-0 h-full w-full select-none ${currentLivePath ? "object-contain" : "object-cover"}`}
         />
         <div className="bg-scrim absolute inset-0" aria-hidden="true" />
+        <motion.div
+          aria-hidden="true"
+          initial={false}
+          animate={{ opacity: expanded ? 1 : 0 }}
+          transition={{ duration: 0.28 }}
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-b from-transparent to-white"
+        />
 
         {totalPhotos > 1 && !expanded && (
           <>

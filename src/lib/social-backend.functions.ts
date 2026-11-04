@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import {
   castFeedPollVoteSchema,
   joinLiveQueueSchema,
@@ -233,4 +234,39 @@ export const castFeedPollVoteServerFn = createServerFn({ method: "POST" })
     } catch {
       return { ok: false, total: 1, counts: { [data.choice]: 1 } };
     }
+  });
+
+export const getMyFeedPollVotesServerFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await untypedDb(context.supabase)
+      .from("feed_poll_votes")
+      .select("poll_id")
+      .eq("user_id", context.userId);
+    if (error) throw error;
+    return (data ?? []).map((row: { poll_id: string }) => row.poll_id);
+  });
+
+export const getMyThisOrThatAnswersServerFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await untypedDb(context.supabase)
+      .from("profile_game_cards")
+      .select("this_or_that_answers")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw error;
+    return (data?.this_or_that_answers ?? {}) as Record<string, "A" | "B">;
+  });
+
+export const saveThisOrThatAnswerServerFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ questionId: z.string().min(2).max(40), choice: z.enum(["A", "B"]) }))
+  .handler(async ({ context, data }) => {
+    const { error } = await untypedDb(context.supabase).rpc("save_this_or_that_answer", {
+      _question_id: data.questionId,
+      _choice: data.choice,
+    });
+    if (error) throw error;
+    return { ok: true };
   });

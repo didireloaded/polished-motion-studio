@@ -14,13 +14,17 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ChatsRouteImport } from './routes/chats'
 import { Route as CrossedPathsRouteImport } from './routes/crossed-paths'
 import { Route as DatePlanRouteImport } from './routes/date-plan'
+import { Route as EventsRouteImport } from './routes/events'
 import { Route as MatchValuesRouteImport } from './routes/match-values'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as ModerationRouteImport } from './routes/moderation'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as PostsRouteImport } from './routes/posts'
 import { Route as RadarRouteImport } from './routes/radar'
+import { Route as RandomFridayRouteImport } from './routes/random-friday'
 import { Route as SafetyRouteImport } from './routes/safety'
+import { Route as SpeedDatingRouteImport } from './routes/speed-dating'
+import { Route as ThisOrThatRouteImport } from './routes/this-or-that'
 import { Route as VerificationRouteImport } from './routes/verification'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as YouRouteImport } from './routes/you'
@@ -50,6 +54,11 @@ const CrossedPathsRoute = CrossedPathsRouteImport.update({
 const DatePlanRoute = DatePlanRouteImport.update({
   id: '/date-plan',
   path: '/date-plan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MatchValuesRoute = MatchValuesRouteImport.update({
@@ -82,9 +91,24 @@ const RadarRoute = RadarRouteImport.update({
   path: '/radar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RandomFridayRoute = RandomFridayRouteImport.update({
+  id: '/random-friday',
+  path: '/random-friday',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SafetyRoute = SafetyRouteImport.update({
   id: '/safety',
   path: '/safety',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpeedDatingRoute = SpeedDatingRouteImport.update({
+  id: '/speed-dating',
+  path: '/speed-dating',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ThisOrThatRoute = ThisOrThatRouteImport.update({
+  id: '/this-or-that',
+  path: '/this-or-that',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerificationRoute = VerificationRouteImport.update({
@@ -120,13 +144,17 @@ export interface FileRoutesByFullPath {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/events': typeof EventsRoute
   '/match-values': typeof MatchValuesRoute
   '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
+  '/random-friday': typeof RandomFridayRoute
   '/safety': typeof SafetyRoute
+  '/speed-dating': typeof SpeedDatingRoute
+  '/this-or-that': typeof ThisOrThatRoute
   '/verification': typeof VerificationRoute
   '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
@@ -139,13 +167,17 @@ export interface FileRoutesByTo {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/events': typeof EventsRoute
   '/match-values': typeof MatchValuesRoute
   '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
+  '/random-friday': typeof RandomFridayRoute
   '/safety': typeof SafetyRoute
+  '/speed-dating': typeof SpeedDatingRoute
+  '/this-or-that': typeof ThisOrThatRoute
   '/verification': typeof VerificationRoute
   '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
@@ -159,13 +191,17 @@ export interface FileRoutesById {
   '/chats': typeof ChatsRoute
   '/crossed-paths': typeof CrossedPathsRoute
   '/date-plan': typeof DatePlanRoute
+  '/events': typeof EventsRoute
   '/match-values': typeof MatchValuesRoute
   '/mcp': typeof McpRoute
   '/moderation': typeof ModerationRoute
   '/notifications': typeof NotificationsRoute
   '/posts': typeof PostsRoute
   '/radar': typeof RadarRoute
+  '/random-friday': typeof RandomFridayRoute
   '/safety': typeof SafetyRoute
+  '/speed-dating': typeof SpeedDatingRoute
+  '/this-or-that': typeof ThisOrThatRoute
   '/verification': typeof VerificationRoute
   '/welcome': typeof WelcomeRoute
   '/you': typeof YouRoute
@@ -180,13 +216,17 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/events'
     | '/match-values'
     | '/mcp'
     | '/moderation'
     | '/notifications'
     | '/posts'
     | '/radar'
+    | '/random-friday'
     | '/safety'
+    | '/speed-dating'
+    | '/this-or-that'
     | '/verification'
     | '/welcome'
     | '/you'
@@ -199,13 +239,17 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/events'
     | '/match-values'
     | '/mcp'
     | '/moderation'
     | '/notifications'
     | '/posts'
     | '/radar'
+    | '/random-friday'
     | '/safety'
+    | '/speed-dating'
+    | '/this-or-that'
     | '/verification'
     | '/welcome'
     | '/you'
@@ -218,13 +262,17 @@ export interface FileRouteTypes {
     | '/chats'
     | '/crossed-paths'
     | '/date-plan'
+    | '/events'
     | '/match-values'
     | '/mcp'
     | '/moderation'
     | '/notifications'
     | '/posts'
     | '/radar'
+    | '/random-friday'
     | '/safety'
+    | '/speed-dating'
+    | '/this-or-that'
     | '/verification'
     | '/welcome'
     | '/you'
@@ -238,13 +286,17 @@ export interface RootRouteChildren {
   ChatsRoute: typeof ChatsRoute
   CrossedPathsRoute: typeof CrossedPathsRoute
   DatePlanRoute: typeof DatePlanRoute
+  EventsRoute: typeof EventsRoute
   MatchValuesRoute: typeof MatchValuesRoute
   McpRoute: typeof McpRoute
   ModerationRoute: typeof ModerationRoute
   NotificationsRoute: typeof NotificationsRoute
   PostsRoute: typeof PostsRoute
   RadarRoute: typeof RadarRoute
+  RandomFridayRoute: typeof RandomFridayRoute
   SafetyRoute: typeof SafetyRoute
+  SpeedDatingRoute: typeof SpeedDatingRoute
+  ThisOrThatRoute: typeof ThisOrThatRoute
   VerificationRoute: typeof VerificationRoute
   WelcomeRoute: typeof WelcomeRoute
   YouRoute: typeof YouRoute
@@ -289,6 +341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DatePlanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/match-values': {
       id: '/match-values'
       path: '/match-values'
@@ -331,11 +390,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RadarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/random-friday': {
+      id: '/random-friday'
+      path: '/random-friday'
+      fullPath: '/random-friday'
+      preLoaderRoute: typeof RandomFridayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/safety': {
       id: '/safety'
       path: '/safety'
       fullPath: '/safety'
       preLoaderRoute: typeof SafetyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/speed-dating': {
+      id: '/speed-dating'
+      path: '/speed-dating'
+      fullPath: '/speed-dating'
+      preLoaderRoute: typeof SpeedDatingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/this-or-that': {
+      id: '/this-or-that'
+      path: '/this-or-that'
+      fullPath: '/this-or-that'
+      preLoaderRoute: typeof ThisOrThatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verification': {
@@ -382,13 +462,17 @@ const rootRouteChildren: RootRouteChildren = {
   ChatsRoute: ChatsRoute,
   CrossedPathsRoute: CrossedPathsRoute,
   DatePlanRoute: DatePlanRoute,
+  EventsRoute: EventsRoute,
   MatchValuesRoute: MatchValuesRoute,
   McpRoute: McpRoute,
   ModerationRoute: ModerationRoute,
   NotificationsRoute: NotificationsRoute,
   PostsRoute: PostsRoute,
   RadarRoute: RadarRoute,
+  RandomFridayRoute: RandomFridayRoute,
   SafetyRoute: SafetyRoute,
+  SpeedDatingRoute: SpeedDatingRoute,
+  ThisOrThatRoute: ThisOrThatRoute,
   VerificationRoute: VerificationRoute,
   WelcomeRoute: WelcomeRoute,
   YouRoute: YouRoute,
