@@ -28,6 +28,7 @@ import { namibianPrompts, triggerHaptic } from "@/lib/icebreakers";
 import { sendWelcomeEmail } from "@/lib/email.functions";
 import { captureProductEvent } from "@/lib/telemetry";
 import { compressProfilePhoto, extensionForMimeType } from "@/lib/photo-compression";
+import { DeleteAccount } from "@/components/DeleteAccount";
 
 const choices = [
   { id: "weekend", prompt: "A free Saturday", options: ["A road trip", "A slow morning"] },
@@ -96,12 +97,15 @@ function You() {
     );
   }
   return (
-    <LiveProfile
-      key={user.id}
-      userId={user.id}
-      profile={profile.data ?? null}
-      loading={profile.isLoading}
-    />
+    <>
+      <LiveProfile
+        key={user.id}
+        userId={user.id}
+        profile={profile.data ?? null}
+        loading={profile.isLoading}
+      />
+      <DeleteAccount userId={user.id} />
+    </>
   );
 }
 
@@ -303,7 +307,7 @@ function LiveProfile({
     );
 
   return (
-    <main className="mx-auto max-w-md pb-28">
+    <main className="mx-auto max-w-md pb-6">
       <PageHeader title="You" />
       {loading ? (
         <YouProfileSkeleton label="Loading your profile…" />
