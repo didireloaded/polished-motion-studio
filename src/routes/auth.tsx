@@ -74,6 +74,11 @@ function AuthPage() {
         redirect_uri: new URL(currentNextPath() ?? "/you", window.location.origin).href,
       });
       if (result?.error) setMsg(result.error.message ?? "Google sign-in couldn't be started.");
+      else if (!result.redirected) {
+        const next = currentNextPath();
+        if (next) window.location.assign(next);
+        else await navigate({ to: "/you" });
+      }
     } catch {
       setMsg("Google sign-in couldn't be started. Please try again.");
     } finally {
@@ -90,6 +95,11 @@ function AuthPage() {
         redirect_uri: new URL(currentNextPath() ?? "/you", window.location.origin).href,
       });
       if (result?.error) setMsg(result.error.message ?? "Apple sign-in couldn't be started.");
+      else if (!result.redirected) {
+        const next = currentNextPath();
+        if (next) window.location.assign(next);
+        else await navigate({ to: "/you" });
+      }
     } catch {
       setMsg("Apple sign-in couldn't be started. Please try again.");
     } finally {
