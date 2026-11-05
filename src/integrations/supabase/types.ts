@@ -874,7 +874,7 @@ export type Database = {
           p_expected_version: number
           p_match_id: string
           p_note: string
-          p_scheduled_at: string
+          p_scheduled_at: string | null
           p_town: string
           p_venue_name: string
         }

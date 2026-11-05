@@ -9,8 +9,10 @@ import {
   normalizeOrderedPair,
   saveProfileGameCardSchema,
   submitChatGameChoiceSchema,
-  tallyPollVotes,
+  pollCountsSchema,
+  tallyPollCounts,
 } from "./social-backend";
+import { getWindhoekDate } from "./social-games";
 
 // Untyped helper for new Lovable Cloud tables added in migration 0011
 function untypedDb(supabase: unknown): SupabaseClient {
@@ -228,11 +230,7 @@ export const castFeedPollVoteServerFn = createServerFn({ method: "POST" })
       });
       if (rowsError) throw rowsError;
 
-      const rows: Array<{ choice: string }> = [];
-      for (const r of (agg ?? []) as Array<{ choice: string; votes: number }>) {
-        for (let i = 0; i < Number(r.votes); i++) rows.push({ choice: r.choice });
-      }
-      const tally = tallyPollVotes(rows, [data.choice]);
+      const tally = tallyPollCounts(pollCountsSchema.parse(agg ?? []), [data.choice]);
       return { ok: true, total: tally.total, counts: tally.counts };
     } catch {
       return { ok: false, total: 1, counts: { [data.choice]: 1 } };
@@ -272,4 +270,54 @@ export const saveThisOrThatAnswerServerFn = createServerFn({ method: "POST" })
     });
     if (error) throw error;
     return { ok: true };
+  });
+
+export const getMyDailyQuickPickServerFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await untypedDb(context.supabase)
+      .from("daily_quick_picks")
+      .select("question_id,choice")
+      .eq("user_id", context.userId)
+      .eq("pick_date", getWindhoekDate())
+      .maybeSingle();
+    if (error) throw error;
+    return data as { question_id: string; choice: "A" | "B" } | null;
+  });
+
+export const saveDailyQuickPickServerFn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ questionId: z.string().min(2).max(40), choice: z.enum(["A", "B"]) }))
+  .handler(async ({ context, data }) => {
+    const { error } = await untypedDb(context.supabase).rpc("save_daily_quick_pick", {
+      _question_id: data.questionId,
+      _choice: data.choice,
+    });
+    if (error) throw error;
+    return { ok: true };
+  });
+
+export const getSharedDailyPickCandidatesServerFn = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ questionId: z.string().min(2).max(40) }))
+  .handler(async ({ context, data }) => {
+    const db = untypedDb(context.supabase);
+    const { data: ids, error } = await db.rpc("shared_daily_pick_candidates", {
+      _question_id: data.questionId,
+    });
+    if (error) throw error;
+    const candidateIds = ((ids ?? []) as Array<{ candidate_id: string }>).map(
+      (row) => row.candidate_id,
+    );
+    if (!candidateIds.length) return [];
+    const { data: profiles, error: profileError } = await context.supabase
+      .from("profiles")
+      .select("id,display_name,age,town,photo_paths")
+      .in("id", candidateIds);
+    if (profileError) throw profileError;
+    const byId = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+    return candidateIds.flatMap((id) => {
+      const profile = byId.get(id);
+      return profile ? [{ ...profile, photo_paths: profile.photo_paths?.slice(0, 1) ?? [] }] : [];
+    });
   });

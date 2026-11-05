@@ -8,7 +8,7 @@ export function NearbyFeatureShell({ title, children }: { title: string; childre
       <header className="flex h-14 items-center border-b border-border px-5">
         <Link
           to="/radar"
-          aria-label="Back to Nearby"
+          aria-label="Back to Explore"
           className="flex h-10 w-10 items-center justify-start text-foreground"
         >
           <ArrowLeft className="h-5 w-5" />

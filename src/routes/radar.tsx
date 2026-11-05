@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -10,12 +10,11 @@ import {
   MapPin,
   Navigation,
   Star,
-  Users,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { events, people, photo, towns, update, useStore } from "@/lib/namlink";
+import { towns } from "@/lib/namlink";
 import { useSession } from "@/hooks/use-session";
 import { type RecommendationResult } from "@/lib/recommend.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,17 +23,14 @@ import { VoiceIntroPlayer } from "@/components/voice-intro";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { BrandLogo } from "@/components/BrandLogo";
 import { mapboxPublicToken, mapboxTileUrl } from "@/lib/mapbox";
-import { captureProductEvent } from "@/lib/telemetry";
-import { isFeatureEnabled } from "@/lib/feature-flags";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { ThisOrThatRapidRadar } from "@/components/SocialGames";
 
 export const Route = createFileRoute("/radar")({
   head: () => ({
     meta: [
-      { title: "Nearby — Mutal" },
+      { title: "Explore — Mutal" },
       { name: "description", content: "Explore people and local plans by town." },
-      { property: "og:title", content: "Nearby — Mutal" },
+      { property: "og:title", content: "Explore — Mutal" },
     ],
   }),
   component: NearbyPage,
@@ -60,7 +56,7 @@ type CommunityEvent = {
   details: string;
   starts_at: string;
 };
-type EventInterest = { event_id: string; user_id: string; display_name: string };
+type EventMatch = { id: string; display_name: string; town: string };
 
 const townCenters: Record<string, [number, number]> = {
   Windhoek: [-22.56, 17.08],
@@ -71,22 +67,9 @@ const townCenters: Record<string, [number, number]> = {
   Rundu: [-17.91, 19.77],
 };
 
-const sampleProfiles: NearbyProfile[] = people.map((p) => ({
-  id: p.id,
-  display_name: p.name,
-  age: p.age,
-  town: p.town,
-  bio: p.bio,
-  tags: p.tags,
-  intent: p.intent,
-  seeking: p.answer,
-  voice_intro_path: null,
-  photo_paths: [],
-}));
-
 export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) {
-  const store = useStore();
   const { user, ready } = useSession();
+  const navigate = useNavigate({ from: "/radar" });
   const [town, setTown] = useState("Windhoek");
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const panel = page;
@@ -103,6 +86,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
   const [eventDate, setEventDate] = useState("");
   const [eventDetails, setEventDetails] = useState("");
   const [eventBusy, setEventBusy] = useState(false);
+  const [selectedEventToShare, setSelectedEventToShare] = useState<CommunityEvent | null>(null);
   const client = useQueryClient();
   const query = useQuery({
     queryKey: ["nearby", user?.id],
@@ -151,39 +135,36 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
       return data as CommunityEvent[];
     },
   });
-  const communityEventIds = communityEventsQuery.data?.map((event) => event.id) ?? [];
-  const eventInterestQuery = useQuery({
-    queryKey: ["event-interests", user?.id, communityEventIds],
-    enabled: !!user && communityEventIds.length > 0,
+  const eventMatchesQuery = useQuery({
+    queryKey: ["event-share-matches", user?.id],
+    enabled: !!user && page === "events",
     queryFn: async () => {
-      const { data: rsvps, error } = await supabase
-        .from("event_rsvps")
-        .select("event_id,user_id")
-        .in("event_id", communityEventIds);
+      const { data: matches, error } = await supabase
+        .from("matches")
+        .select("id,user_a,user_b")
+        .or(`user_a.eq.${user!.id},user_b.eq.${user!.id}`)
+        .limit(50);
       if (error) throw error;
-      const userIds = [...new Set((rsvps ?? []).map((rsvp) => rsvp.user_id))];
-      if (!userIds.length) return [] as EventInterest[];
+      const partnerIds = (matches ?? []).map((match) =>
+        match.user_a === user!.id ? match.user_b : match.user_a,
+      );
+      if (!partnerIds.length) return [] as EventMatch[];
       const { data: memberProfiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id,display_name")
-        .in("id", userIds);
+        .select("id,display_name,town")
+        .in("id", partnerIds);
       if (profilesError) throw profilesError;
-      const names = new Map(
-        (memberProfiles ?? []).map((profile) => [profile.id, profile.display_name]),
-      );
-      return (rsvps ?? []).flatMap((rsvp) => {
-        const displayName = names.get(rsvp.user_id);
-        return displayName ? [{ ...rsvp, display_name: displayName }] : [];
+      const profiles = new Map((memberProfiles ?? []).map((profile) => [profile.id, profile]));
+      return (matches ?? []).flatMap((match) => {
+        const id = match.user_a === user!.id ? match.user_b : match.user_a;
+        const profile = profiles.get(id);
+        return profile
+          ? [{ id: match.id, display_name: profile.display_name, town: profile.town }]
+          : [];
       });
     },
   });
-  const profiles = useMemo(
-    () =>
-      user
-        ? (query.data ?? [])
-        : sampleProfiles.filter((profile) => !store.liked.includes(profile.id)),
-    [user, query.data, store.liked],
-  );
+  const profiles = useMemo(() => query.data ?? [], [query.data]);
   const visibleProfiles = useMemo(
     () => profiles.filter((profile) => town === "All" || profile.town === town),
     [profiles, town],
@@ -226,14 +207,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             : current,
         );
       }
-    } else {
-      update((value) =>
-        value.liked.includes(profile.id)
-          ? value
-          : { ...value, liked: [...value.liked, profile.id] },
-      );
-      setNotice("Like saved.");
-      window.setTimeout(() => setNotice(""), 1600);
     }
   };
 
@@ -261,30 +234,18 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
     void client.invalidateQueries({ queryKey: ["community-events"] });
   };
 
-  const toggleEventInterest = async (eventId: string, interested: boolean) => {
-    if (!user) return;
-    const result = interested
-      ? await supabase.from("event_rsvps").delete().eq("event_id", eventId).eq("user_id", user.id)
-      : await supabase.from("event_rsvps").insert({ event_id: eventId, user_id: user.id });
-    if (result.error) {
-      setNotice("We couldn't update your event interest. Please try again.");
-      return;
-    }
-    void client.invalidateQueries({ queryKey: ["event-interests", user.id] });
-    if (!interested) void captureProductEvent("event_interest");
+  const suggestEventToMatch = async (event: CommunityEvent, match: EventMatch) => {
+    await navigate({
+      to: "/chats",
+      search: {
+        matchId: match.id,
+        draft: `Would you like to go to ${event.title} at ${event.venue_name}, ${event.town}? It’s on ${new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(new Date(event.starts_at))}.`,
+      },
+    });
+    setSelectedEventToShare(null);
   };
 
-  const visibleEvents = user
-    ? (communityEventsQuery.data ?? []).map((event) => ({ ...event, sample: false }))
-    : events.map((event) => ({
-        ...event,
-        venue_name: "",
-        details: "",
-        starts_at: "",
-        sample: true,
-      }));
-  const eventInterests = eventInterestQuery.data ?? [];
-
+  const visibleEvents = communityEventsQuery.data ?? [];
   return (
     <main className={`mx-auto max-w-md bg-white ${panel === "nearby" ? "pb-0" : "pb-24"}`}>
       <header className="flex h-[58px] items-center justify-between px-5">
@@ -293,7 +254,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
         ) : (
           <Link to="/radar" className="flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />
-            <span className="text-[15px] font-semibold">Nearby</span>
+            <span className="text-[15px] font-semibold">Explore</span>
           </Link>
         )}
         <Link
@@ -319,7 +280,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             <TownMap
               town={town}
               profiles={visibleProfiles}
-              demo={!user}
               myLocation={myLocation}
               onSelectTown={openTown}
             />
@@ -349,7 +309,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
               animate={{ height: sheetOpen ? "min(76svh, 700px)" : 82 }}
               transition={{ type: "spring", stiffness: 300, damping: 34 }}
               className="absolute inset-x-0 bottom-0 z-[500] overflow-hidden rounded-t-[22px] border-t border-border bg-white shadow-float"
-              aria-label="Nearby options"
+              aria-label="Explore options"
             >
               <button
                 type="button"
@@ -361,9 +321,9 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                 <span className="mb-3 h-1 w-9 rounded-full bg-border" />
                 <span className="flex w-full items-center justify-between">
                   <span>
-                    <span className="block text-[15px] font-semibold">Explore nearby</span>
+                    <span className="block text-[15px] font-semibold">Explore</span>
                     <span className="block text-[11px] text-muted-foreground">
-                      People, crossed paths, games and events
+                      People, events and quick picks
                     </span>
                   </span>
                   <ChevronDown
@@ -399,9 +359,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                   </label>
                 </div>
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  {user
-                    ? "Map markers show towns, not anyone's exact location."
-                    : "Profiles grouped by town. Markers are not live locations."}
+                  Map markers show towns, not anyone's exact location.
                 </p>
                 <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto pb-2">
                   {visibleProfiles.slice(0, 12).map((profile) => {
@@ -413,24 +371,11 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                         className="w-[80px] shrink-0 text-left"
                       >
                         <div className="relative">
-                          {!user ? (
-                            <img
-                              src={photo(
-                                people.find((p) => p.id === profile.id) ?? people[0]!,
-                                true,
-                              )}
-                              alt=""
-                              loading="lazy"
-                              decoding="async"
-                              className="h-[84px] w-[80px] rounded-[14px] object-cover"
-                            />
-                          ) : (
-                            <ProfilePhoto
-                              name={profile.display_name}
-                              path={profile.photo_paths?.[0]}
-                              className="h-[84px] w-[80px] rounded-[14px] object-cover"
-                            />
-                          )}
+                          <ProfilePhoto
+                            name={profile.display_name}
+                            path={profile.photo_paths?.[0]}
+                            className="h-[84px] w-[80px] rounded-[14px] object-cover"
+                          />
                         </div>
                         <p className="mt-1.5 truncate text-[12px] font-semibold">
                           {profile.display_name} {profile.age}
@@ -446,64 +391,13 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                   )}
                 </div>
 
-                <div className="mt-4 border-t border-border pt-3.5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-[15px] font-semibold">Crossed paths</h2>
-                    <Link
-                      to="/crossed-paths"
-                      className="text-[12px] font-semibold text-primary hover:underline"
-                    >
-                      See all
-                    </Link>
-                  </div>
-                  <Link
-                    to="/crossed-paths"
-                    className="mt-2.5 flex items-center gap-3 rounded-2xl bg-secondary/45 p-3 transition-colors hover:bg-secondary"
-                  >
-                    {!user && (
-                      <img
-                        src="/editorial/amara-small.jpg"
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        className="h-12 w-12 shrink-0 rounded-full object-cover"
-                      />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[13px] font-semibold text-foreground">
-                        {user ? "No crossings recorded" : "Nadia, 26"}
-                      </span>
-                      <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                        {user
-                          ? "Crossed paths needs opt-in location to become available."
-                          : "Example of how a crossing could appear"}
-                      </span>
-                    </span>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  </Link>
-                </div>
-
-                <div className="mt-3 border-t border-border">
+                <div className="mt-4 border-t border-border">
                   {(
                     [
                       {
-                        to: "/random-friday",
-                        title: "Random Friday",
-                        detail: "A 30-second introduction",
-                        icon: Heart,
-                        enabled: isFeatureEnabled("randomFriday"),
-                      },
-                      {
-                        to: "/speed-dating",
-                        title: "Speed dating",
-                        detail: "Questions for an existing match",
-                        icon: Clock3,
-                        enabled: isFeatureEnabled("speedDatingMixer"),
-                      },
-                      {
                         to: "/this-or-that",
-                        title: "This or That",
-                        detail: "Five quick picks that say something about you",
+                        title: "Quick picks",
+                        detail: "Answer a few questions about yourself",
                         icon: Star,
                         enabled: true,
                       },
@@ -547,7 +441,7 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
           <div className="px-5 pb-2">
             <h1 className="text-[20px] font-semibold">Events</h1>
             <p className="mt-0.5 text-[12px] text-muted-foreground">
-              Meet people through shared interests
+              Suggest a local plan to someone you’ve matched with
             </p>
           </div>
           {notice && (
@@ -619,62 +513,29 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             <ul className="mt-3 space-y-2">
               {user && communityEventsQuery.isLoading ? (
                 <li className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
-                  Loading local events…
+                  Loading events…
                 </li>
               ) : (
                 visibleEvents.map((event) => {
-                  const attendees = eventInterests.filter(
-                    (interest) => interest.event_id === event.id,
-                  );
-                  const interested = user
-                    ? attendees.some((interest) => interest.user_id === user.id)
-                    : store.interestedEvents.includes(event.id);
                   return (
                     <li
                       key={event.id}
                       className="overflow-hidden rounded-[15px] border border-border bg-card shadow-float"
                     >
-                      {event.sample ? (
-                        <img loading="lazy" decoding="async"
-                          src={events.find((item) => item.id === event.id)?.image}
-                          alt=""
-                          className="h-[135px] w-full object-cover"
-                        />
-                      ) : (
-                        <div className="relative">
-                          <img loading="lazy" decoding="async"
-                            src={
-                              event.town === "Swakopmund" || event.town === "Walvis Bay"
-                                ? "/design/event-beach.jpg"
-                                : "/design/event-rooftop.jpg"
-                            }
-                            alt="Illustrative scenery for the event town"
-                            className="h-[135px] w-full object-cover"
-                          />
-                          <span className="absolute bottom-2 right-2 rounded-full bg-white/90 px-2 py-1 text-[10px] text-foreground">
-                            Illustrative photo
-                          </span>
-                        </div>
-                      )}
                       <div className="px-3 pt-3">
                         <div className="flex items-start justify-between gap-2">
                           <p className="text-sm font-semibold">{event.title}</p>
                         </div>
                         <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <Clock3 className="h-3.5 w-3.5" />
-                          {event.sample
-                            ? events.find((item) => item.id === event.id)?.when
-                            : new Intl.DateTimeFormat(undefined, {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              }).format(new Date(event.starts_at))}
+                          {new Intl.DateTimeFormat(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          }).format(new Date(event.starts_at))}
                         </p>
                         <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                           <MapPin className="h-3.5 w-3.5" />
-                          {event.sample
-                            ? events.find((item) => item.id === event.id)?.venue
-                            : event.venue_name}{" "}
-                          · {event.town}
+                          {event.venue_name} · {event.town}
                         </p>
                       </div>
                       {event.details && (
@@ -682,58 +543,34 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
                           {event.details}
                         </p>
                       )}
-                      <div className="flex items-center gap-2 px-3 pt-3">
-                        {event.sample ? (
-                          <span className="text-[11px] text-muted-foreground">
-                            Preview a shared plan
-                          </span>
-                        ) : attendees.length > 0 ? (
-                          <>
-                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-primary">
-                              <Users className="h-3.5 w-3.5" />
-                            </span>
-                            <span className="truncate text-[11px] text-muted-foreground">
-                              {attendees.map((attendee) => attendee.display_name).join(", ")}
-                            </span>
-                          </>
-                        ) : (
-                          <span className="text-[11px] text-muted-foreground">
-                            Be the first to show interest
-                          </span>
-                        )}
-                      </div>
+                      <p className="px-3 pt-3 text-[11px] text-muted-foreground">
+                        Suggest this plan privately to someone you’ve matched with.
+                      </p>
                       <button
                         type="button"
-                        aria-pressed={interested}
-                        onClick={() =>
-                          user
-                            ? void toggleEventInterest(event.id, interested)
-                            : update((s) => ({
-                                ...s,
-                                interestedEvents: interested
-                                  ? s.interestedEvents.filter((id) => id !== event.id)
-                                  : [...s.interestedEvents, event.id],
-                              }))
-                        }
-                        className={`mx-3 mb-3 mt-3 flex h-9 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 rounded-full text-xs font-semibold ${interested ? "bg-secondary text-foreground" : "bg-primary text-primary-foreground"}`}
+                        disabled={!user}
+                        onClick={() => {
+                          if (user) setSelectedEventToShare(event);
+                          else setNotice("Sign in and match with someone to suggest an event.");
+                        }}
+                        className="mx-3 mb-3 mt-3 flex h-10 w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground disabled:opacity-70"
                       >
-                        <Star className="h-3.5 w-3.5" />
-                        {interested ? "Interested" : "I’m interested"}
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {user ? "Suggest to a match" : "Sign in to suggest"}
                       </button>
                     </li>
                   );
                 })
               )}
-              {user && !communityEventsQuery.isLoading && visibleEvents.length === 0 && (
+              {!communityEventsQuery.isLoading && visibleEvents.length === 0 && (
                 <li className="rounded-2xl border border-border bg-card p-4 text-sm text-muted-foreground">
                   No upcoming events have been posted for this area yet.
                 </li>
               )}
             </ul>
             <p className="mt-2 text-[11px] text-muted-foreground">
-              {user
-                ? "Your interest is visible to members who can also see your profile. Choose public places and meet safely."
-                : "Your interest is saved on this device."}
+              Event suggestions are private between you and your match. Meet in public and make the
+              plan together.
             </p>
           </section>
         </>
@@ -744,11 +581,6 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
             <>
               <ProfilePhoto
                 name={selectedProfile.display_name}
-                src={
-                  !user
-                    ? photo(people.find((person) => person.id === selectedProfile.id)!)
-                    : undefined
-                }
                 path={selectedProfile.photo_paths?.[0]}
                 className="h-44 w-full rounded-xl object-cover"
               />
@@ -805,6 +637,51 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
           )}
         </DrawerContent>
       </Drawer>
+      <Drawer
+        open={!!selectedEventToShare}
+        onOpenChange={(open) => !open && setSelectedEventToShare(null)}
+      >
+        <DrawerContent className="mx-auto max-w-md bg-white px-5 pb-8">
+          <DrawerHeader className="px-0 text-left">
+            <DrawerTitle>Suggest this event to a match</DrawerTitle>
+          </DrawerHeader>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {selectedEventToShare?.title} · {selectedEventToShare?.town}. We’ll add it as a draft in
+            your private chat.
+          </p>
+          {eventMatchesQuery.isLoading ? (
+            <p className="mt-5 text-sm text-muted-foreground">Loading your matches…</p>
+          ) : eventMatchesQuery.isError ? (
+            <p role="alert" className="mt-5 text-sm text-destructive">
+              Your matches couldn’t load. Close this and try again.
+            </p>
+          ) : !eventMatchesQuery.data?.length ? (
+            <p className="mt-5 text-sm text-muted-foreground">
+              You need a mutual match before you can suggest an event.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-border">
+              {eventMatchesQuery.data.map((match) => (
+                <li key={match.id}>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      selectedEventToShare && void suggestEventToMatch(selectedEventToShare, match)
+                    }
+                    className="flex min-h-14 w-full items-center justify-between text-left"
+                  >
+                    <span>
+                      <span className="block text-sm font-semibold">{match.display_name}</span>
+                      <span className="text-xs text-muted-foreground">{match.town}</span>
+                    </span>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DrawerContent>
+      </Drawer>
     </main>
   );
 }
@@ -812,13 +689,11 @@ export function NearbyPage({ page = "nearby" }: { page?: "nearby" | "events" }) 
 function TownMap({
   town,
   profiles,
-  demo,
   myLocation,
   onSelectTown,
 }: {
   town: string;
   profiles: NearbyProfile[];
-  demo: boolean;
   myLocation: [number, number] | null;
   onSelectTown: (town: string) => void;
 }) {
@@ -889,7 +764,7 @@ function TownMap({
         L.marker(center, {
           icon,
           keyboard: true,
-          title: `${count} ${demo ? "sample " : ""}${count === 1 ? "profile" : "profiles"} in ${place} · town-level placement`,
+          title: `${count} ${count === 1 ? "profile" : "profiles"} in ${place} · town-level placement`,
         })
           .addTo(markers)
           .on("click", () => onSelectTown(place));
@@ -897,7 +772,7 @@ function TownMap({
       if (town === "All") instance.setView([-21.8, 17.2], 5);
       else if (townCenters[town]) instance.setView(townCenters[town], 10);
     });
-  }, [town, profiles, demo, onSelectTown, mapReady]);
+  }, [town, profiles, onSelectTown, mapReady]);
   useEffect(() => {
     if (!map.current || !myLocation) return;
     map.current.setView(myLocation, 13);

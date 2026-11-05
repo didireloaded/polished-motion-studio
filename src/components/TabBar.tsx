@@ -4,34 +4,29 @@ import { Compass, MapPin, NotebookText, MessageCircle, UserRound } from "lucide-
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BrandLogo } from "./BrandLogo";
-import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
-import { useStore } from "@/lib/namlink";
 import { triggerHaptic } from "@/lib/icebreakers";
 
 const tabs = [
-  { to: "/", label: "Discover", icon: Compass },
-  { to: "/radar", label: "Nearby", icon: MapPin },
-  { to: "/posts", label: "Posts", icon: NotebookText },
+  { to: "/", label: "Home", icon: Compass },
+  { to: "/radar", label: "Explore", icon: MapPin },
+  { to: "/posts", label: "Community", icon: NotebookText },
   { to: "/chats", label: "Chats", icon: MessageCircle },
   { to: "/you", label: "You", icon: UserRound },
 ] as const;
 
-export function TabBar() {
+export function TabBar({ userId }: { userId: string }) {
   const { pathname } = useLocation();
-  const { user } = useSession();
-  const store = useStore();
   const queryClient = useQueryClient();
 
   const unreadQuery = useQuery({
-    queryKey: ["unread-notifications-count", user?.id],
-    enabled: !!user,
+    queryKey: ["unread-notifications-count", userId],
     staleTime: 20_000,
     queryFn: async () => {
       const { count, error } = await supabase
         .from("notifications")
         .select("id", { count: "exact", head: true })
-        .eq("user_id", user!.id)
+        .eq("user_id", userId)
         .is("read_at", null);
       if (error) return 0;
       return count ?? 0;
@@ -39,20 +34,19 @@ export function TabBar() {
   });
 
   useEffect(() => {
-    if (!user) return;
     const channel = supabase
-      .channel(`tabbar-unread-${user.id}`)
+      .channel(`tabbar-unread-${userId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "notifications",
-          filter: `user_id=eq.${user.id}`,
+          filter: `user_id=eq.${userId}`,
         },
         () => {
           void queryClient.invalidateQueries({
-            queryKey: ["unread-notifications-count", user.id],
+            queryKey: ["unread-notifications-count", userId],
           });
         },
       )
@@ -60,10 +54,9 @@ export function TabBar() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [queryClient, user]);
+  }, [queryClient, userId]);
 
-  const demoUnreadCount = store.matches.filter((id) => !(store.chats[id]?.length ?? 0)).length;
-  const chatsBadgeCount = user ? (unreadQuery.data ?? 0) : demoUnreadCount;
+  const chatsBadgeCount = unreadQuery.data ?? 0;
 
   if (
     [

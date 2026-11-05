@@ -4,7 +4,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Bell, Heart, MessageCircle, Reply } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
-import { people, photo, timeAgo, useStore } from "@/lib/namlink";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({ meta: [{ title: "Notifications — Mutal" }] }),
@@ -84,8 +83,6 @@ function Notifications() {
         <p role="status" className="px-5 py-8 text-sm text-muted-foreground">
           Loading notifications…
         </p>
-      ) : !user ? (
-        <PreviewNotifications />
       ) : list.isError ? (
         <p role="alert" className="px-5 py-8 text-sm text-muted-foreground">
           Notifications couldn't load. Please try again.
@@ -129,51 +126,5 @@ function Notifications() {
         </ul>
       )}
     </main>
-  );
-}
-
-function PreviewNotifications() {
-  const store = useStore();
-  const matches = people.filter((person) => store.matches.includes(person.id));
-  return (
-    <ul className="divide-y divide-border px-5">
-      {matches.map((person) => {
-        const message = store.chats[person.id]?.filter((entry) => entry.from === "them").at(-1);
-        return (
-          <li key={person.id}>
-            <Link
-              to="/chats"
-              search={{ matchId: person.id }}
-              className="flex items-center gap-3 py-4"
-            >
-              <img
-                src={photo(person, true)}
-                alt=""
-                loading="lazy"
-                className="h-12 w-12 shrink-0 rounded-full object-cover"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">
-                  {message
-                    ? `${person.name} sent you a message`
-                    : `You matched with ${person.name}`}
-                </p>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {message?.text ?? "Say hello when you're ready."}
-                </p>
-              </div>
-              {message && (
-                <span className="text-[11px] text-muted-foreground">{timeAgo(message.at)}</span>
-              )}
-            </Link>
-          </li>
-        );
-      })}
-      {!matches.length && (
-        <li className="py-10 text-center text-sm text-muted-foreground">
-          Your new matches and messages will appear here.
-        </li>
-      )}
-    </ul>
   );
 }

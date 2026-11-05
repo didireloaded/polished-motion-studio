@@ -203,7 +203,10 @@ function AuthPage() {
         {mode === "in" ? "New here? Create an account" : "Have an account? Sign in"}
       </button>
       <p className="mt-6 text-center text-[11px] leading-4 text-muted-foreground">
-        By continuing, you agree to our Terms of Service and Privacy Policy.
+        <Link to="/safety" className="font-semibold text-primary">
+          Safety and privacy
+        </Link>{" "}
+        · Please read before creating an account.
       </p>
     </main>
   );

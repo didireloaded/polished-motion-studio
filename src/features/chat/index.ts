@@ -1,10 +1,5 @@
 export { ConversationOpenerStudio } from "@/components/ConversationOpenerStudio";
 export {
-  EmojiStoryDecodeCard,
-  FirstDateDilemmaCard,
-  TwoTruthsCard,
-} from "@/components/SocialGames";
-export {
   fallbackConversationOpener,
   OPENER_TONE_LABELS,
   type OpenerTone,

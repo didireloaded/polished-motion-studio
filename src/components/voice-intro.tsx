@@ -27,22 +27,6 @@ const quietWave = Array.from(
   (_, i) => 0.16 + (Math.sin(i * 1.9) + 1) * 0.19,
 );
 
-export function SampleVoiceIntro() {
-  return (
-    <div className="py-1">
-      <p className="text-xs font-semibold">Voice intro</p>
-      <div className="flex items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/40 text-white">
-          <Play className="ml-0.5 h-4 w-4" fill="currentColor" />
-        </span>
-        <Waveform levels={quietWave} />
-        <span className="text-[10px] text-muted-foreground">—</span>
-      </div>
-      <p className="text-[10px] text-muted-foreground">No voice intro recorded yet.</p>
-    </div>
-  );
-}
-
 export function VoiceIntroPlayer({ path }: { path: string }) {
   const [url, setUrl] = useState("");
   const [unavailable, setUnavailable] = useState(false);

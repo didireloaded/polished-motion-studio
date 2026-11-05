@@ -6,7 +6,8 @@ import {
   normalizeOrderedPair,
   saveProfileGameCardSchema,
   submitChatGameChoiceSchema,
-  tallyPollVotes,
+  pollCountsSchema,
+  tallyPollCounts,
 } from "./social-backend";
 
 describe("Lovable Cloud social backend helpers & schemas", () => {
@@ -59,12 +60,27 @@ describe("Lovable Cloud social backend helpers & schemas", () => {
   });
 
   it("tallies poll votes into counts and percentages accurately", () => {
-    const result = tallyPollVotes(
-      [{ choice: "green" }, { choice: "green" }, { choice: "green" }, { choice: "red" }],
+    const result = tallyPollCounts(
+      [
+        { choice: "green", votes: 3 },
+        { choice: "red", votes: 1 },
+      ],
       ["green", "red"],
     );
     expect(result.total).toBe(4);
     expect(result.counts).toEqual({ green: 3, red: 1 });
     expect(result.percentages).toEqual({ green: 75, red: 25 });
+  });
+  it("handles aggregate counts without expanding individual votes or accepting identifiers", () => {
+    const rows = pollCountsSchema.parse([
+      { choice: "green", votes: "100000000" },
+      { choice: "red", votes: 1 },
+    ]);
+    expect(tallyPollCounts(rows, ["green", "red"]).total).toBe(100000001);
+    expect(
+      pollCountsSchema.safeParse([{ choice: "green", votes: 1, user_id: "private-member" }])
+        .success,
+    ).toBe(false);
+    expect(pollCountsSchema.safeParse([{ choice: "green", votes: -1 }]).success).toBe(false);
   });
 });
