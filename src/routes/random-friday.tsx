@@ -3,13 +3,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Copy, RotateCcw, Share2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { NearbyFeatureShell } from "@/components/NearbyFeatureShell";
-import { DemoNotice } from "@/components/community";
 import { useMyProfile, useSession } from "@/hooks/use-session";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { interests, people, towns, useStore } from "@/lib/namlink";
+import { interests, towns } from "@/lib/namlink";
 import { randomFridayDicePrompts } from "@/lib/random-friday";
 import {
-  fallbackRandomFridayPitch,
   formatShareablePitchCard,
   MAX_PITCH_CUSTOM_NOTE_LENGTH,
   PITCH_STYLE_LABELS,
@@ -28,7 +26,6 @@ export const Route = createFileRoute("/random-friday")({
 const DURATION = 30;
 
 function RandomFridayPage() {
-  const store = useStore();
   const { user } = useSession();
   const myProfile = useMyProfile(user?.id);
 
@@ -36,40 +33,18 @@ function RandomFridayPage() {
   const [seconds, setSeconds] = useState(DURATION);
   const [running, setRunning] = useState(false);
 
-  const defaultProfile = useMemo<PitchProfileInput>(() => {
-    if (myProfile.data) {
-      return {
-        displayName: myProfile.data.display_name || "Alex",
-        age: myProfile.data.age || 26,
-        town: myProfile.data.town || "Windhoek",
-        intent: myProfile.data.intent || "A relationship",
-        tags: myProfile.data.tags?.length ? myProfile.data.tags : ["Coffee", "Road trips"],
-        bio: myProfile.data.bio || "",
-        seeking: myProfile.data.seeking || "",
-      };
-    }
-    if (store.profile.name.trim()) {
-      return {
-        displayName: store.profile.name,
-        age: store.profile.age || 25,
-        town: store.profile.town || "Windhoek",
-        intent: store.profile.intent || "A relationship",
-        tags: store.profile.tags.length ? store.profile.tags : ["Coffee", "Road trips"],
-        bio: store.profile.bio || "",
-        seeking: "",
-      };
-    }
-    const sample = people[0]!;
-    return {
-      displayName: sample.name,
-      age: sample.age,
-      town: sample.town,
-      intent: sample.intent,
-      tags: sample.tags,
-      bio: sample.bio,
-      seeking: sample.answer,
-    };
-  }, [myProfile.data, store.profile]);
+  const defaultProfile = useMemo<PitchProfileInput>(
+    () => ({
+      displayName: myProfile.data?.display_name ?? "",
+      age: myProfile.data?.age ?? 18,
+      town: myProfile.data?.town ?? "",
+      intent: myProfile.data?.intent ?? "",
+      tags: myProfile.data?.tags ?? [],
+      bio: myProfile.data?.bio ?? "",
+      seeking: myProfile.data?.seeking ?? "",
+    }),
+    [myProfile.data],
+  );
 
   const [displayName, setDisplayName] = useState(defaultProfile.displayName);
   const [age, setAge] = useState(defaultProfile.age);
@@ -118,10 +93,10 @@ function RandomFridayPage() {
   }, [running]);
 
   const currentProfileInput: PitchProfileInput = {
-    displayName: displayName.trim() || "Alex",
-    age: Number(age) || 25,
-    town: town || "Windhoek",
-    intent: intent || "A relationship",
+    displayName: displayName.trim(),
+    age: Number(age),
+    town,
+    intent,
     tags: selectedTags,
     bio: bio.trim(),
     seeking: defaultProfile.seeking,
@@ -129,46 +104,28 @@ function RandomFridayPage() {
 
   const generatePitch = async () => {
     triggerHaptic(10);
+    if (!user || !myProfile.data) {
+      setShareFeedback("Complete your profile before creating a pitch.");
+      return;
+    }
     const request = ++draftRequest.current;
     setGenerating(true);
     setShareFeedback("");
     try {
-      if (user) {
-        const res = await draftRandomFridayPitch({
-          data: {
-            style,
-            ...(focusHint.trim() ? { focusHint: focusHint.trim() } : {}),
-            profileOverride: currentProfileInput,
-          },
-        });
-        if (request === draftRequest.current) setPitchResult(res);
-      } else {
-        const draft = fallbackRandomFridayPitch(
-          currentProfileInput,
+      const res = await draftRandomFridayPitch({
+        data: {
           style,
-          focusHint.trim() || undefined,
-        );
-        if (request === draftRequest.current)
-          setPitchResult({
-            source: "fallback",
-            notice: "Preview introduction · sign in to tailor one from your profile.",
-            draft,
-          });
-      }
+          ...(focusHint.trim() ? { focusHint: focusHint.trim() } : {}),
+          profileOverride: currentProfileInput,
+        },
+      });
+      if (request === draftRequest.current) setPitchResult(res);
       setRunning(false);
       setSeconds(DURATION);
     } catch {
-      const draft = fallbackRandomFridayPitch(
-        currentProfileInput,
-        style,
-        focusHint.trim() || undefined,
-      );
-      if (request === draftRequest.current)
-        setPitchResult({
-          source: "fallback",
-          notice: "A starting point from your profile. Review it before sharing.",
-          draft,
-        });
+      if (request === draftRequest.current) {
+        setShareFeedback("We couldn't create your pitch. Please try again.");
+      }
     } finally {
       setGenerating(false);
     }
@@ -215,7 +172,6 @@ function RandomFridayPage() {
 
   return (
     <NearbyFeatureShell title="Random Friday">
-      {!user && <DemoNotice />}
       <div className="px-5 pb-12 pt-8">
         <h2 className="text-[20px] font-semibold leading-7 tracking-[-0.02em]">
           A quick hello, in your own words.

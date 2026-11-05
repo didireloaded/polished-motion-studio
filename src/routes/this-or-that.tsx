@@ -6,7 +6,6 @@ import { ProfilePhoto } from "@/components/community";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { triggerHaptic } from "@/lib/icebreakers";
-import { update, useStore } from "@/lib/namlink";
 import {
   getMyDailyQuickPickServerFn,
   getSharedDailyPickCandidatesServerFn,
@@ -21,10 +20,8 @@ export const Route = createFileRoute("/this-or-that")({
 
 function ThisOrThatPage() {
   const { user } = useSession();
-  const store = useStore();
   const navigate = useNavigate({ from: "/this-or-that" });
   const question = getDailyThisOrThatQuestion();
-  const guestChoice = store.profile.choices[question.id];
   const [choice, setChoice] = useState<"A" | "B" | null>(null);
   const [candidates, setCandidates] = useState<
     Awaited<ReturnType<typeof getSharedDailyPickCandidatesServerFn>>
@@ -39,7 +36,6 @@ function ThisOrThatPage() {
   useEffect(() => {
     let active = true;
     if (!user) {
-      setChoice(guestChoice === "A" || guestChoice === "B" ? guestChoice : null);
       setLoading(false);
       return;
     }
@@ -57,7 +53,7 @@ function ThisOrThatPage() {
     return () => {
       active = false;
     };
-  }, [user, guestChoice, question.id]);
+  }, [user, question.id]);
 
   useEffect(() => {
     let active = true;
@@ -82,20 +78,12 @@ function ThisOrThatPage() {
   }, [user, choice, question.id]);
 
   const choose = async (nextChoice: "A" | "B") => {
-    if (saving) return;
+    if (!user || saving) return;
     setSaving(true);
     setNotice("");
     try {
       if (user) {
         await saveDailyQuickPickServerFn({ data: { questionId: question.id, choice: nextChoice } });
-      } else {
-        update((current) => ({
-          ...current,
-          profile: {
-            ...current.profile,
-            choices: { ...current.profile.choices, [question.id]: nextChoice },
-          },
-        }));
       }
       setChoice(nextChoice);
       triggerHaptic("like");
@@ -249,11 +237,6 @@ function ThisOrThatPage() {
               </button>
             )}
           </section>
-        )}
-        {!user && (
-          <p className="mt-5 text-xs text-muted-foreground">
-            Sample picks stay on this device until you create an account.
-          </p>
         )}
       </div>
     </NearbyFeatureShell>

@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Check, MessageCircle, RefreshCw, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import {
-  fallbackConversationOpener,
   MAX_OPENER_NOTE_LENGTH,
   OPENER_TONE_LABELS,
   OPENER_TONES,
@@ -18,14 +17,12 @@ export function ConversationOpenerStudio({
   matchId,
   matchName,
   profile,
-  live,
   onUseOpener,
   onClose,
 }: {
   matchId: string;
   matchName: string;
   profile: OpenerProfileInput;
-  live: boolean;
   onUseOpener: (openerText: string) => void;
   onClose: () => void;
 }) {
@@ -41,23 +38,18 @@ export function ConversationOpenerStudio({
     setNotice("");
     triggerHaptic("like");
     try {
-      if (live) {
-        const res = await runDraftServerFn({
-          data: {
-            matchId,
-            tone: selectedTone,
-            ...(customNote.trim() ? { customNote: customNote.trim() } : {}),
-          },
-        });
-        setDraft(res.draft);
-        if (res.notice) setNotice(res.notice);
-      } else {
-        setDraft(fallbackConversationOpener(profile, selectedTone, customNote));
-        setNotice("Sample preview · Sign in to create a personal opening line.");
-      }
+      const res = await runDraftServerFn({
+        data: {
+          matchId,
+          tone: selectedTone,
+          ...(customNote.trim() ? { customNote: customNote.trim() } : {}),
+        },
+      });
+      setDraft(res.draft);
+      if (res.notice) setNotice(res.notice);
     } catch {
-      setDraft(fallbackConversationOpener(profile, selectedTone, customNote));
-      setNotice("Suggestions are unavailable right now — showing a profile-based starter.");
+      setDraft(null);
+      setNotice("Suggestions are unavailable right now. Please try again.");
     } finally {
       setBusy(false);
     }

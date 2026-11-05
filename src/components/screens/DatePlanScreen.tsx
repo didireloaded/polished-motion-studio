@@ -4,15 +4,12 @@ import { useState } from "react";
 import { ArrowLeft, CalendarDays, Heart, MapPin } from "lucide-react";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
-import { people } from "@/lib/namlink";
 
 export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
   const { user } = useSession();
   const client = useQueryClient();
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
-  const [sampleTime, setSampleTime] = useState(0);
-  const [sampleConfirmed, setSampleConfirmed] = useState(false);
   const query = useQuery({
     queryKey: ["date-plan-screen", user?.id, matchId],
     enabled: !!user && !!matchId,
@@ -38,10 +35,8 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
       return { plan, match, name: profile?.display_name ?? "your match" };
     },
   });
-  const sample = !user;
   const plan = query.data?.plan;
-  const previewPerson = people.find((person) => person.id === matchId) ?? people[13]!;
-  const name = sample ? previewPerson.name : (query.data?.name ?? "your match");
+  const name = query.data?.name ?? "your match";
   const amUserA = query.data?.match.user_a === user?.id;
   const myConfirmed = plan ? (amUserA ? plan.confirmed_a : plan.confirmed_b) : false;
   const theirConfirmed = plan ? (amUserA ? plan.confirmed_b : plan.confirmed_a) : false;
@@ -101,69 +96,32 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
         <p className="mt-3 text-sm font-semibold">You and {name}</p>
         <p className="text-xs text-muted-foreground">Planning something together</p>
       </div>
-      {sample || plan ? (
-        <div className="mx-5 mt-6 overflow-hidden rounded-[15px] border border-border shadow-float">
-          <img
-            src="/design/event-rooftop.jpg"
-            alt="A rooftop venue at sunset"
-            loading="lazy"
-            decoding="async"
-            className="h-[155px] w-full object-cover"
-          />
-          <div className="p-4">
-            <h2 className="text-[16px] font-semibold">
-              {sample ? "Drinks at The Stellenbosch" : plan!.activity}
-            </h2>
-            <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <MapPin className="h-4 w-4" />{" "}
-              {sample
-                ? "Windhoek, Khomas"
-                : [plan!.venue_name, plan!.town].filter(Boolean).join(" · ")}
-            </p>
-            <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <CalendarDays className="h-4 w-4" />{" "}
-              {sample
-                ? `${sampleTime === 0 ? "Friday at 18:00" : "Saturday at 17:00"}`
-                : plan!.scheduled_at
-                  ? new Intl.DateTimeFormat(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    }).format(new Date(plan!.scheduled_at))
-                  : "Time to be agreed"}
-            </p>
-            {plan?.note && <p className="mt-3 text-xs leading-5">{plan.note}</p>}
-            {sample && (
-              <div className="mt-4 grid grid-cols-2 gap-2">
-                {["Friday · 18:00", "Saturday · 17:00"].map((time, index) => (
-                  <button
-                    key={time}
-                    type="button"
-                    aria-pressed={sampleTime === index}
-                    onClick={() => {
-                      setSampleTime(index);
-                      setSampleConfirmed(false);
-                    }}
-                    className={`rounded-xl border px-2 py-2.5 text-xs ${sampleTime === index ? "border-primary bg-primary/5 text-primary" : "border-border"}`}
-                  >
-                    {time}
-                  </button>
-                ))}
-              </div>
-            )}
-            <p className="mt-4 text-xs text-primary">
-              {sample
-                ? sampleConfirmed
-                  ? `You’re in · waiting for ${name}`
-                  : "Choose a time together"
-                : plan!.confirmed_a && plan!.confirmed_b
-                  ? "Confirmed by both of you"
-                  : myConfirmed
-                    ? "You're in · waiting for your match"
-                    : theirConfirmed
-                      ? `${name} is in · your turn to confirm`
-                      : "Tentative plan · waiting for both of you"}
-            </p>
-          </div>
+      {plan ? (
+        <div className="mx-5 mt-6 rounded-[15px] border border-border bg-card p-4">
+          <h2 className="text-[16px] font-semibold">{plan.activity}</h2>
+          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <MapPin className="h-4 w-4" />{" "}
+            {[plan.venue_name, plan.town].filter(Boolean).join(" · ")}
+          </p>
+          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <CalendarDays className="h-4 w-4" />{" "}
+            {plan.scheduled_at
+              ? new Intl.DateTimeFormat(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                }).format(new Date(plan.scheduled_at))
+              : "Time to be agreed"}
+          </p>
+          {plan.note && <p className="mt-3 text-xs leading-5">{plan.note}</p>}
+          <p className="mt-4 text-xs text-primary">
+            {plan.confirmed_a && plan.confirmed_b
+              ? "Confirmed by both of you"
+              : myConfirmed
+                ? "You're in · waiting for your match"
+                : theirConfirmed
+                  ? `${name} is in · your turn to confirm`
+                  : "Tentative plan · waiting for both of you"}
+          </p>
         </div>
       ) : (
         <div className="mx-5 mt-8 rounded-[15px] bg-secondary p-5 text-center">
@@ -188,16 +146,6 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
           {notice}
         </p>
       )}
-      {sample && (
-        <button
-          type="button"
-          onClick={() => setSampleConfirmed(true)}
-          disabled={sampleConfirmed}
-          className="mx-5 mt-6 flex h-11 w-[calc(100%-2.5rem)] items-center justify-center rounded-full bg-primary text-sm font-semibold text-white disabled:opacity-60"
-        >
-          {sampleConfirmed ? "You’re in" : "I’m in"}
-        </button>
-      )}
       {user && plan && !myConfirmed && (
         <button
           type="button"
@@ -213,7 +161,7 @@ export function DatePlanScreen({ matchId }: { matchId?: string | undefined }) {
         search={{ matchId }}
         className="mx-5 mt-6 flex h-11 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white"
       >
-        {sample ? "Explore chats" : "Open chat to plan together"}
+        Open chat to plan together
       </Link>
     </main>
   );

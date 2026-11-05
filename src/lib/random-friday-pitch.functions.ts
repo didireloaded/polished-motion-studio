@@ -53,34 +53,27 @@ export const draftRandomFridayPitch = createServerFn({ method: "POST" })
     let profileInput: PitchProfileInput | null = data.profileOverride ?? null;
 
     if (!profileInput) {
-      const { data: dbProfile } = await supabase
+      const { data: dbProfile, error } = await supabase
         .from("profiles")
         .select("display_name,age,town,intent,tags,bio,seeking")
         .eq("id", userId)
         .maybeSingle();
+      if (error) throw error;
+      if (!dbProfile) throw new Error("Create your profile before generating a pitch.");
 
-      if (dbProfile) {
-        profileInput = {
-          displayName: dbProfile.display_name ?? "Member",
-          age: dbProfile.age ?? 25,
-          town: dbProfile.town ?? "Windhoek",
-          intent: dbProfile.intent ?? "A relationship",
-          tags: dbProfile.tags ?? [],
-          bio: dbProfile.bio ?? "",
-          seeking: dbProfile.seeking ?? "",
-        };
-      }
+      profileInput = {
+        displayName: dbProfile.display_name,
+        age: dbProfile.age,
+        town: dbProfile.town,
+        intent: dbProfile.intent,
+        tags: dbProfile.tags ?? [],
+        bio: dbProfile.bio ?? "",
+        seeking: dbProfile.seeking ?? "",
+      };
     }
 
-    const resolvedProfile: PitchProfileInput = profileInput ?? {
-      displayName: "Member",
-      age: 25,
-      town: "Windhoek",
-      intent: "A relationship",
-      tags: ["Coffee", "Road trips"],
-      bio: "",
-      seeking: "",
-    };
+    if (!profileInput) throw new Error("Create your profile before generating a pitch.");
+    const resolvedProfile = profileInput;
 
     const fallback = (notice: string): RandomFridayPitchResult => ({
       source: "fallback",

@@ -3,6 +3,8 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useLocation,
+  useNavigate,
   useRouter,
   HeadContent,
   Scripts,
@@ -11,7 +13,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { MotionConfig } from "framer-motion";
 import { TabBar } from "../components/TabBar";
-import { PreviewNotice } from "../components/PreviewNotice";
+import { useSession } from "../hooks/use-session";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -127,6 +129,17 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { user, ready } = useSession();
+  const publicRoute =
+    pathname === "/welcome" || pathname === "/auth" || pathname === "/.lovable/oauth/consent";
+
+  useEffect(() => {
+    if (ready && !user && !publicRoute) {
+      void navigate({ to: "/welcome", replace: true });
+    }
+  }, [navigate, publicRoute, ready, user]);
 
   useEffect(() => {
     void startCrashReporting();
@@ -137,9 +150,17 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <MotionConfig reducedMotion="user">
-        <Outlet />
-        <TabBar />
-        <PreviewNotice />
+        {publicRoute || (ready && user) ? (
+          <Outlet />
+        ) : (
+          <main
+            className="mx-auto flex min-h-svh max-w-md items-center justify-center px-6 text-sm text-muted-foreground"
+            aria-busy="true"
+          >
+            Checking your account…
+          </main>
+        )}
+        {ready && user && !publicRoute && <TabBar userId={user.id} />}
       </MotionConfig>
     </QueryClientProvider>
   );

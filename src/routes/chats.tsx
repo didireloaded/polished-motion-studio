@@ -13,14 +13,14 @@ import {
   Send,
   Sparkles,
 } from "lucide-react";
-import { people, photo, update, useStore, timeAgo } from "@/lib/namlink";
+
 import { PageHeader } from "@/components/TabBar";
 import { useSession } from "@/hooks/use-session";
 import { supabase } from "@/integrations/supabase/client";
 import { captureProductEvent } from "@/lib/telemetry";
 import { isFeatureEnabled } from "@/lib/feature-flags";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DemoNotice, ProfilePhoto, SafetyActions } from "@/components/community";
+import { ProfilePhoto, SafetyActions } from "@/components/community";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { suggestDatePlan } from "@/lib/date-suggestion.functions";
 import {
@@ -30,16 +30,6 @@ import {
   type DateSuggestion,
 } from "@/lib/date-suggestions";
 import { generateIcebreakers, localDateSpots, triggerHaptic } from "@/lib/icebreakers";
-import {
-  EmojiStoryDecodeCard,
-  FirstDateDilemmaCard,
-  TwoTruthsCard,
-} from "@/components/SocialGames";
-import {
-  getEmojiStoryForPerson,
-  getFirstDateDilemmaForTown,
-  getTwoTruthsForPerson,
-} from "@/lib/social-games";
 
 const ConversationOpenerStudio = lazy(() =>
   import("@/components/ConversationOpenerStudio").then((m) => ({
@@ -68,160 +58,31 @@ export const Route = createFileRoute("/chats")({
 });
 
 function Chats() {
-  const s = useStore();
   const { user, ready } = useSession();
   const { matchId, draft } = Route.useSearch();
-  const [openId, setOpenId] = useState<string | null>(matchId ?? null);
-  useEffect(() => {
-    if (matchId) setOpenId(matchId);
-  }, [matchId]);
-  const matches = people.filter((p) => s.matches.includes(p.id));
-  const list = matches;
-  const newMatches = list.filter((person) => !s.chats[person.id]?.length);
-  const conversations = list
-    .filter((person) => s.chats[person.id]?.length)
-    .sort((a, b) => (s.chats[b.id]?.at(-1)?.at ?? 0) - (s.chats[a.id]?.at(-1)?.at ?? 0));
-  const person = list.find((p) => p.id === openId) ?? people.find((p) => p.id === openId);
-
-  if (!ready)
+  if (!ready || !user)
     return (
       <main className="mx-auto max-w-md pb-28">
         <PageHeader title="Chats" />
         <ChatsListSkeleton />
       </main>
     );
-  if (user)
-    return (
-      <LiveChats
-        key={user.id}
-        userId={user.id}
-        {...(matchId ? { initialMatchId: matchId } : {})}
-        {...(draft ? { initialDraft: draft } : {})}
-      />
-    );
-
   return (
-    <main className="mx-auto max-w-md pb-28">
-      <AnimatePresence mode="wait">
-        {!person ? (
-          <motion.div
-            key="list"
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -30 }}
-          >
-            <PageHeader title="Chats" />
-            <DemoNotice />
-            {list.length === 0 ? (
-              <div className="mx-5 flex flex-col items-center rounded-3xl bg-card p-10 text-center">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.82 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ type: "spring", stiffness: 320, damping: 24 }}
-                  className="rounded-full bg-primary/15 p-4 text-primary"
-                >
-                  <MessagesSquare className="h-7 w-7" />
-                </motion.div>
-                <p className="mt-4 font-semibold">No chats yet</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Chats appear after you both choose to connect.
-                </p>
-                <Link
-                  to="/"
-                  className="mt-5 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground shadow-glow"
-                >
-                  Discover people
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between px-5 pb-2">
-                  <h2 className="text-sm font-semibold">New matches</h2>
-                </div>
-                <div className="no-scrollbar flex gap-4 overflow-x-auto px-5 pb-4">
-                  {newMatches.map((p, i) => (
-                    <motion.button
-                      key={p.id}
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", delay: i * 0.06 }}
-                      onClick={() => setOpenId(p.id)}
-                      className="shrink-0 text-center"
-                    >
-                      <img
-                        loading="lazy"
-                        decoding="async"
-                        src={photo(p, true)}
-                        alt=""
-                        className="h-16 w-16 rounded-full border-2 border-primary object-cover p-0.5"
-                      />
-                      <p className="mt-1 text-xs">{p.name}</p>
-                    </motion.button>
-                  ))}
-                </div>
-                <h2 className="px-5 pb-1 text-sm font-semibold">Messages</h2>
-                <ul className="divide-y divide-border px-3">
-                  {conversations.map((p, i) => {
-                    const last = s.chats[p.id]?.at(-1);
-                    return (
-                      <motion.li
-                        key={p.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + i * 0.05 }}
-                      >
-                        <button
-                          onClick={() => setOpenId(p.id)}
-                          className="flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-colors hover:bg-card"
-                        >
-                          <img
-                            loading="lazy"
-                            decoding="async"
-                            src={photo(p, true)}
-                            alt=""
-                            className="h-12 w-12 rounded-full object-cover"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="flex justify-between">
-                              <p className="font-semibold">{p.name}</p>
-                              <span className="text-xs text-muted-foreground">
-                                {last
-                                  ? timeAgo(last.at)
-                                  : ["10:24", "09:18", "Yesterday", "Yesterday"][i % 4]}
-                              </span>
-                            </div>
-                            <p className="truncate text-sm text-muted-foreground">
-                              {last ? last.text : "You both chose to connect. Say hello."}
-                            </p>
-                          </div>
-                        </button>
-                      </motion.li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
-          </motion.div>
-        ) : (
-          <Thread
-            key={person.id}
-            id={person.id}
-            {...(draft ? { initialDraft: draft } : {})}
-            onBack={() => setOpenId(null)}
-          />
-        )}
-      </AnimatePresence>
-    </main>
+    <LiveChats
+      key={user.id}
+      userId={user.id}
+      {...(matchId ? { initialMatchId: matchId } : {})}
+      {...(draft ? { initialDraft: draft } : {})}
+    />
   );
 }
-
-type MatchRow = { id: string; user_a: string; user_b: string; created_at: string };
 
 function toDateTimeLocal(value: string) {
   const date = new Date(value);
   const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
   return local.toISOString().slice(0, 16);
 }
+type MatchRow = { id: string; user_a: string; user_b: string; created_at: string };
 type MessageRow = {
   id: string;
   match_id: string;
@@ -264,21 +125,6 @@ function LiveChats({
   const [listRealtimeConnected, setListRealtimeConnected] = useState(false);
   const matchesQuery = useQuery({
     queryKey: ["matches", userId],
-    initialData: () => {
-      if (typeof window === "undefined") return undefined;
-      try {
-        const raw = window.localStorage.getItem(`mutal:matches:v1:${userId}`);
-        return raw
-          ? (JSON.parse(raw) as {
-              matches: MatchRow[];
-              profiles: ChatProfile[];
-              messages: MessageRow[];
-            })
-          : undefined;
-      } catch {
-        return undefined;
-      }
-    },
     queryFn: async () => {
       const { data, error } = await supabase
         .from("matches")
@@ -294,13 +140,6 @@ function LiveChats({
           profiles: [] as ChatProfile[],
           messages: [] as MessageRow[],
         };
-        if (typeof window !== "undefined") {
-          try {
-            window.localStorage.setItem(`mutal:matches:v1:${userId}`, JSON.stringify(emptyPayload));
-          } catch {
-            // ignore storage quota errors
-          }
-        }
         return emptyPayload;
       }
       const [profiles, messages] = await Promise.all([
@@ -325,13 +164,6 @@ function LiveChats({
         profiles: profiles.data as ChatProfile[],
         messages: messages.data as MessageRow[],
       };
-      if (typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(`mutal:matches:v1:${userId}`, JSON.stringify(payload));
-        } catch {
-          // ignore storage quota errors
-        }
-      }
       return payload;
     },
     refetchInterval: listRealtimeConnected ? false : 30000,
@@ -893,7 +725,6 @@ function LiveThread({
                 bio: person.bio ?? "",
                 seeking: "",
               }}
-              live={true}
               onUseOpener={(openerText) => {
                 setText(openerText);
                 setShowOpenerStudio(false);
@@ -915,29 +746,21 @@ function LiveThread({
           </button>
         )}
         {showPrompts && (
-          <div className="mb-4 space-y-2.5">
-            <FirstDateDilemmaCard
-              partnerName={person.display_name}
-              dilemma={getFirstDateDilemmaForTown(person.town, person.id)}
-              onUseReply={(replyDraft) => {
-                setText(replyDraft);
-                setShowPrompts(false);
-                inputRef.current?.focus();
-              }}
-            />
-            <EmojiStoryDecodeCard
-              partnerName={person.display_name}
-              puzzle={getEmojiStoryForPerson({
-                id: person.id,
-                name: person.display_name,
-                town: person.town,
-              })}
-              onUseReply={(replyDraft) => {
-                setText(replyDraft);
-                setShowPrompts(false);
-                inputRef.current?.focus();
-              }}
-            />
+          <div className="mb-4 flex flex-wrap gap-2">
+            {icebreakers.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => {
+                  setText(prompt);
+                  setShowPrompts(false);
+                  inputRef.current?.focus();
+                }}
+                className="rounded-xl border border-border bg-card px-3 py-2 text-left text-xs"
+              >
+                {prompt}
+              </button>
+            ))}
           </div>
         )}
         <div className="mb-4 rounded-2xl bg-card p-4 text-center text-sm text-muted-foreground">
@@ -1357,248 +1180,6 @@ function LiveThread({
         />
         <motion.button
           whileTap={{ scale: 0.9 }}
-          disabled={!text.trim()}
-          aria-label="Send"
-          className="rounded-full bg-primary p-3 text-primary-foreground disabled:opacity-40"
-        >
-          <Send className="h-5 w-5" />
-        </motion.button>
-      </form>
-    </motion.div>
-  );
-}
-
-function Thread({
-  id,
-  initialDraft,
-  onBack,
-}: {
-  id: string;
-  initialDraft?: string;
-  onBack: () => void;
-}) {
-  const s = useStore();
-  const p = people.find((x) => x.id === id)!;
-  const msgs = s.chats[id] ?? [];
-  const [text, setText] = useState(initialDraft ?? "");
-  const [showTwoTruths, setShowTwoTruths] = useState(false);
-  const [showOpenerStudio, setShowOpenerStudio] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const end = useRef<HTMLDivElement>(null);
-  const twoTruthsGame = getTwoTruthsForPerson(p);
-  const icebreakers = generateIcebreakers({
-    name: p.name,
-    town: p.town,
-    tags: p.tags,
-    intent: p.intent,
-    bio: p.bio,
-    prompt: p.prompt,
-    answer: p.answer,
-  });
-  useEffect(() => {
-    end.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs.length]);
-  const send = () => {
-    const t = text.trim();
-    if (!t) return;
-    triggerHaptic(10);
-    update((st) => ({
-      ...st,
-      chats: {
-        ...st.chats,
-        [id]: [
-          ...(st.chats[id] ?? []),
-          { id: crypto.randomUUID(), from: "me", text: t.slice(0, 1000), at: Date.now() },
-        ],
-      },
-    }));
-    setText("");
-  };
-  const shared = p.tags.filter((t) => s.profile.tags.includes(t));
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 40 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 40 }}
-      className="flex h-[calc(100vh-5rem)] flex-col"
-    >
-      <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-[#fff7f8] px-4 py-3">
-        <button
-          onClick={onBack}
-          aria-label="Back"
-          className="rounded-full p-1.5 hover:bg-secondary"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <img
-          loading="lazy"
-          decoding="async"
-          src={photo(p, true)}
-          alt=""
-          className="h-10 w-10 rounded-full object-cover"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold">{p.name}</p>
-          <p className="text-xs text-muted-foreground">{p.town}</p>
-        </div>
-        {!showOpenerStudio && isFeatureEnabled("aiOpenerStudio") && (
-          <button
-            type="button"
-            onClick={() => {
-              setShowTwoTruths(false);
-              setShowOpenerStudio(true);
-            }}
-            className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1.5 text-xs font-semibold text-primary"
-          >
-            <MessagesSquare className="h-3.5 w-3.5" />
-            Ideas
-          </button>
-        )}
-        {!showOpenerStudio && (
-          <button
-            type="button"
-            onClick={() => setShowTwoTruths((v) => !v)}
-            className="inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-primary"
-          >
-            <Sparkles className="h-3.5 w-3.5" />2 Truths
-          </button>
-        )}
-      </header>
-      <DemoNotice />
-      <AnimatePresence>
-        {showOpenerStudio && (
-          <Suspense fallback={null}>
-            <ConversationOpenerStudio
-              matchId={p.id}
-              matchName={p.name}
-              profile={{
-                town: p.town,
-                intent: p.intent,
-                tags: p.tags,
-                bio: p.bio,
-                seeking: p.answer,
-              }}
-              live={false}
-              onUseOpener={(openerText) => {
-                setText(openerText);
-                setShowOpenerStudio(false);
-                inputRef.current?.focus();
-              }}
-              onClose={() => setShowOpenerStudio(false)}
-            />
-          </Suspense>
-        )}
-      </AnimatePresence>
-      <div className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
-        {showTwoTruths && (
-          <div className="mb-3 space-y-2.5">
-            <FirstDateDilemmaCard
-              partnerName={p.name}
-              dilemma={getFirstDateDilemmaForTown(p.town, p.id)}
-              onUseReply={(replyDraft) => {
-                setText(replyDraft);
-                setShowTwoTruths(false);
-                inputRef.current?.focus();
-              }}
-            />
-            <TwoTruthsCard
-              game={twoTruthsGame}
-              onSendReply={(replyDraft) => {
-                setText(replyDraft);
-                setShowTwoTruths(false);
-                inputRef.current?.focus();
-              }}
-            />
-            <EmojiStoryDecodeCard
-              partnerName={p.name}
-              puzzle={getEmojiStoryForPerson(p)}
-              onUseReply={(replyDraft) => {
-                setText(replyDraft);
-                setShowTwoTruths(false);
-                inputRef.current?.focus();
-              }}
-            />
-          </div>
-        )}
-        <Link
-          to="/date-plan"
-          search={{ matchId: p.id }}
-          className="block rounded-xl border border-border bg-white p-3 text-center text-xs font-semibold text-primary"
-        >
-          Plan a date
-        </Link>
-        <div className="mb-4 rounded-2xl bg-card p-4 text-center text-sm text-muted-foreground">
-          {shared.length ? (
-            <>
-              You both like <span className="text-primary">{shared.join(", ")}</span>
-            </>
-          ) : (
-            <>
-              Ask about: <span className="text-primary">“{p.prompt}…”</span>
-            </>
-          )}
-        </div>
-        <AnimatePresence initial={false}>
-          {msgs.map((m) => (
-            <motion.div
-              key={m.id}
-              layout
-              initial={{ opacity: 0, y: 20, scale: 0.8 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
-              className={`flex ${m.from === "me" ? "justify-end" : "justify-start"}`}
-              style={{ originX: m.from === "me" ? 1 : 0 }}
-            >
-              <div
-                className={`flex max-w-[78%] items-end gap-1.5 rounded-3xl px-4 py-2.5 text-[15px] ${m.from === "me" ? "rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md bg-secondary"}`}
-              >
-                <span>{m.text}</span>
-                {m.from === "me" && <Check className="mb-0.5 h-3.5 w-3.5 shrink-0 opacity-85" />}
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        <div ref={end} />
-      </div>
-      {msgs.length === 0 && (
-        <div className="border-t border-border bg-secondary/40 px-4 py-2.5">
-          <p className="mb-1.5 flex items-center gap-1 text-[11px] font-semibold text-primary">
-            <Sparkles className="h-3 w-3" /> Tap an icebreaker to start talking
-          </p>
-          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-0.5">
-            {icebreakers.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => {
-                  triggerHaptic(10);
-                  setText(prompt);
-                  inputRef.current?.focus();
-                }}
-                className="shrink-0 rounded-2xl border border-border bg-card px-3 py-1.5 text-left text-xs text-foreground shadow-2xs transition-colors hover:border-primary/50"
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          send();
-        }}
-        className="flex items-center gap-2 border-t border-border px-4 py-3"
-      >
-        <input
-          ref={inputRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={`Message ${p.name}…`}
-          className="flex-1 rounded-full bg-card px-4 py-3 text-[15px] outline-none focus:ring-2 focus:ring-ring"
-        />
-        <motion.button
-          whileTap={{ scale: 0.8, rotate: -15 }}
           disabled={!text.trim()}
           aria-label="Send"
           className="rounded-full bg-primary p-3 text-primary-foreground disabled:opacity-40"
