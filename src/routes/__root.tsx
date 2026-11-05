@@ -133,7 +133,10 @@ function RootComponent() {
   const navigate = useNavigate();
   const { user, ready } = useSession();
   const publicRoute =
-    pathname === "/welcome" || pathname === "/auth" || pathname === "/.lovable/oauth/consent";
+    pathname === "/welcome" ||
+    pathname === "/auth" ||
+    pathname === "/safety" ||
+    pathname === "/.lovable/oauth/consent";
 
   useEffect(() => {
     if (ready && !user && !publicRoute) {
