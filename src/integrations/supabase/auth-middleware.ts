@@ -94,6 +94,12 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
       throw new Error("Unauthorized: No user ID found in token");
     }
 
+    // A deleted account's signed JWT can remain valid until expiry. Check Auth too.
+    const { data: current, error: userError } = await supabase.auth.getUser(token);
+    if (userError || current.user?.id !== data.claims.sub) {
+      throw new Error("Unauthorized: Account is unavailable");
+    }
+
     return next({
       context: {
         supabase,

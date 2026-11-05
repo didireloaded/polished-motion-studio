@@ -713,19 +713,19 @@ export type Database = {
           moderator_note: string
           report_id: string
           reviewed_at: string
-          reviewed_by: string
+          reviewed_by: string | null
         }
         Insert: {
           moderator_note?: string
           report_id: string
           reviewed_at?: string
-          reviewed_by: string
+          reviewed_by?: string | null
         }
         Update: {
           moderator_note?: string
           report_id?: string
           reviewed_at?: string
-          reviewed_by?: string
+          reviewed_by?: string | null
         }
         Relationships: [
           {
